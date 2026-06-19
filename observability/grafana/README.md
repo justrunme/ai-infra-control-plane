@@ -6,6 +6,7 @@ This directory contains Grafana dashboards for the AI Infrastructure Control Pla
 
 - `dashboards/ai-control-plane.json` - overview dashboard for backend health, latency, request traffic, model availability, capacity, and hourly cost.
 - `dashboards/loki-logs.json` - Loki dashboard for control plane logs, Argo CD deployment signals, and observability stack logs.
+- `dashboards/topology-overview.json` - digital twin overview for platform dependencies and operational signals.
 
 ## Required Metrics
 
@@ -30,3 +31,5 @@ Core metrics:
 4. Select the Prometheus datasource that scrapes the control API.
 
 For the Loki logs dashboard, import `dashboards/loki-logs.json` and select the Loki datasource configured for the cluster.
+
+For the digital twin dashboard, import `dashboards/topology-overview.json` and select the Prometheus datasource that scrapes the control API.

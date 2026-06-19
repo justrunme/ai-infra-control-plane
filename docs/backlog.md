@@ -74,3 +74,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Emit GenAI-style spans for model requests, token usage, tool calls, latency, and cost.
    - Keep prompt and response content out of the prototype artifact.
    - Document semantic attributes for future collector integration.
+
+14. Add AI infrastructure digital twin
+   - Expose a control API topology graph.
+   - Document component dependencies, health, telemetry, and operational signals.
+   - Add a Grafana topology overview dashboard.

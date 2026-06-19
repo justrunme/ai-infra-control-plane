@@ -7,7 +7,7 @@ from typing import Literal
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT_SECONDS = 2.0
@@ -71,6 +71,55 @@ class BackendLatencyStatus(BaseModel):
     latency_ms: int
     measured_endpoint: str
     error: str | None = None
+
+
+class TopologySignal(BaseModel):
+    name: str
+    value: int | float | str
+    unit: str
+    description: str
+
+
+class TopologyNode(BaseModel):
+    id: str
+    label: str
+    kind: Literal[
+        "api",
+        "inference-backend",
+        "ui",
+        "observability",
+        "gitops",
+        "cluster",
+        "package",
+        "forecasting",
+        "security",
+    ]
+    health: Literal["healthy", "degraded", "unknown"]
+    signals: list[TopologySignal] = Field(default_factory=list)
+
+
+class TopologyEdge(BaseModel):
+    source: str
+    target: str
+    relationship: Literal[
+        "probes",
+        "serves",
+        "scrapes",
+        "visualizes",
+        "collects",
+        "deploys",
+        "packages",
+        "forecasts",
+        "enforces",
+        "runs-on",
+    ]
+
+
+class TopologyStatus(BaseModel):
+    updated_at: str
+    graph_version: str
+    nodes: list[TopologyNode]
+    edges: list[TopologyEdge]
 
 
 app = FastAPI(
@@ -162,6 +211,213 @@ def metric_line(name: str, value: int | float, **labels: str | int) -> str:
     return f"{name}{metric_labels(**labels)} {value}"
 
 
+def get_platform_topology() -> TopologyStatus:
+    models = get_model_inventory()
+    capacity_status = get_capacity_status(models)
+    cost_status = get_cost_status(models)
+
+    return TopologyStatus(
+        updated_at=datetime.now(UTC).isoformat(),
+        graph_version="v1",
+        nodes=[
+            TopologyNode(
+                id="k3s",
+                label="k3s cluster",
+                kind="cluster",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="node_count",
+                        value=1,
+                        unit="nodes",
+                        description="Bootstrap target from the Terraform k3s example.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="control-api",
+                label="Control API",
+                kind="api",
+                health="healthy" if capacity_status.healthy_models else "degraded",
+                signals=[
+                    TopologySignal(
+                        name="models",
+                        value=capacity_status.models,
+                        unit="count",
+                        description="Models known by the control plane.",
+                    ),
+                    TopologySignal(
+                        name="capacity",
+                        value=capacity_status.total_capacity_tokens_per_second,
+                        unit="tokens_per_second",
+                        description="Aggregate serving capacity.",
+                    ),
+                    TopologySignal(
+                        name="estimated_cost",
+                        value=cost_status.estimated_hourly_cost,
+                        unit="USD_per_hour",
+                        description="Estimated hourly model serving cost.",
+                    ),
+                ],
+            ),
+            TopologyNode(
+                id="ollama",
+                label="Ollama",
+                kind="inference-backend",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="probe_endpoint",
+                        value="/api/tags",
+                        unit="http_path",
+                        description="Endpoint used by the Ollama backend probe.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="vllm",
+                label="vLLM",
+                kind="inference-backend",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="planned_protocol",
+                        value="openai-compatible",
+                        unit="api",
+                        description="Future backend probe and deployment path.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="openwebui",
+                label="OpenWebUI",
+                kind="ui",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="role",
+                        value="operator-ui",
+                        unit="component",
+                        description="Planned private AI user interface.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="prometheus",
+                label="Prometheus",
+                kind="observability",
+                health="healthy",
+                signals=[
+                    TopologySignal(
+                        name="scrape_target",
+                        value="/metrics",
+                        unit="http_path",
+                        description="Control API metrics endpoint.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="grafana",
+                label="Grafana",
+                kind="observability",
+                health="healthy",
+                signals=[
+                    TopologySignal(
+                        name="dashboards",
+                        value=3,
+                        unit="count",
+                        description="Control plane, logs, and topology dashboards.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="loki",
+                label="Loki",
+                kind="observability",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="retention",
+                        value=168,
+                        unit="hours",
+                        description="Example Loki retention window.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="argocd",
+                label="Argo CD",
+                kind="gitops",
+                health="unknown",
+                signals=[
+                    TopologySignal(
+                        name="sync_target",
+                        value="helm-chart",
+                        unit="component",
+                        description="GitOps deployment target.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="helm-chart",
+                label="AI Control Plane Helm chart",
+                kind="package",
+                health="healthy",
+                signals=[
+                    TopologySignal(
+                        name="autoscaling",
+                        value="enabled",
+                        unit="feature",
+                        description="Horizontal Pod Autoscaler support.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="forecasting",
+                label="Forecasting layer",
+                kind="forecasting",
+                health="healthy",
+                signals=[
+                    TopologySignal(
+                        name="predicted_saturation",
+                        value=15,
+                        unit="minutes",
+                        description="Example lead time from autoscaling simulator.",
+                    )
+                ],
+            ),
+            TopologyNode(
+                id="opa",
+                label="OPA policy gates",
+                kind="security",
+                health="healthy",
+                signals=[
+                    TopologySignal(
+                        name="policy_gate",
+                        value="enabled",
+                        unit="feature",
+                        description="Rendered Kubernetes manifest checks.",
+                    )
+                ],
+            ),
+        ],
+        edges=[
+            TopologyEdge(source="control-api", target="ollama", relationship="probes"),
+            TopologyEdge(source="control-api", target="vllm", relationship="probes"),
+            TopologyEdge(source="openwebui", target="control-api", relationship="serves"),
+            TopologyEdge(source="prometheus", target="control-api", relationship="scrapes"),
+            TopologyEdge(source="grafana", target="prometheus", relationship="visualizes"),
+            TopologyEdge(source="grafana", target="loki", relationship="visualizes"),
+            TopologyEdge(source="loki", target="control-api", relationship="collects"),
+            TopologyEdge(source="argocd", target="helm-chart", relationship="deploys"),
+            TopologyEdge(source="helm-chart", target="control-api", relationship="packages"),
+            TopologyEdge(source="control-api", target="k3s", relationship="runs-on"),
+            TopologyEdge(source="forecasting", target="control-api", relationship="forecasts"),
+            TopologyEdge(source="opa", target="helm-chart", relationship="enforces"),
+        ],
+    )
+
+
 @app.middleware("http")
 async def record_http_metrics(request: Request, call_next):
     started_at = perf_counter()
@@ -198,6 +454,11 @@ def capacity() -> CapacityStatus:
 @app.get("/cost", response_model=CostStatus)
 def cost() -> CostStatus:
     return get_cost_status(get_model_inventory())
+
+
+@app.get("/topology", response_model=TopologyStatus)
+def topology() -> TopologyStatus:
+    return get_platform_topology()
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
