@@ -2,6 +2,10 @@
 
 This chart deploys the AI Control Plane API and optional Kubernetes autoscaling.
 
+## Security Defaults
+
+The chart defaults to non-root containers, a read-only root filesystem, dropped Linux capabilities, and a non-`latest` image tag so rendered manifests can pass the repository OPA policy gates.
+
 ## Autoscaling
 
 Autoscaling is enabled by default:
@@ -30,4 +34,3 @@ autoscaling:
 ```sh
 helm template ai-control-plane infra/helm/ai-control-plane
 ```
-

@@ -34,6 +34,7 @@ forecasting/
   timesfm/            Experimental capacity forecasting prototype
 security/
   trivy/              Container and IaC scan configuration
+  opa/                Kubernetes policy gates for rendered manifests
 docs/
   architecture.md     System design notes
 ```

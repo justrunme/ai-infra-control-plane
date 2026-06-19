@@ -58,6 +58,7 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Add Trivy IaC examples.
    - Add baseline Kubernetes policy notes.
    - Add future OPA/Gatekeeper roadmap.
+   - Add OPA policy gates for rendered Kubernetes manifests.
 
 11. Add Loki logging
    - Add Loki and Promtail Helm values.
