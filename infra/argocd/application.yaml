@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-control-plane
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: ai-control-plane
+    app.kubernetes.io/part-of: ai-infra-control-plane
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/justrunme/ai-infra-control-plane.git
+    targetRevision: main
+    path: infra/helm/ai-control-plane
+    helm:
+      releaseName: ai-control-plane
+      values: |
+        image:
+          repository: ghcr.io/justrunme/ai-infra-control-plane
+          tag: latest
+        ollama:
+          baseUrl: http://ollama.ai-platform.svc.cluster.local:11434
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+  revisionHistoryLimit: 5
+
