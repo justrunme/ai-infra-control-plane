@@ -1,9 +1,10 @@
 import httpx
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app import main as app_main
 
 
+app = app_main.app
 client = TestClient(app)
 
 
@@ -52,14 +53,47 @@ def test_cost() -> None:
     }
 
 
-def test_metrics() -> None:
+def test_metrics(monkeypatch) -> None:
+    def fake_fetch_ollama_tags() -> tuple[dict, int, str | None]:
+        return {"models": [{"name": "llama3.1:8b"}]}, 17, None
+
+    monkeypatch.setattr(app_main, "fetch_ollama_tags", fake_fetch_ollama_tags)
+
+    client.get("/health")
     response = client.get("/metrics")
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/plain")
-    assert "ai_control_plane_models_total 1" in response.text
-    assert "ai_control_plane_models_healthy 1" in response.text
-    assert "ai_control_plane_capacity_tokens_per_second 320" in response.text
+    assert 'ai_control_backend_up{backend="ollama"} 1' in response.text
+    assert 'ai_control_backend_latency_ms{backend="ollama"} 17' in response.text
+    assert (
+        'ai_control_model_available{backend="mock",model="llama-3.1-8b-instruct"} 1'
+        in response.text
+    )
+    assert (
+        'ai_control_model_available{backend="ollama",model="llama3.1:8b"} 1'
+        in response.text
+    )
+    assert (
+        'ai_control_capacity_available{unit="tokens_per_second"} 320'
+        in response.text
+    )
+    assert 'ai_control_http_requests_total{method="GET",path="/health",status="200"}' in (
+        response.text
+    )
+
+
+def test_metrics_reports_backend_down(monkeypatch) -> None:
+    def fake_fetch_ollama_tags() -> tuple[dict, int, str | None]:
+        return {}, 2000, "connection refused"
+
+    monkeypatch.setattr(app_main, "fetch_ollama_tags", fake_fetch_ollama_tags)
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert 'ai_control_backend_up{backend="ollama"} 0' in response.text
+    assert 'ai_control_backend_latency_ms{backend="ollama"} 2000' in response.text
 
 
 def test_summary() -> None:

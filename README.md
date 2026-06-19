@@ -73,6 +73,20 @@ The API exposes:
 - `GET /backends/ollama/models` - model names returned by Ollama `/api/tags`.
 - `GET /backends/ollama/latency` - lightweight latency measurement for `/api/tags`.
 
+### Prometheus Metrics
+
+`GET /metrics` exposes Prometheus-compatible metrics for request traffic, backend health, model inventory, capacity, and estimated cost.
+
+Core metrics:
+
+- `ai_control_http_requests_total`
+- `ai_control_http_request_latency_ms`
+- `ai_control_backend_up`
+- `ai_control_backend_latency_ms`
+- `ai_control_model_available`
+- `ai_control_capacity_available`
+- `ai_control_estimated_hourly_cost_usd`
+
 ## First Backlog
 
 - Add real vLLM and Ollama backend probes.
