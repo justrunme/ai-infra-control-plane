@@ -1,6 +1,6 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint docker-build helm-template
+.PHONY: venv test lint docker-build helm-template demo
 
 venv:
 	$(PYTHON) -m venv .venv
@@ -17,3 +17,17 @@ docker-build:
 
 helm-template:
 	helm template ai-control-plane infra/helm/ai-control-plane
+
+demo:
+	@echo "AI Infrastructure Control Plane demo"
+	@echo
+	@echo "Control API endpoints:"
+	@echo "  GET /health"
+	@echo "  GET /models"
+	@echo "  GET /metrics"
+	@echo "  GET /capacity"
+	@echo "  GET /cost"
+	@echo "  GET /topology"
+	@echo
+	@echo "Governance pipeline:"
+	$(PYTHON) governance/pipeline/run_pipeline.py --requests governance/pipeline/sample_requests.csv
