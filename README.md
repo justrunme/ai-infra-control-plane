@@ -35,6 +35,8 @@ forecasting/
   timesfm/            Experimental capacity forecasting prototype
 experiments/
   inference-autoscaling/ Forecast-driven inference scaling recommendations
+governance/
+  cost/               AI cost governance policy engine
 security/
   trivy/              Container and IaC scan configuration
   opa/                Kubernetes policy gates for rendered manifests
@@ -105,6 +107,10 @@ Core metrics:
 ### AI Infrastructure Digital Twin
 
 `GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. See `docs/digital-twin.md`.
+
+### AI Cost Governance
+
+`governance/cost` evaluates model usage, team budgets, token spend, and forecasted monthly cost into `allow`, `warn`, or `block` decisions.
 
 ## First Backlog
 
