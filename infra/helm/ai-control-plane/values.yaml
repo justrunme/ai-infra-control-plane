@@ -5,6 +5,9 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+ollama:
+  baseUrl: http://ollama:11434
+
 service:
   type: ClusterIP
   port: 80
@@ -16,4 +19,3 @@ resources:
   limits:
     cpu: 500m
     memory: 512Mi
-
