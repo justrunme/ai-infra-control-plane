@@ -1,5 +1,13 @@
 # AI Infrastructure Control Plane
 
+[![CI](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-control%20API-009688)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-platform%20engineering-326CE5)
+![Terraform](https://img.shields.io/badge/Terraform-infrastructure-844FBA)
+![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 A Kubernetes-native platform for operating private AI workloads with observability, forecasting, GitOps delivery, security policy, cost governance, risk scoring, and human approval gates.
 
 This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.
@@ -98,6 +106,14 @@ make test
 ```
 
 The project targets Python 3.12 for local development and CI.
+
+Run the portfolio demo:
+
+```sh
+make demo
+```
+
+The demo prints the key control API endpoints and runs the end-to-end governance pipeline from `governance/pipeline/sample_requests.csv`.
 
 ## Control API
 
