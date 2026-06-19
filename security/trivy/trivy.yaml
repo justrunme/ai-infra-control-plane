@@ -1,0 +1,12 @@
+scan:
+  skip-dirs:
+    - .git
+    - apps/control-api/.venv
+
+severity:
+  - HIGH
+  - CRITICAL
+
+vulnerability:
+  ignore-unfixed: true
+

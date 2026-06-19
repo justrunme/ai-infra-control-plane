@@ -1,0 +1,12 @@
+.DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate*
+dist/
+build/
+*.egg-info/
+
