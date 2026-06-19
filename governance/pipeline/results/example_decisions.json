@@ -1,0 +1,586 @@
+{
+  "request_source": "governance/pipeline/sample_requests.csv",
+  "cost_policy_source": "governance/cost/policies.yaml",
+  "risk_rule_source": "governance/risk/rules.yaml",
+  "flow": [
+    "request",
+    "telemetry_sample",
+    "cost_decision",
+    "risk_score",
+    "approval_decision",
+    "final_verdict"
+  ],
+  "verdict_counts": {
+    "allow": 2,
+    "approval_required": 3,
+    "block": 3
+  },
+  "decisions": [
+    {
+      "id": "pipeline-local-dev-llama",
+      "final_verdict": "allow",
+      "reasons": [
+        "all governance stages allow the request"
+      ],
+      "request": {
+        "team": "platform",
+        "owner": "platform-oncall",
+        "environment": "dev",
+        "namespace": "ai-dev",
+        "action": "run_model",
+        "model": "llama3.1:8b",
+        "provider": "ollama"
+      },
+      "telemetry": {
+        "input_tokens": 1200,
+        "output_tokens": 600,
+        "cost_per_request_usd": 0.0,
+        "cost_per_hour_usd": 0.12,
+        "month_to_date_cost_usd": 210.4,
+        "forecast_monthly_cost_usd": 420.0,
+        "sensitive_data": false,
+        "tool_access": false,
+        "write_permission": false
+      },
+      "stages": {
+        "cost": {
+          "decision": "allow",
+          "reasons": [
+            "usage is within governance limits"
+          ]
+        },
+        "risk": {
+          "score": 0,
+          "level": "low",
+          "factors": []
+        },
+        "approval": {
+          "decision": "allow",
+          "reasons": [
+            "request is low-risk and inside approval limits"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-staging-qwen",
+      "final_verdict": "approval_required",
+      "reasons": [
+        "approval workflow requires human review"
+      ],
+      "request": {
+        "team": "search",
+        "owner": "search-platform",
+        "environment": "staging",
+        "namespace": "ai-staging",
+        "action": "deploy_model",
+        "model": "qwen2.5:14b",
+        "provider": "vllm"
+      },
+      "telemetry": {
+        "input_tokens": 18000,
+        "output_tokens": 9000,
+        "cost_per_request_usd": 0.0141,
+        "cost_per_hour_usd": 0.72,
+        "month_to_date_cost_usd": 735.0,
+        "forecast_monthly_cost_usd": 1880.0,
+        "sensitive_data": false,
+        "tool_access": false,
+        "write_permission": true
+      },
+      "stages": {
+        "cost": {
+          "decision": "warn",
+          "reasons": [
+            "team search is near monthly budget",
+            "forecasted monthly cost is near platform hard limit"
+          ]
+        },
+        "risk": {
+          "score": 46,
+          "level": "medium",
+          "factors": [
+            {
+              "name": "high_cost_forecast",
+              "points": 16,
+              "reason": "forecasted monthly cost exceeds threshold"
+            },
+            {
+              "name": "write_permission",
+              "points": 14,
+              "reason": "request grants write permission"
+            },
+            {
+              "name": "deploy_permission",
+              "points": 16,
+              "reason": "action deploy_model can change serving state"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "approval_required",
+          "reasons": [
+            "cost governance returned warn",
+            "action deploy_model changes serving posture",
+            "forecasted monthly cost is above approval threshold"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-prod-gemma",
+      "final_verdict": "approval_required",
+      "reasons": [
+        "approval workflow requires human review"
+      ],
+      "request": {
+        "team": "platform",
+        "owner": "platform-oncall",
+        "environment": "production",
+        "namespace": "ai-prod",
+        "action": "deploy_model",
+        "model": "gemma-3-12b",
+        "provider": "vllm"
+      },
+      "telemetry": {
+        "input_tokens": 24000,
+        "output_tokens": 12000,
+        "cost_per_request_usd": 0.0088,
+        "cost_per_hour_usd": 0.58,
+        "month_to_date_cost_usd": 590.0,
+        "forecast_monthly_cost_usd": 1480.0,
+        "sensitive_data": false,
+        "tool_access": false,
+        "write_permission": true
+      },
+      "stages": {
+        "cost": {
+          "decision": "warn",
+          "reasons": [
+            "team platform is near monthly budget"
+          ]
+        },
+        "risk": {
+          "score": 50,
+          "level": "high",
+          "factors": [
+            {
+              "name": "production_namespace",
+              "points": 20,
+              "reason": "namespace ai-prod is production-facing"
+            },
+            {
+              "name": "write_permission",
+              "points": 14,
+              "reason": "request grants write permission"
+            },
+            {
+              "name": "deploy_permission",
+              "points": 16,
+              "reason": "action deploy_model can change serving state"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "approval_required",
+          "reasons": [
+            "cost governance returned warn",
+            "production environment requires human approval",
+            "action deploy_model changes serving posture",
+            "risk level is high"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-prod-openai-tools",
+      "final_verdict": "block",
+      "reasons": [
+        "cost governance blocked the request"
+      ],
+      "request": {
+        "team": "finance",
+        "owner": "finance-platform",
+        "environment": "production",
+        "namespace": "finance-ai-prod",
+        "action": "run_model",
+        "model": "gpt-4.1",
+        "provider": "openai"
+      },
+      "telemetry": {
+        "input_tokens": 64000,
+        "output_tokens": 32000,
+        "cost_per_request_usd": 0.0832,
+        "cost_per_hour_usd": 1.45,
+        "month_to_date_cost_usd": 610.0,
+        "forecast_monthly_cost_usd": 2120.0,
+        "sensitive_data": true,
+        "tool_access": true,
+        "write_permission": false
+      },
+      "stages": {
+        "cost": {
+          "decision": "block",
+          "reasons": [
+            "model gpt-4.1 is not approved for team finance",
+            "model hourly cost exceeds hard limit"
+          ]
+        },
+        "risk": {
+          "score": 94,
+          "level": "critical",
+          "factors": [
+            {
+              "name": "external_provider",
+              "points": 18,
+              "reason": "provider openai is external"
+            },
+            {
+              "name": "production_namespace",
+              "points": 20,
+              "reason": "namespace finance-ai-prod is production-facing"
+            },
+            {
+              "name": "high_token_volume",
+              "points": 12,
+              "reason": "token volume 96000 exceeds threshold"
+            },
+            {
+              "name": "high_cost_forecast",
+              "points": 16,
+              "reason": "forecasted monthly cost exceeds threshold"
+            },
+            {
+              "name": "sensitive_data",
+              "points": 18,
+              "reason": "request may process sensitive data"
+            },
+            {
+              "name": "tool_access",
+              "points": 10,
+              "reason": "request enables tool access"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "block",
+          "reasons": [
+            "cost governance returned block"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-external-agent",
+      "final_verdict": "block",
+      "reasons": [
+        "cost governance blocked the request"
+      ],
+      "request": {
+        "team": "mlops",
+        "owner": "mlops-lead",
+        "environment": "production",
+        "namespace": "ai-prod",
+        "action": "enable_external_model",
+        "model": "claude-3.7-sonnet",
+        "provider": "anthropic"
+      },
+      "telemetry": {
+        "input_tokens": 78000,
+        "output_tokens": 44000,
+        "cost_per_request_usd": 0.0417,
+        "cost_per_hour_usd": 1.18,
+        "month_to_date_cost_usd": 1020.0,
+        "forecast_monthly_cost_usd": 2400.0,
+        "sensitive_data": true,
+        "tool_access": true,
+        "write_permission": true
+      },
+      "stages": {
+        "cost": {
+          "decision": "block",
+          "reasons": [
+            "model hourly cost exceeds hard limit"
+          ]
+        },
+        "risk": {
+          "score": 100,
+          "level": "critical",
+          "factors": [
+            {
+              "name": "external_provider",
+              "points": 18,
+              "reason": "provider anthropic is external"
+            },
+            {
+              "name": "production_namespace",
+              "points": 20,
+              "reason": "namespace ai-prod is production-facing"
+            },
+            {
+              "name": "high_token_volume",
+              "points": 12,
+              "reason": "token volume 122000 exceeds threshold"
+            },
+            {
+              "name": "high_cost_forecast",
+              "points": 16,
+              "reason": "forecasted monthly cost exceeds threshold"
+            },
+            {
+              "name": "sensitive_data",
+              "points": 18,
+              "reason": "request may process sensitive data"
+            },
+            {
+              "name": "tool_access",
+              "points": 10,
+              "reason": "request enables tool access"
+            },
+            {
+              "name": "write_permission",
+              "points": 14,
+              "reason": "request grants write permission"
+            },
+            {
+              "name": "deploy_permission",
+              "points": 16,
+              "reason": "action enable_external_model can change serving state"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "block",
+          "reasons": [
+            "cost governance returned block"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-shadow-model",
+      "final_verdict": "block",
+      "reasons": [
+        "cost governance blocked the request"
+      ],
+      "request": {
+        "team": "research",
+        "owner": null,
+        "environment": "production",
+        "namespace": "ai-prod",
+        "action": "deploy_model",
+        "model": "unknown-frontier-model",
+        "provider": "external"
+      },
+      "telemetry": {
+        "input_tokens": 91000,
+        "output_tokens": 52000,
+        "cost_per_request_usd": 0.091,
+        "cost_per_hour_usd": 0.88,
+        "month_to_date_cost_usd": 0.0,
+        "forecast_monthly_cost_usd": 2650.0,
+        "sensitive_data": true,
+        "tool_access": true,
+        "write_permission": true
+      },
+      "stages": {
+        "cost": {
+          "decision": "block",
+          "reasons": [
+            "team research has no cost governance policy",
+            "forecasted monthly cost exceeds platform hard limit"
+          ]
+        },
+        "risk": {
+          "score": 100,
+          "level": "critical",
+          "factors": [
+            {
+              "name": "missing_owner",
+              "points": 25,
+              "reason": "request has no responsible owner"
+            },
+            {
+              "name": "external_provider",
+              "points": 18,
+              "reason": "provider external is external"
+            },
+            {
+              "name": "production_namespace",
+              "points": 20,
+              "reason": "namespace ai-prod is production-facing"
+            },
+            {
+              "name": "high_token_volume",
+              "points": 12,
+              "reason": "token volume 143000 exceeds threshold"
+            },
+            {
+              "name": "high_cost_forecast",
+              "points": 16,
+              "reason": "forecasted monthly cost exceeds threshold"
+            },
+            {
+              "name": "sensitive_data",
+              "points": 18,
+              "reason": "request may process sensitive data"
+            },
+            {
+              "name": "tool_access",
+              "points": 10,
+              "reason": "request enables tool access"
+            },
+            {
+              "name": "write_permission",
+              "points": 14,
+              "reason": "request grants write permission"
+            },
+            {
+              "name": "deploy_permission",
+              "points": 16,
+              "reason": "action deploy_model can change serving state"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "block",
+          "reasons": [
+            "request has no responsible owner",
+            "team research is not onboarded for AI governance",
+            "model unknown-frontier-model is forbidden",
+            "cost governance returned block"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-dev-tools",
+      "final_verdict": "allow",
+      "reasons": [
+        "all governance stages allow the request"
+      ],
+      "request": {
+        "team": "search",
+        "owner": "search-platform",
+        "environment": "dev",
+        "namespace": "ai-dev",
+        "action": "run_model",
+        "model": "gemma-3-12b",
+        "provider": "vllm"
+      },
+      "telemetry": {
+        "input_tokens": 9000,
+        "output_tokens": 4200,
+        "cost_per_request_usd": 0.006,
+        "cost_per_hour_usd": 0.44,
+        "month_to_date_cost_usd": 420.0,
+        "forecast_monthly_cost_usd": 640.0,
+        "sensitive_data": false,
+        "tool_access": true,
+        "write_permission": false
+      },
+      "stages": {
+        "cost": {
+          "decision": "allow",
+          "reasons": [
+            "usage is within governance limits"
+          ]
+        },
+        "risk": {
+          "score": 10,
+          "level": "low",
+          "factors": [
+            {
+              "name": "tool_access",
+              "points": 10,
+              "reason": "request enables tool access"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "allow",
+          "reasons": [
+            "request is low-risk and inside approval limits"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pipeline-customer-prod",
+      "final_verdict": "approval_required",
+      "reasons": [
+        "critical risk score requires human approval"
+      ],
+      "request": {
+        "team": "mlops",
+        "owner": "mlops-lead",
+        "environment": "production",
+        "namespace": "customer-ai-prod",
+        "action": "scale_replicas",
+        "model": "qwen2.5:14b",
+        "provider": "vllm"
+      },
+      "telemetry": {
+        "input_tokens": 41000,
+        "output_tokens": 19000,
+        "cost_per_request_usd": 0.019,
+        "cost_per_hour_usd": 0.82,
+        "month_to_date_cost_usd": 980.0,
+        "forecast_monthly_cost_usd": 1780.0,
+        "sensitive_data": false,
+        "tool_access": false,
+        "write_permission": true
+      },
+      "stages": {
+        "cost": {
+          "decision": "warn",
+          "reasons": [
+            "model hourly cost is near hard limit"
+          ]
+        },
+        "risk": {
+          "score": 78,
+          "level": "critical",
+          "factors": [
+            {
+              "name": "production_namespace",
+              "points": 20,
+              "reason": "namespace customer-ai-prod is production-facing"
+            },
+            {
+              "name": "high_token_volume",
+              "points": 12,
+              "reason": "token volume 60000 exceeds threshold"
+            },
+            {
+              "name": "high_cost_forecast",
+              "points": 16,
+              "reason": "forecasted monthly cost exceeds threshold"
+            },
+            {
+              "name": "write_permission",
+              "points": 14,
+              "reason": "request grants write permission"
+            },
+            {
+              "name": "deploy_permission",
+              "points": 16,
+              "reason": "action scale_replicas can change serving state"
+            }
+          ]
+        },
+        "approval": {
+          "decision": "approval_required",
+          "reasons": [
+            "cost governance returned warn",
+            "production environment requires human approval",
+            "action scale_replicas changes serving posture",
+            "risk level is critical",
+            "model hourly cost is above approval threshold",
+            "forecasted monthly cost is above approval threshold"
+          ]
+        }
+      }
+    }
+  ]
+}
