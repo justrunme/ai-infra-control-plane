@@ -1,0 +1,27 @@
+score_weights:
+  external_provider: 18
+  production_namespace: 20
+  high_token_volume: 12
+  high_cost_forecast: 16
+  sensitive_data: 18
+  tool_access: 10
+  write_permission: 14
+  deploy_permission: 16
+  missing_owner: 25
+
+thresholds:
+  high_token_volume: 50000
+  high_cost_forecast_usd: 1500.00
+  medium_min: 25
+  high_min: 50
+  critical_min: 75
+
+external_providers:
+  - anthropic
+  - openai
+  - external
+
+production_namespaces:
+  - ai-prod
+  - finance-ai-prod
+  - customer-ai-prod
