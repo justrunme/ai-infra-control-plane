@@ -109,12 +109,24 @@ Governance is modeled as a staged decision pipeline.
 
 ```mermaid
 flowchart LR
-  Request["AI request"] --> Telemetry["Telemetry sample"]
-  Telemetry --> Cost["Cost decision"]
-  Telemetry --> Risk["Risk score"]
-  Cost --> Approval["Approval decision"]
-  Risk --> Approval
-  Approval --> Verdict["Final verdict"]
+    Request["AI Request"]
+    Cost["Cost Analysis"]
+    Risk["Risk Analysis"]
+    Capacity["Capacity Check"]
+    Decision{"Policy Engine"}
+    Allow["ALLOW"]
+    Warn["WARN"]
+    Block["BLOCK"]
+
+    Request --> Cost
+    Request --> Risk
+    Request --> Capacity
+    Cost --> Decision
+    Risk --> Decision
+    Capacity --> Decision
+    Decision --> Allow
+    Decision --> Warn
+    Decision --> Block
 ```
 
 The stages are:
@@ -128,13 +140,20 @@ The stages are:
 
 The delivery path is designed for reviewable infrastructure changes:
 
-```text
-Terraform bootstrap
-  -> k3s host
-  -> Argo CD Application
-  -> Helm chart
-  -> Control API deployment
-  -> Prometheus and Grafana visibility
+```mermaid
+flowchart LR
+    Dev["Developer"]
+    Git["Git Repository"]
+    Actions["GitHub Actions"]
+    Registry["Container Registry"]
+    Argo["Argo CD"]
+    Cluster["Kubernetes Cluster"]
+
+    Dev --> Git
+    Git --> Actions
+    Actions --> Registry
+    Registry --> Argo
+    Argo --> Cluster
 ```
 
 The repository includes a Terraform k3s bootstrap example, Argo CD application manifest, Helm chart, and policy checks against rendered Kubernetes manifests.

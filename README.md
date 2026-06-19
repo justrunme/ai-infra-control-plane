@@ -76,15 +76,77 @@ flowchart TB
 
 ### Governance Flow
 
-![End-to-end AI governance pipeline](docs/images/governance-pipeline.png)
+```mermaid
+flowchart LR
+    Request["AI Request"]
+    Cost["Cost Analysis"]
+    Risk["Risk Analysis"]
+    Capacity["Capacity Check"]
+    Decision{"Policy Engine"}
+    Allow["ALLOW"]
+    Warn["WARN"]
+    Block["BLOCK"]
+
+    Request --> Cost
+    Request --> Risk
+    Request --> Capacity
+    Cost --> Decision
+    Risk --> Decision
+    Capacity --> Decision
+    Decision --> Allow
+    Decision --> Warn
+    Decision --> Block
+```
 
 ### Digital Twin
 
-![AI infrastructure digital twin](docs/images/digital-twin.png)
+```mermaid
+flowchart LR
+    Real["Real AI Cluster"]
+    Metrics["Telemetry"]
+    Twin["Digital Twin Model"]
+    Simulate["Scenario Simulation"]
+    Decision["Capacity Decision"]
 
-### Forecast-driven Scaling And Observability
+    Real --> Metrics
+    Metrics --> Twin
+    Twin --> Simulate
+    Simulate --> Decision
+```
 
-![GenAI observability stack](docs/images/observability-stack.png)
+### Forecast-driven Scaling
+
+```mermaid
+flowchart TB
+    Metrics["Historical Metrics"]
+    TimesFM["TimesFM Forecasting"]
+    Forecast["Demand Forecast"]
+    ScaleUp["Scale Up"]
+    ScaleDown["Scale Down"]
+
+    Metrics --> TimesFM
+    TimesFM --> Forecast
+    Forecast --> ScaleUp
+    Forecast --> ScaleDown
+```
+
+### GitOps Delivery
+
+```mermaid
+flowchart LR
+    Dev["Developer"]
+    Git["Git Repository"]
+    Actions["GitHub Actions"]
+    Registry["Container Registry"]
+    Argo["Argo CD"]
+    Cluster["Kubernetes Cluster"]
+
+    Dev --> Git
+    Git --> Actions
+    Actions --> Registry
+    Registry --> Argo
+    Argo --> Cluster
+```
 
 ## Scope
 
