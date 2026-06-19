@@ -89,3 +89,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Evaluate high-risk AI platform requests before execution.
    - Return allow, approval_required, or block decisions with reasons.
    - Keep the prototype offline until gateway or GitOps enforcement exists.
+
+17. Add AI risk scoring engine
+   - Score AI platform requests from 0 to 100.
+   - Classify requests as low, medium, high, or critical risk.
+   - Feed risk results into future approval and policy decisions.

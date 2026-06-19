@@ -37,6 +37,7 @@ experiments/
   inference-autoscaling/ Forecast-driven inference scaling recommendations
 governance/
   cost/               AI cost governance policy engine
+  risk/               AI request risk scoring engine
   approval/           Human approval workflow prototype
 security/
   trivy/              Container and IaC scan configuration
@@ -116,6 +117,10 @@ Core metrics:
 ### AI Approval Workflow
 
 `governance/approval` evaluates high-risk AI platform requests into `allow`, `approval_required`, or `block` decisions for human approval gates.
+
+### AI Governance Layer
+
+`governance/cost`, `governance/risk`, and `governance/approval` model cost control, risk scoring, and human approval gates for private AI infrastructure.
 
 ## First Backlog
 
