@@ -1,0 +1,35 @@
+currency: USD
+
+global:
+  max_model_hourly_cost_usd: 1.00
+  warn_model_hourly_cost_usd: 0.75
+  max_forecast_monthly_cost_usd: 2500.00
+  warn_forecast_monthly_cost_usd: 1800.00
+
+teams:
+  platform:
+    monthly_budget_usd: 600.00
+    warn_at_percent: 80
+    allowed_models:
+      - llama3.1:8b
+      - qwen2.5:14b
+      - gemma-3-12b
+  search:
+    monthly_budget_usd: 900.00
+    warn_at_percent: 80
+    allowed_models:
+      - qwen2.5:14b
+      - gemma-3-12b
+  mlops:
+    monthly_budget_usd: 1200.00
+    warn_at_percent: 85
+    allowed_models:
+      - gpt-4.1-mini
+      - claude-3.7-sonnet
+      - qwen2.5:14b
+  finance:
+    monthly_budget_usd: 700.00
+    warn_at_percent: 75
+    allowed_models:
+      - gpt-4.1-mini
+      - qwen2.5:14b

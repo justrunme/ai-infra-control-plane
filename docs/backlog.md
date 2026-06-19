@@ -79,3 +79,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Expose a control API topology graph.
    - Document component dependencies, health, telemetry, and operational signals.
    - Add a Grafana topology overview dashboard.
+
+15. Add AI cost governance engine
+   - Evaluate model usage, token spend, and forecasted monthly cost.
+   - Return allow, warn, or block decisions with reasons.
+   - Keep the prototype offline until gateway enforcement exists.

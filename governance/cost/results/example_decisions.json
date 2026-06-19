@@ -1,0 +1,158 @@
+{
+  "usage_source": "governance/cost/sample_usage.csv",
+  "policy_source": "governance/cost/policies.yaml",
+  "currency": "USD",
+  "decision_counts": {
+    "allow": 2,
+    "warn": 4,
+    "block": 2
+  },
+  "decisions": [
+    {
+      "timestamp": "2026-06-19T00:00:00Z",
+      "team": "platform",
+      "model": "llama3.1:8b",
+      "provider": "ollama",
+      "decision": "allow",
+      "reasons": [
+        "usage is within governance limits"
+      ],
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 190,
+        "cost_per_request_usd": 0.0,
+        "cost_per_hour_usd": 0.12,
+        "month_to_date_cost_usd": 210.4,
+        "forecast_monthly_cost_usd": 420.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:05:00Z",
+      "team": "platform",
+      "model": "qwen2.5:14b",
+      "provider": "vllm",
+      "decision": "allow",
+      "reasons": [
+        "usage is within governance limits"
+      ],
+      "usage": {
+        "input_tokens": 860,
+        "output_tokens": 420,
+        "cost_per_request_usd": 0.0062,
+        "cost_per_hour_usd": 0.62,
+        "month_to_date_cost_usd": 455.1,
+        "forecast_monthly_cost_usd": 575.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:10:00Z",
+      "team": "search",
+      "model": "gemma-3-12b",
+      "provider": "vllm",
+      "decision": "warn",
+      "reasons": [
+        "model hourly cost is near hard limit"
+      ],
+      "usage": {
+        "input_tokens": 1180,
+        "output_tokens": 620,
+        "cost_per_request_usd": 0.0114,
+        "cost_per_hour_usd": 0.81,
+        "month_to_date_cost_usd": 680.0,
+        "forecast_monthly_cost_usd": 840.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:15:00Z",
+      "team": "mlops",
+      "model": "gpt-4.1-mini",
+      "provider": "openai",
+      "decision": "warn",
+      "reasons": [
+        "model hourly cost is near hard limit"
+      ],
+      "usage": {
+        "input_tokens": 1520,
+        "output_tokens": 740,
+        "cost_per_request_usd": 0.0268,
+        "cost_per_hour_usd": 0.94,
+        "month_to_date_cost_usd": 920.0,
+        "forecast_monthly_cost_usd": 1185.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:20:00Z",
+      "team": "mlops",
+      "model": "claude-3.7-sonnet",
+      "provider": "anthropic",
+      "decision": "block",
+      "reasons": [
+        "model hourly cost exceeds hard limit"
+      ],
+      "usage": {
+        "input_tokens": 1840,
+        "output_tokens": 930,
+        "cost_per_request_usd": 0.0417,
+        "cost_per_hour_usd": 1.18,
+        "month_to_date_cost_usd": 1020.0,
+        "forecast_monthly_cost_usd": 1620.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:25:00Z",
+      "team": "finance",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "decision": "block",
+      "reasons": [
+        "model gpt-4.1 is not approved for team finance",
+        "model hourly cost exceeds hard limit"
+      ],
+      "usage": {
+        "input_tokens": 2480,
+        "output_tokens": 1180,
+        "cost_per_request_usd": 0.0832,
+        "cost_per_hour_usd": 1.45,
+        "month_to_date_cost_usd": 610.0,
+        "forecast_monthly_cost_usd": 980.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:30:00Z",
+      "team": "search",
+      "model": "qwen2.5:14b",
+      "provider": "vllm",
+      "decision": "warn",
+      "reasons": [
+        "team search is near monthly budget",
+        "forecasted monthly cost is near platform hard limit"
+      ],
+      "usage": {
+        "input_tokens": 1320,
+        "output_tokens": 700,
+        "cost_per_request_usd": 0.0141,
+        "cost_per_hour_usd": 0.72,
+        "month_to_date_cost_usd": 735.0,
+        "forecast_monthly_cost_usd": 1880.0
+      }
+    },
+    {
+      "timestamp": "2026-06-19T00:35:00Z",
+      "team": "platform",
+      "model": "gemma-3-12b",
+      "provider": "vllm",
+      "decision": "warn",
+      "reasons": [
+        "team platform is near monthly budget"
+      ],
+      "usage": {
+        "input_tokens": 980,
+        "output_tokens": 410,
+        "cost_per_request_usd": 0.0088,
+        "cost_per_hour_usd": 0.58,
+        "month_to_date_cost_usd": 590.0,
+        "forecast_monthly_cost_usd": 720.0
+      }
+    }
+  ]
+}
