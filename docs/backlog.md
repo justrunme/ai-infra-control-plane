@@ -52,6 +52,7 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Add a complete example using the Hetzner VM module.
    - Document required variables and secrets.
    - Keep apply steps manual.
+   - Add a k3s bootstrap example with cloud-init and kubeconfig outputs.
 
 10. Add security policy checks
    - Add Trivy IaC examples.

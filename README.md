@@ -26,6 +26,7 @@ apps/
 infra/
   helm/               Kubernetes packaging
   terraform/          Cloud bootstrap modules
+    k3s-bootstrap/    Example Hetzner VM bootstrap with cloud-init and k3s
 observability/
   grafana/            Dashboards and metrics notes
 forecasting/
