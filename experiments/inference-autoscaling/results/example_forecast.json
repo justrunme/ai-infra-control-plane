@@ -1,0 +1,63 @@
+{
+  "source": "experiments/inference-autoscaling/sample_load.csv",
+  "history_points": 18,
+  "horizon": 6,
+  "forecast_method": "rolling_trend_baseline",
+  "inputs": {
+    "target_utilization": 0.7,
+    "latency_slo_ms": 450.0,
+    "token_capacity_per_replica": 1800.0,
+    "max_scale_up_step": 2
+  },
+  "forecasts": {
+    "request_rate_rps": [
+      49.9733,
+      52.6133,
+      55.2533,
+      57.8933,
+      60.5333,
+      63.1733
+    ],
+    "p95_latency_ms": [
+      698.9333,
+      756.5333,
+      814.1333,
+      871.7333,
+      929.3333,
+      986.9333
+    ],
+    "input_tokens_per_second": [
+      1418.7333,
+      1511.1333,
+      1603.5333,
+      1695.9333,
+      1788.3333,
+      1880.7333
+    ],
+    "output_tokens_per_second": [
+      642.3333,
+      686.3333,
+      730.3333,
+      774.3333,
+      818.3333,
+      862.3333
+    ]
+  },
+  "recommendation": {
+    "current_replicas": 2,
+    "recommended_replicas": 4,
+    "unconstrained_replicas": 6,
+    "current_capacity_rps": 36.0,
+    "target_capacity_rps": 72.0,
+    "peak_forecast_rps": 63.1733,
+    "peak_forecast_p95_latency_ms": 986.9333,
+    "peak_forecast_tokens_per_second": 2743.0666,
+    "scale_delta": 2,
+    "reasons": [
+      "forecasted request load exceeds target utilization",
+      "forecasted p95 latency exceeds latency SLO",
+      "forecasted token throughput exceeds target utilization",
+      "recommendation capped by max scale-up step"
+    ]
+  }
+}

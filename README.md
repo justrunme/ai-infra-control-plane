@@ -32,6 +32,8 @@ observability/
   loki/               Loki and Promtail logging examples
 forecasting/
   timesfm/            Experimental capacity forecasting prototype
+experiments/
+  inference-autoscaling/ Forecast-driven inference scaling recommendations
 security/
   trivy/              Container and IaC scan configuration
   opa/                Kubernetes policy gates for rendered manifests

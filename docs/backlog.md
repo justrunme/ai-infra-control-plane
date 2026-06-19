@@ -64,3 +64,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Add Loki and Promtail Helm values.
    - Add a Grafana dashboard for application and platform logs.
    - Document logging labels and production hardening notes.
+
+12. Add AI inference autoscaling simulator
+   - Forecast request load, p95 latency, and token throughput from sample metrics.
+   - Recommend replicas before private AI inference workloads hit limits.
+   - Keep the simulator offline and separate from the production Helm chart.
