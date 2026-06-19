@@ -1,0 +1,27 @@
+name: Feature
+description: Track a real implementation task for the AI infrastructure control plane.
+title: "feat: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true after this task is done?
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Notes
+      description: Key files, contracts, and constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: Tests or commands that should pass.
+    validations:
+      required: true
+

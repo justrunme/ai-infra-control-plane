@@ -1,0 +1,55 @@
+# Backlog
+
+Use this backlog to create small, reviewable pull requests. Each item should produce working code, tests, documentation, or deployable infrastructure.
+
+## Week 1
+
+1. Add Ollama backend probe
+   - Add `/backends/ollama` health check support.
+   - Make the endpoint configurable through environment variables.
+   - Add tests for healthy, unhealthy, and timeout responses.
+
+2. Add Prometheus metrics
+   - Expose `/metrics`.
+   - Track request count, latency, model health, and capacity.
+   - Document the metrics contract.
+
+3. Add Grafana model latency dashboard
+   - Create dashboard JSON under `observability/grafana`.
+   - Include latency, availability, and estimated cost panels.
+   - Reference Prometheus metric names from the API.
+
+## Week 2
+
+4. Add Argo CD application
+   - Add an application manifest under `infra/argocd`.
+   - Point it at the Helm chart.
+   - Document bootstrap assumptions.
+
+5. Add Kubernetes autoscaling
+   - Add HPA template to the Helm chart.
+   - Make min and max replicas configurable.
+   - Document CPU and future latency-based scaling.
+
+6. Add container publish workflow
+   - Build and push image to GitHub Container Registry.
+   - Use semantic tags and commit SHA tags.
+   - Keep tests before publish.
+
+## Week 3
+
+7. Add vLLM backend probe
+   - Add OpenAI-compatible health and model listing checks.
+   - Add timeout and circuit-breaker behavior.
+   - Add tests for degraded backend status.
+
+8. Add Terraform example environment
+   - Add a complete example using the Hetzner VM module.
+   - Document required variables and secrets.
+   - Keep apply steps manual.
+
+9. Add security policy checks
+   - Add Trivy IaC examples.
+   - Add baseline Kubernetes policy notes.
+   - Add future OPA/Gatekeeper roadmap.
+
