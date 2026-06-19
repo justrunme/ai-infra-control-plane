@@ -1,0 +1,9 @@
+id,timestamp,team,owner,environment,namespace,action,model,provider,input_tokens,output_tokens,cost_per_request_usd,cost_per_hour_usd,month_to_date_cost_usd,forecast_monthly_cost_usd,sensitive_data,tool_access,write_permission
+pipeline-local-dev-llama,2026-06-19T01:00:00Z,platform,platform-oncall,dev,ai-dev,run_model,llama3.1:8b,ollama,1200,600,0.0000,0.12,210.40,420.00,false,false,false
+pipeline-staging-qwen,2026-06-19T01:05:00Z,search,search-platform,staging,ai-staging,deploy_model,qwen2.5:14b,vllm,18000,9000,0.0141,0.72,735.00,1880.00,false,false,true
+pipeline-prod-gemma,2026-06-19T01:10:00Z,platform,platform-oncall,production,ai-prod,deploy_model,gemma-3-12b,vllm,24000,12000,0.0088,0.58,590.00,1480.00,false,false,true
+pipeline-prod-openai-tools,2026-06-19T01:15:00Z,finance,finance-platform,production,finance-ai-prod,run_model,gpt-4.1,openai,64000,32000,0.0832,1.45,610.00,2120.00,true,true,false
+pipeline-external-agent,2026-06-19T01:20:00Z,mlops,mlops-lead,production,ai-prod,enable_external_model,claude-3.7-sonnet,anthropic,78000,44000,0.0417,1.18,1020.00,2400.00,true,true,true
+pipeline-shadow-model,2026-06-19T01:25:00Z,research,,production,ai-prod,deploy_model,unknown-frontier-model,external,91000,52000,0.0910,0.88,0.00,2650.00,true,true,true
+pipeline-dev-tools,2026-06-19T01:30:00Z,search,search-platform,dev,ai-dev,run_model,gemma-3-12b,vllm,9000,4200,0.0060,0.44,420.00,640.00,false,true,false
+pipeline-customer-prod,2026-06-19T01:35:00Z,mlops,mlops-lead,production,customer-ai-prod,scale_replicas,qwen2.5:14b,vllm,41000,19000,0.0190,0.82,980.00,1780.00,false,false,true

@@ -39,6 +39,7 @@ governance/
   cost/               AI cost governance policy engine
   risk/               AI request risk scoring engine
   approval/           Human approval workflow prototype
+  pipeline/           End-to-end AI governance decision pipeline
 security/
   trivy/              Container and IaC scan configuration
   opa/                Kubernetes policy gates for rendered manifests
@@ -121,6 +122,8 @@ Core metrics:
 ### AI Governance Layer
 
 `governance/cost`, `governance/risk`, and `governance/approval` model cost control, risk scoring, and human approval gates for private AI infrastructure.
+
+`governance/pipeline` connects those signals into an end-to-end decision flow: request telemetry, cost decision, risk score, approval decision, and final verdict.
 
 ## First Backlog
 

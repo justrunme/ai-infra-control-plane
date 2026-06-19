@@ -94,3 +94,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Score AI platform requests from 0 to 100.
    - Classify requests as low, medium, high, or critical risk.
    - Feed risk results into future approval and policy decisions.
+
+18. Add AI governance decision pipeline
+   - Connect request telemetry, cost governance, risk scoring, and approval gates.
+   - Produce a final allow, approval_required, or block verdict.
+   - Keep the pipeline offline until gateway or GitOps enforcement exists.
