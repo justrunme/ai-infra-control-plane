@@ -10,74 +10,61 @@ AI Infrastructure Control Plane operates the platform layer around private AI wo
 - apply GitOps and security controls;
 - evaluate governance decisions before high-risk AI operations.
 
-## Logical Layers
+## Platform Reference Architecture
 
 ```mermaid
 flowchart TB
-  User["Operator, developer, or platform workflow"]
+    User["AI Consumer"]
+    API["Control API<br/>FastAPI"]
 
-  subgraph Serving["Serving Layer"]
-    Gateway["Future model gateway"]
-    Ollama["Ollama"]
-    VLLM["vLLM"]
-    OpenWebUI["OpenWebUI"]
-  end
+    subgraph ControlPlane["AI Infrastructure Control Plane"]
+        Capacity["Capacity Planner"]
+        Cost["Cost Governance"]
+        Risk["Risk Scoring"]
+        Approval["Approval Engine"]
+        Twin["Digital Twin"]
+    end
 
-  subgraph Control["Control Plane"]
-    API["FastAPI Control API"]
-    Topology["Digital twin topology"]
-    Metrics["Prometheus metrics endpoint"]
-  end
+    subgraph AI["AI Workloads"]
+        Ollama["Ollama"]
+        VLLM["vLLM"]
+        Models["Foundation Models"]
+    end
 
-  subgraph Observability["Observability Layer"]
-    Prom["Prometheus"]
-    Grafana["Grafana dashboards"]
-    Loki["Loki logs"]
-    OTel["OpenTelemetry GenAI prototype"]
-  end
+    subgraph Observability["Observability"]
+        OTel["OpenTelemetry"]
+        Prom["Prometheus"]
+        Graf["Grafana"]
+        Loki["Loki"]
+    end
 
-  subgraph Intelligence["Planning Layer"]
-    TimesFM["TimesFM forecasting"]
-    Autoscaling["Inference autoscaling simulator"]
-  end
-
-  subgraph Governance["Governance Layer"]
-    Cost["Cost governance"]
-    Risk["Risk scoring"]
-    Approval["Approval workflow"]
-    Pipeline["Decision pipeline"]
-  end
-
-  subgraph Delivery["Delivery Layer"]
-    Terraform["Terraform k3s bootstrap"]
-    Argo["Argo CD"]
-    Helm["Helm chart"]
-    OPA["OPA policy gates"]
-    Trivy["Trivy scan"]
-  end
-
-  User --> API
-  Gateway --> API
-  API --> Ollama
-  API --> VLLM
-  API --> OpenWebUI
-  API --> Topology
-  API --> Metrics
-  Prom --> Metrics
-  Grafana --> Prom
-  Grafana --> Loki
-  OTel --> API
-  TimesFM --> Autoscaling
-  Autoscaling --> Governance
-  Pipeline --> Cost
-  Pipeline --> Risk
-  Pipeline --> Approval
-  Terraform --> Argo
-  Argo --> Helm
-  OPA --> Helm
-  Trivy --> Delivery
-  Helm --> API
+    User --> API
+    API --> Capacity
+    API --> Cost
+    API --> Risk
+    API --> Approval
+    API --> Twin
+    Capacity --> Ollama
+    Capacity --> VLLM
+    Ollama --> Models
+    VLLM --> Models
+    Ollama --> OTel
+    VLLM --> OTel
+    OTel --> Prom
+    OTel --> Loki
+    Prom --> Graf
+    Loki --> Graf
+    Twin --> Graf
 ```
+
+## Logical Layers
+
+- Serving layer: Ollama, vLLM, OpenWebUI, and future model gateway integrations.
+- Control plane: FastAPI control API, topology model, metrics, capacity, and cost signals.
+- Observability layer: OpenTelemetry GenAI signals, Prometheus, Grafana, and Loki.
+- Planning layer: TimesFM forecasting and forecast-driven autoscaling experiments.
+- Governance layer: cost governance, risk scoring, approval workflow, and decision pipeline.
+- Delivery layer: Terraform bootstrap, Argo CD, Helm, OPA policy gates, and Trivy scans.
 
 ## Control API
 
