@@ -40,6 +40,7 @@ security/
   opa/                Kubernetes policy gates for rendered manifests
 docs/
   architecture.md     System design notes
+  digital-twin.md     AI infrastructure topology model
 ```
 
 ## Local Development
@@ -100,6 +101,10 @@ Core metrics:
 - `ai_control_model_available`
 - `ai_control_capacity_available`
 - `ai_control_estimated_hourly_cost_usd`
+
+### AI Infrastructure Digital Twin
+
+`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. See `docs/digital-twin.md`.
 
 ## First Backlog
 

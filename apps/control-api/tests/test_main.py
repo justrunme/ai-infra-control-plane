@@ -53,6 +53,44 @@ def test_cost() -> None:
     }
 
 
+def test_topology() -> None:
+    response = client.get("/topology")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["graph_version"] == "v1"
+    assert "updated_at" in payload
+
+    node_ids = {node["id"] for node in payload["nodes"]}
+    assert {
+        "control-api",
+        "ollama",
+        "vllm",
+        "openwebui",
+        "prometheus",
+        "grafana",
+        "loki",
+        "argocd",
+        "k3s",
+        "helm-chart",
+        "forecasting",
+        "opa",
+    }.issubset(node_ids)
+
+    edges = {
+        (edge["source"], edge["target"], edge["relationship"])
+        for edge in payload["edges"]
+    }
+    assert ("control-api", "ollama", "probes") in edges
+    assert ("prometheus", "control-api", "scrapes") in edges
+    assert ("grafana", "prometheus", "visualizes") in edges
+    assert ("argocd", "helm-chart", "deploys") in edges
+
+    control_api = next(node for node in payload["nodes"] if node["id"] == "control-api")
+    signal_names = {signal["name"] for signal in control_api["signals"]}
+    assert {"models", "capacity", "estimated_cost"}.issubset(signal_names)
+
+
 def test_metrics(monkeypatch) -> None:
     def fake_fetch_ollama_tags() -> tuple[dict, int, str | None]:
         return {"models": [{"name": "llama3.1:8b"}]}, 17, None
