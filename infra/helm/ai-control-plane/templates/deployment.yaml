@@ -5,7 +5,9 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
