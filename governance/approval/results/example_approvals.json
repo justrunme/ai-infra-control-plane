@@ -1,0 +1,181 @@
+{
+  "request_source": "governance/approval/requests.yaml",
+  "decision_counts": {
+    "allow": 2,
+    "approval_required": 3,
+    "block": 3
+  },
+  "approvals": [
+    {
+      "id": "req-local-dev-llama",
+      "team": "platform",
+      "owner": "platform-oncall",
+      "environment": "dev",
+      "namespace": "ai-dev",
+      "action": "run_model",
+      "model": "llama3.1:8b",
+      "provider": "ollama",
+      "decision": "allow",
+      "reasons": [
+        "request is low-risk and inside approval limits"
+      ],
+      "signals": {
+        "cost_decision": "allow",
+        "cost_per_hour_usd": 0.12,
+        "forecast_monthly_cost_usd": 420.0,
+        "risk": "low"
+      }
+    },
+    {
+      "id": "req-vllm-staging-qwen",
+      "team": "search",
+      "owner": "search-platform",
+      "environment": "staging",
+      "namespace": "ai-staging",
+      "action": "deploy_model",
+      "model": "qwen2.5:14b",
+      "provider": "vllm",
+      "decision": "approval_required",
+      "reasons": [
+        "cost governance returned warn",
+        "action deploy_model changes serving posture",
+        "forecasted monthly cost is above approval threshold"
+      ],
+      "signals": {
+        "cost_decision": "warn",
+        "cost_per_hour_usd": 0.72,
+        "forecast_monthly_cost_usd": 1880.0,
+        "risk": "medium"
+      }
+    },
+    {
+      "id": "req-prod-gemma",
+      "team": "platform",
+      "owner": "platform-oncall",
+      "environment": "production",
+      "namespace": "ai-prod",
+      "action": "deploy_model",
+      "model": "gemma-3-12b",
+      "provider": "vllm",
+      "decision": "approval_required",
+      "reasons": [
+        "cost governance returned warn",
+        "production environment requires human approval",
+        "action deploy_model changes serving posture"
+      ],
+      "signals": {
+        "cost_decision": "warn",
+        "cost_per_hour_usd": 0.58,
+        "forecast_monthly_cost_usd": 720.0,
+        "risk": "medium"
+      }
+    },
+    {
+      "id": "req-mlops-claude",
+      "team": "mlops",
+      "owner": "mlops-lead",
+      "environment": "production",
+      "namespace": "ai-prod",
+      "action": "enable_external_model",
+      "model": "claude-3.7-sonnet",
+      "provider": "anthropic",
+      "decision": "block",
+      "reasons": [
+        "cost governance returned block"
+      ],
+      "signals": {
+        "cost_decision": "block",
+        "cost_per_hour_usd": 1.18,
+        "forecast_monthly_cost_usd": 1620.0,
+        "risk": "high"
+      }
+    },
+    {
+      "id": "req-finance-gpt4",
+      "team": "finance",
+      "owner": "finance-platform",
+      "environment": "production",
+      "namespace": "finance-ai-prod",
+      "action": "run_model",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "decision": "block",
+      "reasons": [
+        "cost governance returned block"
+      ],
+      "signals": {
+        "cost_decision": "block",
+        "cost_per_hour_usd": 1.45,
+        "forecast_monthly_cost_usd": 980.0,
+        "risk": "high"
+      }
+    },
+    {
+      "id": "req-shadow-model",
+      "team": "research",
+      "owner": null,
+      "environment": "production",
+      "namespace": "ai-prod",
+      "action": "deploy_model",
+      "model": "unknown-frontier-model",
+      "provider": "external",
+      "decision": "block",
+      "reasons": [
+        "request has no responsible owner",
+        "team research is not onboarded for AI governance",
+        "model unknown-frontier-model is forbidden"
+      ],
+      "signals": {
+        "cost_decision": "warn",
+        "cost_per_hour_usd": 0.88,
+        "forecast_monthly_cost_usd": 2450.0,
+        "risk": "critical"
+      }
+    },
+    {
+      "id": "req-dev-gemma",
+      "team": "search",
+      "owner": "search-platform",
+      "environment": "dev",
+      "namespace": "ai-dev",
+      "action": "run_model",
+      "model": "gemma-3-12b",
+      "provider": "vllm",
+      "decision": "allow",
+      "reasons": [
+        "request is low-risk and inside approval limits"
+      ],
+      "signals": {
+        "cost_decision": "allow",
+        "cost_per_hour_usd": 0.44,
+        "forecast_monthly_cost_usd": 640.0,
+        "risk": "low"
+      }
+    },
+    {
+      "id": "req-prod-qwen-scaleout",
+      "team": "mlops",
+      "owner": "mlops-lead",
+      "environment": "production",
+      "namespace": "ai-prod",
+      "action": "scale_replicas",
+      "model": "qwen2.5:14b",
+      "provider": "vllm",
+      "decision": "approval_required",
+      "reasons": [
+        "cost governance returned warn",
+        "production environment requires human approval",
+        "action scale_replicas changes serving posture",
+        "risk level is high",
+        "model hourly cost is above approval threshold",
+        "forecasted monthly cost is above approval threshold"
+      ],
+      "signals": {
+        "cost_decision": "warn",
+        "cost_per_hour_usd": 0.82,
+        "forecast_monthly_cost_usd": 1960.0,
+        "risk": "high"
+      }
+    }
+  ]
+}
