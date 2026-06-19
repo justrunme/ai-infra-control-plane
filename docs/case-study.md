@@ -19,27 +19,48 @@ This project models a private AI platform control plane that connects those conc
 The platform is organized around a control API and a set of infrastructure, observability, governance, and deployment modules.
 
 ```mermaid
-flowchart LR
-  Operator["Operator or platform workflow"] --> API["Control API"]
-  API --> Ollama["Ollama"]
-  API --> VLLM["vLLM path"]
-  API --> Capacity["Capacity and cost signals"]
-  API --> Topology["Digital twin topology"]
+flowchart TB
+    User["AI Consumer"]
+    API["Control API<br/>FastAPI"]
 
-  Prom["Prometheus"] --> API
-  Grafana["Grafana"] --> Prom
-  Loki["Loki"] --> API
+    subgraph ControlPlane["AI Infrastructure Control Plane"]
+        Capacity["Capacity Planner"]
+        Cost["Cost Governance"]
+        Risk["Risk Scoring"]
+        Approval["Approval Engine"]
+        Twin["Digital Twin"]
+    end
 
-  Forecast["Forecasting and autoscaling experiments"] --> Capacity
-  Governance["Governance pipeline"] --> API
-  Governance --> Cost["Cost decision"]
-  Governance --> Risk["Risk score"]
-  Governance --> Approval["Human approval gate"]
+    subgraph AI["AI Workloads"]
+        Ollama["Ollama"]
+        VLLM["vLLM"]
+        Models["Foundation Models"]
+    end
 
-  Argo["Argo CD"] --> Helm["Helm chart"]
-  Helm --> API
-  OPA["OPA policy gates"] --> Helm
-  Terraform["Terraform k3s bootstrap"] --> Argo
+    subgraph Observability["Observability"]
+        OTel["OpenTelemetry"]
+        Prom["Prometheus"]
+        Graf["Grafana"]
+        Loki["Loki"]
+    end
+
+    User --> API
+    API --> Capacity
+    API --> Cost
+    API --> Risk
+    API --> Approval
+    API --> Twin
+    Capacity --> Ollama
+    Capacity --> VLLM
+    Ollama --> Models
+    VLLM --> Models
+    Ollama --> OTel
+    VLLM --> OTel
+    OTel --> Prom
+    OTel --> Loki
+    Prom --> Graf
+    Loki --> Graf
+    Twin --> Graf
 ```
 
 ## Capabilities
@@ -61,13 +82,26 @@ flowchart LR
 
 The strongest part of the project is the AI governance layer:
 
-```text
-AI request
-  -> telemetry sample
-  -> cost decision
-  -> risk score
-  -> approval decision
-  -> final verdict
+```mermaid
+flowchart LR
+    Request["AI Request"]
+    Cost["Cost Analysis"]
+    Risk["Risk Analysis"]
+    Capacity["Capacity Check"]
+    Decision{"Policy Engine"}
+    Allow["ALLOW"]
+    Warn["WARN"]
+    Block["BLOCK"]
+
+    Request --> Cost
+    Request --> Risk
+    Request --> Capacity
+    Cost --> Decision
+    Risk --> Decision
+    Capacity --> Decision
+    Decision --> Allow
+    Decision --> Warn
+    Decision --> Block
 ```
 
 The pipeline combines:
@@ -102,6 +136,20 @@ This makes model operations visible as a platform concern instead of an isolated
 
 Forecasting is represented by two prototypes:
 
+```mermaid
+flowchart TB
+    Metrics["Historical Metrics"]
+    TimesFM["TimesFM Forecasting"]
+    Forecast["Demand Forecast"]
+    ScaleUp["Scale Up"]
+    ScaleDown["Scale Down"]
+
+    Metrics --> TimesFM
+    TimesFM --> Forecast
+    Forecast --> ScaleUp
+    Forecast --> ScaleDown
+```
+
 - `forecasting/timesfm` for experimental time-series forecasting of latency, request rate, capacity, and estimated hourly cost;
 - `experiments/inference-autoscaling` for forecast-driven scaling recommendations before private inference workloads hit limits.
 
@@ -111,12 +159,20 @@ The goal is not to claim production autoscaling. The goal is to show how observa
 
 The GitOps path is intentionally simple and reviewable:
 
-```text
-Terraform k3s bootstrap
-  -> Argo CD Application
-  -> Helm chart
-  -> Control API
-  -> Prometheus and Grafana visibility
+```mermaid
+flowchart LR
+    Dev["Developer"]
+    Git["Git Repository"]
+    Actions["GitHub Actions"]
+    Registry["Container Registry"]
+    Argo["Argo CD"]
+    Cluster["Kubernetes Cluster"]
+
+    Dev --> Git
+    Git --> Actions
+    Actions --> Registry
+    Registry --> Argo
+    Argo --> Cluster
 ```
 
 The repository keeps apply steps manual and review-oriented. This matches how platform teams normally introduce new infrastructure capabilities safely.

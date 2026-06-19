@@ -59,18 +59,16 @@ Example edge:
 
 ```mermaid
 flowchart LR
-  K3s["k3s cluster"] --> API["Control API"]
-  UI["OpenWebUI"] --> API
-  API --> Ollama["Ollama"]
-  API --> VLLM["vLLM"]
-  Prom["Prometheus"] --> API
-  Grafana["Grafana"] --> Prom
-  Grafana --> Loki["Loki"]
-  Loki --> API
-  Argo["Argo CD"] --> Helm["Helm chart"]
-  Helm --> API
-  Forecasting["Forecasting layer"] --> API
-  OPA["OPA policy gates"] --> Helm
+    Real["Real AI Cluster"]
+    Metrics["Telemetry"]
+    Twin["Digital Twin Model"]
+    Simulate["Scenario Simulation"]
+    Decision["Capacity Decision"]
+
+    Real --> Metrics
+    Metrics --> Twin
+    Twin --> Simulate
+    Simulate --> Decision
 ```
 
 ## Current Status
