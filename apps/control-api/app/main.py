@@ -1,15 +1,19 @@
 import os
+from collections import defaultdict
 from datetime import UTC, datetime
 from time import perf_counter
 from typing import Literal
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT_SECONDS = 2.0
+
+HTTP_REQUESTS_TOTAL: dict[tuple[str, str, int], int] = defaultdict(int)
+HTTP_REQUEST_LATENCY_MS_TOTAL: dict[tuple[str, str, int], float] = defaultdict(float)
 
 
 class HealthStatus(BaseModel):
@@ -143,6 +147,34 @@ def extract_ollama_models(payload: dict) -> list[OllamaModel]:
     ]
 
 
+def metric_label_value(value: str | int) -> str:
+    return str(value).replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
+
+def metric_labels(**labels: str | int) -> str:
+    rendered = ",".join(
+        f'{key}="{metric_label_value(value)}"' for key, value in labels.items()
+    )
+    return f"{{{rendered}}}" if rendered else ""
+
+
+def metric_line(name: str, value: int | float, **labels: str | int) -> str:
+    return f"{name}{metric_labels(**labels)} {value}"
+
+
+@app.middleware("http")
+async def record_http_metrics(request: Request, call_next):
+    started_at = perf_counter()
+    response = await call_next(request)
+    latency_ms = (perf_counter() - started_at) * 1000
+    metric_key = (request.method, request.url.path, response.status_code)
+
+    HTTP_REQUESTS_TOTAL[metric_key] += 1
+    HTTP_REQUEST_LATENCY_MS_TOTAL[metric_key] += latency_ms
+
+    return response
+
+
 @app.get("/health", response_model=HealthStatus)
 def health() -> HealthStatus:
     return HealthStatus(status="ok", checked_at=datetime.now(UTC).isoformat())
@@ -173,27 +205,110 @@ def metrics() -> str:
     models = get_model_inventory()
     capacity_status = get_capacity_status(models)
     cost_status = get_cost_status(models)
-    healthy_model_count = capacity_status.healthy_models
-    unhealthy_model_count = capacity_status.models - healthy_model_count
+    ollama_payload, ollama_latency_ms, ollama_error = fetch_ollama_tags()
+    ollama_models = extract_ollama_models(ollama_payload) if ollama_error is None else []
+    ollama_up = 1 if ollama_error is None else 0
 
     lines = [
-        "# HELP ai_control_plane_models_total Total configured AI models.",
-        "# TYPE ai_control_plane_models_total gauge",
-        f"ai_control_plane_models_total {capacity_status.models}",
-        "# HELP ai_control_plane_models_healthy Healthy AI models.",
-        "# TYPE ai_control_plane_models_healthy gauge",
-        f"ai_control_plane_models_healthy {healthy_model_count}",
-        "# HELP ai_control_plane_models_unhealthy Unhealthy AI models.",
-        "# TYPE ai_control_plane_models_unhealthy gauge",
-        f"ai_control_plane_models_unhealthy {unhealthy_model_count}",
-        "# HELP ai_control_plane_capacity_tokens_per_second Total model capacity.",
-        "# TYPE ai_control_plane_capacity_tokens_per_second gauge",
-        "ai_control_plane_capacity_tokens_per_second "
-        f"{capacity_status.total_capacity_tokens_per_second}",
-        "# HELP ai_control_plane_estimated_hourly_cost_usd Estimated hourly cost.",
-        "# TYPE ai_control_plane_estimated_hourly_cost_usd gauge",
-        f"ai_control_plane_estimated_hourly_cost_usd {cost_status.estimated_hourly_cost}",
+        "# HELP ai_control_http_requests_total Total HTTP requests.",
+        "# TYPE ai_control_http_requests_total counter",
     ]
+
+    for (method, path, status), count in sorted(HTTP_REQUESTS_TOTAL.items()):
+        lines.append(
+            metric_line(
+                "ai_control_http_requests_total",
+                count,
+                method=method,
+                path=path,
+                status=status,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_http_request_latency_ms Request latency in milliseconds.",
+            "# TYPE ai_control_http_request_latency_ms summary",
+        ]
+    )
+    for (method, path, status), latency_sum in sorted(
+        HTTP_REQUEST_LATENCY_MS_TOTAL.items()
+    ):
+        count = HTTP_REQUESTS_TOTAL[(method, path, status)]
+        lines.append(
+            metric_line(
+                "ai_control_http_request_latency_ms_sum",
+                round(latency_sum, 3),
+                method=method,
+                path=path,
+                status=status,
+            )
+        )
+        lines.append(
+            metric_line(
+                "ai_control_http_request_latency_ms_count",
+                count,
+                method=method,
+                path=path,
+                status=status,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_backend_up Backend health status.",
+            "# TYPE ai_control_backend_up gauge",
+            metric_line("ai_control_backend_up", ollama_up, backend="ollama"),
+            "# HELP ai_control_backend_latency_ms Backend probe latency in milliseconds.",
+            "# TYPE ai_control_backend_latency_ms gauge",
+            metric_line(
+                "ai_control_backend_latency_ms",
+                ollama_latency_ms,
+                backend="ollama",
+            ),
+            "# HELP ai_control_model_available Model availability by backend.",
+            "# TYPE ai_control_model_available gauge",
+        ]
+    )
+
+    for model in models:
+        lines.append(
+            metric_line(
+                "ai_control_model_available",
+                1 if model.healthy else 0,
+                backend=model.backend,
+                model=model.name,
+            )
+        )
+
+    for model in ollama_models:
+        lines.append(
+            metric_line(
+                "ai_control_model_available",
+                1,
+                backend="ollama",
+                model=model.name,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_capacity_available Total available model capacity.",
+            "# TYPE ai_control_capacity_available gauge",
+            metric_line(
+                "ai_control_capacity_available",
+                capacity_status.total_capacity_tokens_per_second,
+                unit="tokens_per_second",
+            ),
+            "# HELP ai_control_estimated_hourly_cost_usd Estimated hourly cost.",
+            "# TYPE ai_control_estimated_hourly_cost_usd gauge",
+            metric_line(
+                "ai_control_estimated_hourly_cost_usd",
+                cost_status.estimated_hourly_cost,
+            ),
+        ]
+    )
+
     return "\n".join(lines) + "\n"
 
 
