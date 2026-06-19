@@ -41,11 +41,23 @@ uvicorn app.main:app --reload
 Run tests:
 
 ```sh
-cd apps/control-api
-pytest
+make venv
+make test
 ```
 
 The project targets Python 3.12 for local development and CI.
+
+## Control API
+
+The initial control API exposes:
+
+- `GET /health` - operator-facing service health.
+- `GET /healthz` - Kubernetes-compatible health check.
+- `GET /models` - configured model backends and status.
+- `GET /metrics` - Prometheus-compatible text metrics.
+- `GET /capacity` - aggregate model serving capacity.
+- `GET /cost` - estimated hourly, daily, and monthly cost.
+- `GET /summary` - compact status for dashboards and demos.
 
 ## First Backlog
 
