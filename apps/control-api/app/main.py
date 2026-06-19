@@ -1,9 +1,15 @@
+import os
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Literal
 
+import httpx
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
+
+OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
+OLLAMA_TIMEOUT_SECONDS = 2.0
 
 
 class HealthStatus(BaseModel):
@@ -31,6 +37,36 @@ class CostStatus(BaseModel):
     estimated_hourly_cost: float
     estimated_daily_cost: float
     estimated_monthly_cost: float
+
+
+class BackendHealthStatus(BaseModel):
+    backend: Literal["ollama"]
+    base_url: str
+    healthy: bool
+    status: Literal["up", "down"]
+    latency_ms: int
+    error: str | None = None
+
+
+class OllamaModel(BaseModel):
+    name: str
+
+
+class OllamaModelsStatus(BaseModel):
+    backend: Literal["ollama"]
+    base_url: str
+    healthy: bool
+    models: list[OllamaModel]
+    error: str | None = None
+
+
+class BackendLatencyStatus(BaseModel):
+    backend: Literal["ollama"]
+    base_url: str
+    healthy: bool
+    latency_ms: int
+    measured_endpoint: str
+    error: str | None = None
 
 
 app = FastAPI(
@@ -72,6 +108,39 @@ def get_cost_status(models: list[ModelStatus]) -> CostStatus:
         estimated_daily_cost=round(hourly_cost * 24, 2),
         estimated_monthly_cost=round(hourly_cost * 24 * 30, 2),
     )
+
+
+def get_ollama_base_url() -> str:
+    return os.getenv("OLLAMA_BASE_URL", OLLAMA_DEFAULT_BASE_URL).rstrip("/")
+
+
+def fetch_ollama_tags() -> tuple[dict, int, str | None]:
+    base_url = get_ollama_base_url()
+    started_at = perf_counter()
+
+    try:
+        response = httpx.get(
+            f"{base_url}/api/tags",
+            timeout=OLLAMA_TIMEOUT_SECONDS,
+        )
+        latency_ms = round((perf_counter() - started_at) * 1000)
+        response.raise_for_status()
+        return response.json(), latency_ms, None
+    except httpx.HTTPError as exc:
+        latency_ms = round((perf_counter() - started_at) * 1000)
+        return {}, latency_ms, str(exc)
+
+
+def extract_ollama_models(payload: dict) -> list[OllamaModel]:
+    models = payload.get("models", [])
+    if not isinstance(models, list):
+        return []
+
+    return [
+        OllamaModel(name=model["name"])
+        for model in models
+        if isinstance(model, dict) and isinstance(model.get("name"), str)
+    ]
 
 
 @app.get("/health", response_model=HealthStatus)
@@ -126,6 +195,45 @@ def metrics() -> str:
         f"ai_control_plane_estimated_hourly_cost_usd {cost_status.estimated_hourly_cost}",
     ]
     return "\n".join(lines) + "\n"
+
+
+@app.get("/backends/ollama/health", response_model=BackendHealthStatus)
+def ollama_health() -> BackendHealthStatus:
+    _, latency_ms, error = fetch_ollama_tags()
+    healthy = error is None
+    return BackendHealthStatus(
+        backend="ollama",
+        base_url=get_ollama_base_url(),
+        healthy=healthy,
+        status="up" if healthy else "down",
+        latency_ms=latency_ms,
+        error=error,
+    )
+
+
+@app.get("/backends/ollama/models", response_model=OllamaModelsStatus)
+def ollama_models() -> OllamaModelsStatus:
+    payload, _, error = fetch_ollama_tags()
+    return OllamaModelsStatus(
+        backend="ollama",
+        base_url=get_ollama_base_url(),
+        healthy=error is None,
+        models=extract_ollama_models(payload) if error is None else [],
+        error=error,
+    )
+
+
+@app.get("/backends/ollama/latency", response_model=BackendLatencyStatus)
+def ollama_latency() -> BackendLatencyStatus:
+    _, latency_ms, error = fetch_ollama_tags()
+    return BackendLatencyStatus(
+        backend="ollama",
+        base_url=get_ollama_base_url(),
+        healthy=error is None,
+        latency_ms=latency_ms,
+        measured_endpoint="/api/tags",
+        error=error,
+    )
 
 
 @app.get("/summary")
