@@ -1,10 +1,21 @@
 # AI Infrastructure Control Plane
 
-A Kubernetes-native platform for operating private AI workloads, including model serving, observability, security, GitOps deployment, cost tracking, and capacity management.
+A Kubernetes-native platform for operating private AI workloads with observability, forecasting, GitOps delivery, security policy, cost governance, risk scoring, and human approval gates.
 
-The project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, metrics, dashboards, security checks, and operational readiness.
+This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.
 
-Each directory is a real engineering surface that can grow through focused pull requests: API, Helm, Terraform, observability, security, GitOps, and CI/CD.
+The core workflow is:
+
+```text
+AI request
+  -> telemetry
+  -> cost decision
+  -> risk score
+  -> approval decision
+  -> final verdict
+```
+
+Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
 ## Scope
 
@@ -16,6 +27,7 @@ Each directory is a real engineering surface that can grow through focused pull 
 - Add security and quality gates through GitHub Actions.
 - Add observability with Prometheus, Grafana, and future log signals.
 - Explore experimental forecasting for latency, load, capacity, and cost signals.
+- Evaluate AI governance decisions through cost controls, risk scoring, and approval gates.
 - Grow through weekly issues and pull requests instead of empty commits.
 
 ## Repository Layout
@@ -45,7 +57,9 @@ security/
   opa/                Kubernetes policy gates for rendered manifests
 docs/
   architecture.md     System design notes
+  case-study.md       Portfolio case study and demo flow
   digital-twin.md     AI infrastructure topology model
+  platform-architecture.md Technical platform architecture
 ```
 
 ## Local Development
@@ -124,6 +138,18 @@ Core metrics:
 `governance/cost`, `governance/risk`, and `governance/approval` model cost control, risk scoring, and human approval gates for private AI infrastructure.
 
 `governance/pipeline` connects those signals into an end-to-end decision flow: request telemetry, cost decision, risk score, approval decision, and final verdict.
+
+Run the demo pipeline:
+
+```sh
+python3.12 governance/pipeline/run_pipeline.py \
+  --requests governance/pipeline/sample_requests.csv
+```
+
+## Portfolio Docs
+
+- `docs/case-study.md` explains the problem, architecture, capabilities, governance pipeline, observability, forecasting, GitOps, security, and demo flow.
+- `docs/platform-architecture.md` describes the system boundary, logical layers, control API, governance architecture, delivery path, and extension points.
 
 ## First Backlog
 
