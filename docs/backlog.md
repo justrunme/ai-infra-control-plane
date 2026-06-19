@@ -36,20 +36,24 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Use semantic tags and commit SHA tags.
    - Keep tests before publish.
 
+7. Add TimesFM forecasting prototype
+   - Add an experimental forecasting module under `forecasting/timesfm`.
+   - Forecast latency, request rate, capacity, and estimated hourly cost.
+   - Keep it separate from the control API and Helm chart.
+
 ## Week 3
 
-7. Add vLLM backend probe
+8. Add vLLM backend probe
    - Add OpenAI-compatible health and model listing checks.
    - Add timeout and circuit-breaker behavior.
    - Add tests for degraded backend status.
 
-8. Add Terraform example environment
+9. Add Terraform example environment
    - Add a complete example using the Hetzner VM module.
    - Document required variables and secrets.
    - Keep apply steps manual.
 
-9. Add security policy checks
+10. Add security policy checks
    - Add Trivy IaC examples.
    - Add baseline Kubernetes policy notes.
    - Add future OPA/Gatekeeper roadmap.
-

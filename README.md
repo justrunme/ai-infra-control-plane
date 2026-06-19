@@ -15,6 +15,7 @@ Each directory is a real engineering surface that can grow through focused pull 
 - Add GitOps deployment examples through Argo CD.
 - Add security and quality gates through GitHub Actions.
 - Add observability with Prometheus, Grafana, and future log signals.
+- Explore experimental forecasting for latency, load, capacity, and cost signals.
 - Grow through weekly issues and pull requests instead of empty commits.
 
 ## Repository Layout
@@ -27,6 +28,8 @@ infra/
   terraform/          Cloud bootstrap modules
 observability/
   grafana/            Dashboards and metrics notes
+forecasting/
+  timesfm/            Experimental capacity forecasting prototype
 security/
   trivy/              Container and IaC scan configuration
 docs/
