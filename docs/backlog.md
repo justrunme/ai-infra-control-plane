@@ -84,3 +84,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Evaluate model usage, token spend, and forecasted monthly cost.
    - Return allow, warn, or block decisions with reasons.
    - Keep the prototype offline until gateway enforcement exists.
+
+16. Add AI approval workflow prototype
+   - Evaluate high-risk AI platform requests before execution.
+   - Return allow, approval_required, or block decisions with reasons.
+   - Keep the prototype offline until gateway or GitOps enforcement exists.

@@ -37,6 +37,7 @@ experiments/
   inference-autoscaling/ Forecast-driven inference scaling recommendations
 governance/
   cost/               AI cost governance policy engine
+  approval/           Human approval workflow prototype
 security/
   trivy/              Container and IaC scan configuration
   opa/                Kubernetes policy gates for rendered manifests
@@ -111,6 +112,10 @@ Core metrics:
 ### AI Cost Governance
 
 `governance/cost` evaluates model usage, team budgets, token spend, and forecasted monthly cost into `allow`, `warn`, or `block` decisions.
+
+### AI Approval Workflow
+
+`governance/approval` evaluates high-risk AI platform requests into `allow`, `approval_required`, or `block` decisions for human approval gates.
 
 ## First Backlog
 
