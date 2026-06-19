@@ -1,0 +1,259 @@
+{
+  "source": "observability/otel-genai/sample_requests.csv",
+  "schema": "otel-genai-prototype",
+  "span_count": 8,
+  "spans": [
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00101",
+      "span_id": "0000000000000001",
+      "start_time": "2026-06-19T00:00:00Z",
+      "duration_ms": 820.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "ollama",
+        "gen_ai.request.model": "llama3.1:8b",
+        "gen_ai.response.model": "llama3.1:8b",
+        "gen_ai.usage.input_tokens": 420,
+        "gen_ai.usage.output_tokens": 190,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.2,
+        "gen_ai.request.max_tokens": 512,
+        "ai_control.estimated_cost_usd": 0.0,
+        "ai_control.team": "platform",
+        "ai_control.backend": "ollama",
+        "ai_control.tool_calls": 0
+      }
+    },
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00102",
+      "span_id": "0000000000000002",
+      "start_time": "2026-06-19T00:05:00Z",
+      "duration_ms": 1240.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "vllm",
+        "gen_ai.request.model": "qwen2.5:14b",
+        "gen_ai.response.model": "qwen2.5:14b",
+        "gen_ai.usage.input_tokens": 860,
+        "gen_ai.usage.output_tokens": 420,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.3,
+        "gen_ai.request.max_tokens": 1024,
+        "ai_control.estimated_cost_usd": 0.0062,
+        "ai_control.team": "platform",
+        "ai_control.backend": "vllm",
+        "ai_control.tool_calls": 1
+      }
+    },
+    {
+      "name": "gen_ai.generate_content",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00103",
+      "span_id": "0000000000000003",
+      "start_time": "2026-06-19T00:10:00Z",
+      "duration_ms": 1680.0,
+      "attributes": {
+        "gen_ai.operation.name": "generate_content",
+        "gen_ai.provider.name": "vllm",
+        "gen_ai.request.model": "gemma-3-12b",
+        "gen_ai.response.model": "gemma-3-12b",
+        "gen_ai.usage.input_tokens": 1180,
+        "gen_ai.usage.output_tokens": 620,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.4,
+        "gen_ai.request.max_tokens": 1200,
+        "ai_control.estimated_cost_usd": 0.0114,
+        "ai_control.team": "search",
+        "ai_control.backend": "vllm",
+        "ai_control.tool_calls": 2
+      }
+    },
+    {
+      "name": "gen_ai.text_completion",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00104",
+      "span_id": "0000000000000004",
+      "start_time": "2026-06-19T00:15:00Z",
+      "duration_ms": 2140.0,
+      "attributes": {
+        "gen_ai.operation.name": "text_completion",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-4.1-mini",
+        "gen_ai.response.model": "gpt-4.1-mini",
+        "gen_ai.usage.input_tokens": 1520,
+        "gen_ai.usage.output_tokens": 740,
+        "gen_ai.response.finish_reasons": [
+          "length"
+        ],
+        "gen_ai.request.temperature": 0.1,
+        "gen_ai.request.max_tokens": 1500,
+        "ai_control.estimated_cost_usd": 0.0268,
+        "ai_control.team": "mlops",
+        "ai_control.backend": "external",
+        "ai_control.tool_calls": 0
+      }
+    },
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00105",
+      "span_id": "0000000000000005",
+      "start_time": "2026-06-19T00:20:00Z",
+      "duration_ms": 2480.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "anthropic",
+        "gen_ai.request.model": "claude-3.7-sonnet",
+        "gen_ai.response.model": "claude-3.7-sonnet",
+        "gen_ai.usage.input_tokens": 1840,
+        "gen_ai.usage.output_tokens": 930,
+        "gen_ai.response.finish_reasons": [
+          "tool_calls"
+        ],
+        "gen_ai.request.temperature": 0.2,
+        "gen_ai.request.max_tokens": 1800,
+        "ai_control.estimated_cost_usd": 0.0417,
+        "ai_control.team": "mlops",
+        "ai_control.backend": "external",
+        "ai_control.tool_calls": 3
+      }
+    },
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00106",
+      "span_id": "0000000000000006",
+      "start_time": "2026-06-19T00:25:00Z",
+      "duration_ms": 910.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "ollama",
+        "gen_ai.request.model": "llama3.1:8b",
+        "gen_ai.response.model": "llama3.1:8b",
+        "gen_ai.usage.input_tokens": 510,
+        "gen_ai.usage.output_tokens": 260,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.2,
+        "gen_ai.request.max_tokens": 512,
+        "ai_control.estimated_cost_usd": 0.0,
+        "ai_control.team": "platform",
+        "ai_control.backend": "ollama",
+        "ai_control.tool_calls": 0
+      }
+    },
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00107",
+      "span_id": "0000000000000007",
+      "start_time": "2026-06-19T00:30:00Z",
+      "duration_ms": 1760.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "vllm",
+        "gen_ai.request.model": "qwen2.5:14b",
+        "gen_ai.response.model": "qwen2.5:14b",
+        "gen_ai.usage.input_tokens": 1320,
+        "gen_ai.usage.output_tokens": 700,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.3,
+        "gen_ai.request.max_tokens": 1200,
+        "ai_control.estimated_cost_usd": 0.0141,
+        "ai_control.team": "search",
+        "ai_control.backend": "vllm",
+        "ai_control.tool_calls": 1
+      }
+    },
+    {
+      "name": "gen_ai.chat",
+      "trace_id": "9f4f0f0c8a8c4f1ba59d1b3b01f00108",
+      "span_id": "0000000000000008",
+      "start_time": "2026-06-19T00:35:00Z",
+      "duration_ms": 3290.0,
+      "attributes": {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-4.1",
+        "gen_ai.response.model": "gpt-4.1",
+        "gen_ai.usage.input_tokens": 2480,
+        "gen_ai.usage.output_tokens": 1180,
+        "gen_ai.response.finish_reasons": [
+          "stop"
+        ],
+        "gen_ai.request.temperature": 0.1,
+        "gen_ai.request.max_tokens": 2200,
+        "ai_control.estimated_cost_usd": 0.0832,
+        "ai_control.team": "finance",
+        "ai_control.backend": "external",
+        "ai_control.tool_calls": 2
+      }
+    }
+  ],
+  "metrics": {
+    "requests_total": 8,
+    "models": {
+      "claude-3.7-sonnet": {
+        "requests": 1,
+        "input_tokens": 1840,
+        "output_tokens": 930,
+        "tool_calls": 3,
+        "estimated_cost_usd": 0.0417,
+        "avg_latency_ms": 2480.0
+      },
+      "gemma-3-12b": {
+        "requests": 1,
+        "input_tokens": 1180,
+        "output_tokens": 620,
+        "tool_calls": 2,
+        "estimated_cost_usd": 0.0114,
+        "avg_latency_ms": 1680.0
+      },
+      "gpt-4.1": {
+        "requests": 1,
+        "input_tokens": 2480,
+        "output_tokens": 1180,
+        "tool_calls": 2,
+        "estimated_cost_usd": 0.0832,
+        "avg_latency_ms": 3290.0
+      },
+      "gpt-4.1-mini": {
+        "requests": 1,
+        "input_tokens": 1520,
+        "output_tokens": 740,
+        "tool_calls": 0,
+        "estimated_cost_usd": 0.0268,
+        "avg_latency_ms": 2140.0
+      },
+      "llama3.1:8b": {
+        "requests": 2,
+        "input_tokens": 930,
+        "output_tokens": 450,
+        "tool_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "avg_latency_ms": 865.0
+      },
+      "qwen2.5:14b": {
+        "requests": 2,
+        "input_tokens": 2180,
+        "output_tokens": 1120,
+        "tool_calls": 2,
+        "estimated_cost_usd": 0.0203,
+        "avg_latency_ms": 1500.0
+      }
+    },
+    "team_cost_usd": {
+      "finance": 0.0832,
+      "mlops": 0.0685,
+      "platform": 0.0062,
+      "search": 0.0255
+    },
+    "estimated_cost_usd_total": 0.1834
+  }
+}

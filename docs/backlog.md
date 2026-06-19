@@ -69,3 +69,8 @@ Use this backlog to create small, reviewable pull requests. Each item should pro
    - Forecast request load, p95 latency, and token throughput from sample metrics.
    - Recommend replicas before private AI inference workloads hit limits.
    - Keep the simulator offline and separate from the production Helm chart.
+
+13. Add OpenTelemetry GenAI telemetry prototype
+   - Emit GenAI-style spans for model requests, token usage, tool calls, latency, and cost.
+   - Keep prompt and response content out of the prototype artifact.
+   - Document semantic attributes for future collector integration.
