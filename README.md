@@ -29,6 +29,7 @@ infra/
     k3s-bootstrap/    Example Hetzner VM bootstrap with cloud-init and k3s
 observability/
   grafana/            Dashboards and metrics notes
+  loki/               Loki and Promtail logging examples
 forecasting/
   timesfm/            Experimental capacity forecasting prototype
 security/
