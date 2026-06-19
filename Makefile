@@ -10,7 +10,7 @@ test:
 	. .venv/bin/activate && cd apps/control-api && PYTHONPATH=. pytest
 
 lint:
-	$(PYTHON) -m compileall apps/control-api/app apps/control-api/tests forecasting/timesfm
+	$(PYTHON) -m compileall apps/control-api/app apps/control-api/tests forecasting/timesfm experiments/inference-autoscaling
 
 docker-build:
 	docker build -t ai-infra-control-plane:local apps/control-api
