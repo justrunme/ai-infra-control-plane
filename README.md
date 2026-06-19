@@ -1,15 +1,20 @@
 # AI Infrastructure Control Plane
 
-Portfolio-grade control plane for running local and private AI inference on Kubernetes.
+A Kubernetes-native platform for operating private AI workloads, including model serving, observability, security, GitOps deployment, cost tracking, and capacity management.
 
-The project is intentionally small at the start, but each directory is a real engineering surface that can grow through focused pull requests: API, Helm, Terraform, observability, security, and GitHub Actions.
+The project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, metrics, dashboards, security checks, and operational readiness.
+
+Each directory is a real engineering surface that can grow through focused pull requests: API, Helm, Terraform, observability, security, GitOps, and CI/CD.
 
 ## Scope
 
-- Expose a control API for model gateway health, latency, capacity, and cost signals.
+- Expose a control API for private AI backend health, latency, capacity, and cost signals.
+- Monitor local and Kubernetes-hosted inference backends such as Ollama and vLLM.
 - Package the API with Docker and Helm.
 - Provision a small VM baseline with Terraform.
+- Add GitOps deployment examples through Argo CD.
 - Add security and quality gates through GitHub Actions.
+- Add observability with Prometheus, Grafana, and future log signals.
 - Grow through weekly issues and pull requests instead of empty commits.
 
 ## Repository Layout
@@ -49,7 +54,7 @@ The project targets Python 3.12 for local development and CI.
 
 ## Control API
 
-The initial control API exposes:
+The control API exposes operator-facing signals for private AI infrastructure:
 
 - `GET /health` - operator-facing service health.
 - `GET /healthz` - Kubernetes-compatible health check.
@@ -89,8 +94,11 @@ Core metrics:
 
 ## First Backlog
 
-- Add real vLLM and Ollama backend probes.
+- Add vLLM backend probes.
+- Add OpenWebUI service health checks.
 - Add a Grafana dashboard for request latency and model availability.
 - Add Argo CD application manifests.
 - Add horizontal pod autoscaling based on CPU and request latency.
+- Add Loki log collection examples.
+- Add OPA policy checks for Kubernetes manifests.
 - Add Terraform examples for Hetzner and local k3s bootstrap.
