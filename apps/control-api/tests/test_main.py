@@ -1,3 +1,4 @@
+import httpx
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -67,3 +68,83 @@ def test_summary() -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "ready"
     assert response.json()["healthy_models"] == 1
+
+
+def test_ollama_health(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        assert url == "http://ollama.local:11434/api/tags"
+        assert timeout == 2.0
+        return httpx.Response(
+            200,
+            json={"models": []},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.local:11434")
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/ollama/health")
+
+    assert response.status_code == 200
+    assert response.json()["backend"] == "ollama"
+    assert response.json()["base_url"] == "http://ollama.local:11434"
+    assert response.json()["healthy"] is True
+    assert response.json()["status"] == "up"
+
+
+def test_ollama_models(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "models": [
+                    {"name": "llama3.1:8b"},
+                    {"name": "mistral:7b"},
+                    {"digest": "missing-name"},
+                ]
+            },
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/ollama/models")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is True
+    assert response.json()["models"] == [
+        {"name": "llama3.1:8b"},
+        {"name": "mistral:7b"},
+    ]
+
+
+def test_ollama_latency(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"models": []},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/ollama/latency")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is True
+    assert response.json()["measured_endpoint"] == "/api/tags"
+    assert isinstance(response.json()["latency_ms"], int)
+
+
+def test_ollama_health_reports_down_on_error(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/ollama/health")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is False
+    assert response.json()["status"] == "down"
+    assert "connection refused" in response.json()["error"]

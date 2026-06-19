@@ -59,6 +59,20 @@ The initial control API exposes:
 - `GET /cost` - estimated hourly, daily, and monthly cost.
 - `GET /summary` - compact status for dashboards and demos.
 
+### Ollama Backend Probe
+
+Set `OLLAMA_BASE_URL` to point the control API at an Ollama backend:
+
+```sh
+export OLLAMA_BASE_URL=http://localhost:11434
+```
+
+The API exposes:
+
+- `GET /backends/ollama/health` - backend reachability and status.
+- `GET /backends/ollama/models` - model names returned by Ollama `/api/tags`.
+- `GET /backends/ollama/latency` - lightweight latency measurement for `/api/tags`.
+
 ## First Backlog
 
 - Add real vLLM and Ollama backend probes.
