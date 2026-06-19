@@ -30,6 +30,7 @@ infra/
 observability/
   grafana/            Dashboards and metrics notes
   loki/               Loki and Promtail logging examples
+  otel-genai/         OpenTelemetry GenAI telemetry prototype
 forecasting/
   timesfm/            Experimental capacity forecasting prototype
 experiments/

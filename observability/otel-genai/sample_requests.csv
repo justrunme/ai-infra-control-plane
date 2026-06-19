@@ -1,0 +1,9 @@
+timestamp,trace_id,span_id,team,provider,backend,operation,request_model,response_model,input_tokens,output_tokens,latency_ms,tool_calls,temperature,max_tokens,estimated_cost_usd,finish_reason
+2026-06-19T00:00:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00101,0000000000000001,platform,ollama,ollama,chat,llama3.1:8b,llama3.1:8b,420,190,820,0,0.2,512,0.0000,stop
+2026-06-19T00:05:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00102,0000000000000002,platform,vllm,vllm,chat,qwen2.5:14b,qwen2.5:14b,860,420,1240,1,0.3,1024,0.0062,stop
+2026-06-19T00:10:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00103,0000000000000003,search,vllm,vllm,generate_content,gemma-3-12b,gemma-3-12b,1180,620,1680,2,0.4,1200,0.0114,stop
+2026-06-19T00:15:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00104,0000000000000004,mlops,openai,external,text_completion,gpt-4.1-mini,gpt-4.1-mini,1520,740,2140,0,0.1,1500,0.0268,length
+2026-06-19T00:20:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00105,0000000000000005,mlops,anthropic,external,chat,claude-3.7-sonnet,claude-3.7-sonnet,1840,930,2480,3,0.2,1800,0.0417,tool_calls
+2026-06-19T00:25:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00106,0000000000000006,platform,ollama,ollama,chat,llama3.1:8b,llama3.1:8b,510,260,910,0,0.2,512,0.0000,stop
+2026-06-19T00:30:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00107,0000000000000007,search,vllm,vllm,chat,qwen2.5:14b,qwen2.5:14b,1320,700,1760,1,0.3,1200,0.0141,stop
+2026-06-19T00:35:00Z,9f4f0f0c8a8c4f1ba59d1b3b01f00108,0000000000000008,finance,openai,external,chat,gpt-4.1,gpt-4.1,2480,1180,3290,2,0.1,2200,0.0832,stop
