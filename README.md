@@ -29,7 +29,50 @@ Read the portfolio overview in `docs/case-study.md` and the technical system des
 
 ### Platform Overview
 
-![AI Infrastructure Control Plane architecture](docs/images/architecture.png)
+```mermaid
+flowchart TB
+    User["AI Consumer"]
+    API["Control API<br/>FastAPI"]
+
+    subgraph ControlPlane["AI Infrastructure Control Plane"]
+        Capacity["Capacity Planner"]
+        Cost["Cost Governance"]
+        Risk["Risk Scoring"]
+        Approval["Approval Engine"]
+        Twin["Digital Twin"]
+    end
+
+    subgraph AI["AI Workloads"]
+        Ollama["Ollama"]
+        VLLM["vLLM"]
+        Models["Foundation Models"]
+    end
+
+    subgraph Observability["Observability"]
+        OTel["OpenTelemetry"]
+        Prom["Prometheus"]
+        Graf["Grafana"]
+        Loki["Loki"]
+    end
+
+    User --> API
+    API --> Capacity
+    API --> Cost
+    API --> Risk
+    API --> Approval
+    API --> Twin
+    Capacity --> Ollama
+    Capacity --> VLLM
+    Ollama --> Models
+    VLLM --> Models
+    Ollama --> OTel
+    VLLM --> OTel
+    OTel --> Prom
+    OTel --> Loki
+    Prom --> Graf
+    Loki --> Graf
+    Twin --> Graf
+```
 
 ### Governance Flow
 
