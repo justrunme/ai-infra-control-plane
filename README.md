@@ -17,6 +17,24 @@ AI request
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
+## Visual Overview
+
+### Platform Overview
+
+![AI Infrastructure Control Plane architecture](docs/images/architecture.png)
+
+### Governance Flow
+
+![End-to-end AI governance pipeline](docs/images/governance-pipeline.png)
+
+### Digital Twin
+
+![AI infrastructure digital twin](docs/images/digital-twin.png)
+
+### Forecast-driven Scaling And Observability
+
+![GenAI observability stack](docs/images/observability-stack.png)
+
 ## Scope
 
 - Expose a control API for private AI backend health, latency, capacity, and cost signals.
