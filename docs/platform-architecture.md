@@ -95,6 +95,8 @@ OpenTelemetry GenAI telemetry is included as a prototype for model name, token u
 
 ## Forecasting And Capacity Planning
 
+> **Video walkthrough** | [Watch the 10-second forecast-driven scaling walkthrough](videos/forecast-driven-scaling.mp4)
+
 Forecasting is intentionally isolated from production deployment paths:
 
 - TimesFM prototype forecasts latency, request rate, capacity, and hourly cost from sample metrics;
@@ -102,6 +104,12 @@ Forecasting is intentionally isolated from production deployment paths:
 - Helm autoscaling remains conservative and Kubernetes-native.
 
 This separation keeps the production chart understandable while showing where predictive operations can evolve.
+
+## Digital Twin
+
+> **Video walkthrough** | [Watch the 10-second digital twin walkthrough](videos/digital-twin.mp4)
+
+The digital twin represents a live topology model for private AI platform components, their dependencies, health, telemetry, and operational signals. It provides the context needed to evaluate capacity planning scenarios before applying a change to the real AI cluster.
 
 ## Governance Architecture
 
