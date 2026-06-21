@@ -29,6 +29,20 @@ AI request
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
+## Product Walkthroughs
+
+### Governance Decision Flow
+
+[![Animated preview of the AI governance decision flow](docs/videos/previews/governance-pipeline.gif)](docs/videos/governance-pipeline.mp4)
+
+### AI Infrastructure Digital Twin
+
+[![Animated preview of the AI infrastructure digital twin](docs/videos/previews/digital-twin.gif)](docs/videos/digital-twin.mp4)
+
+### Forecast-driven Scaling
+
+[![Animated preview of forecast-driven scaling](docs/videos/previews/forecast-driven-scaling.gif)](docs/videos/forecast-driven-scaling.mp4)
+
 ## Visual Overview
 
 ### Platform Overview
