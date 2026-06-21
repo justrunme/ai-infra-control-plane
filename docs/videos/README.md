@@ -1,6 +1,6 @@
 # Product Videos
 
-These H.264 MP4 walkthroughs complement the written architecture and keep the portfolio presentation concise. GitHub opens each file in its built-in media viewer. Short animated previews in `previews/` render directly in Markdown and link to the full MP4 files.
+These H.264 MP4 walkthroughs complement the written architecture and keep the portfolio presentation concise. GitHub opens each file in its built-in media viewer. Full animated previews in `previews/` render directly in Markdown and link to the corresponding MP4 files.
 
 | Video | Duration | Placement |
 | --- | --- | --- |
