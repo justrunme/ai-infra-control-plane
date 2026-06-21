@@ -8,6 +8,8 @@
 ![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+> **Product walkthrough** | [Watch the 10-second platform overview](docs/videos/hero-overview.mp4)
+
 A Kubernetes-native platform for operating private AI workloads with observability, forecasting, GitOps delivery, security policy, cost governance, risk scoring, and human approval gates.
 
 This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.

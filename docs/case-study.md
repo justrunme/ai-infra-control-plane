@@ -80,6 +80,8 @@ flowchart TB
 
 ## Governance Pipeline
 
+> **Video walkthrough** | [Watch the 10-second governance decision flow](videos/governance-pipeline.mp4)
+
 The strongest part of the project is the AI governance layer:
 
 ```mermaid
