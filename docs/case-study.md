@@ -80,7 +80,9 @@ flowchart TB
 
 ## Governance Pipeline
 
-> **Video walkthrough** | [Watch the 10-second governance decision flow](videos/governance-pipeline.mp4)
+> **Video walkthrough** | Click the animated preview to watch the full 10-second governance decision flow.
+
+[![Animated preview of the AI governance decision flow](videos/previews/governance-pipeline.gif)](videos/governance-pipeline.mp4)
 
 The strongest part of the project is the AI governance layer:
 

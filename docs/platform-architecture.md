@@ -95,7 +95,9 @@ OpenTelemetry GenAI telemetry is included as a prototype for model name, token u
 
 ## Forecasting And Capacity Planning
 
-> **Video walkthrough** | [Watch the 10-second forecast-driven scaling walkthrough](videos/forecast-driven-scaling.mp4)
+> **Video walkthrough** | Click the animated preview to watch the full 10-second forecast-driven scaling walkthrough.
+
+[![Animated preview of forecast-driven scaling](videos/previews/forecast-driven-scaling.gif)](videos/forecast-driven-scaling.mp4)
 
 Forecasting is intentionally isolated from production deployment paths:
 
@@ -107,7 +109,9 @@ This separation keeps the production chart understandable while showing where pr
 
 ## Digital Twin
 
-> **Video walkthrough** | [Watch the 10-second digital twin walkthrough](videos/digital-twin.mp4)
+> **Video walkthrough** | Click the animated preview to watch the full 10-second digital twin walkthrough.
+
+[![Animated preview of the AI infrastructure digital twin](videos/previews/digital-twin.gif)](videos/digital-twin.mp4)
 
 The digital twin represents a live topology model for private AI platform components, their dependencies, health, telemetry, and operational signals. It provides the context needed to evaluate capacity planning scenarios before applying a change to the real AI cluster.
 

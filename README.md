@@ -8,7 +8,9 @@
 ![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **Product walkthrough** | [Watch the 10-second platform overview](docs/videos/hero-overview.mp4)
+> **Product walkthrough** | Click the animated preview to watch the full 10-second platform overview.
+
+[![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
 
 A Kubernetes-native platform for operating private AI workloads with observability, forecasting, GitOps delivery, security policy, cost governance, risk scoring, and human approval gates.
 
