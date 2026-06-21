@@ -29,6 +29,17 @@ AI request
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
+## How the Projects Fit Together
+
+This repository is part of a larger AI Platform portfolio. Read the [portfolio overview](docs/portfolio-overview.md) for the full architecture.
+
+| Layer | Responsibility | Repository |
+| --- | --- | --- |
+| **AI Infrastructure Control Plane** | Observes, governs, forecasts, and operates AI workloads through telemetry, policy, cost control, risk scoring, approvals, digital twin topology, and GitOps. | [justrunme/ai-infra-control-plane](https://github.com/justrunme/ai-infra-control-plane) |
+| **AI Runtime Platform** | Executes private LLM inference through an OpenAI-compatible gateway, model routing, vLLM/Ollama, KServe, and KEDA. | [justrunme/ai-runtime-platform](https://github.com/justrunme/ai-runtime-platform) |
+
+The Runtime Platform executes AI workloads. The Control Plane uses their operational signals to observe, govern, predict, and control the platform.
+
 ## Product Walkthroughs
 
 ### Governance Decision Flow
