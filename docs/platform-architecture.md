@@ -70,14 +70,16 @@ flowchart TB
 
 The control API is the operator-facing interface for platform state:
 
+- `/` for the live operator dashboard (HTML);
 - `/health` and `/healthz` for service health;
-- `/models` for configured model backend inventory;
+- `/models` for configuration-driven model backend inventory (`MODEL_INVENTORY_PATH`);
 - `/backends/ollama/health`, `/models`, and `/latency` for Ollama probes;
+- `/backends/vllm/health`, `/models`, and `/latency` for vLLM OpenAI-compatible probes;
 - `/metrics` for Prometheus-compatible metrics;
 - `/capacity` for aggregate serving capacity;
 - `/cost` for estimated hourly, daily, and monthly cost;
 - `/summary` for dashboard-oriented status;
-- `/topology` for the digital twin graph.
+- `/topology` for the digital twin graph with live Ollama and vLLM probe health.
 
 ## Observability Architecture
 
@@ -168,24 +170,25 @@ flowchart LR
     Argo --> Cluster
 ```
 
-The repository includes a Terraform k3s bootstrap example, Argo CD application manifest, Helm chart, and policy checks against rendered Kubernetes manifests.
+The repository includes a Terraform k3s bootstrap example, Argo CD application manifest, production-hardened Helm chart (ServiceAccount, ConfigMap inventory, PDB, optional ServiceMonitor/Ingress/NetworkPolicy), and policy checks against rendered Kubernetes manifests. Container images are built and pushed to GHCR on every merge to `main`, signed with cosign, and accompanied by an SPDX SBOM.
 
 ## Security Controls
 
 Security controls are split into CI, manifest, and AI-operation layers:
 
-- Trivy scans repository files in GitHub Actions;
-- OPA policies validate rendered Kubernetes manifests;
-- Helm chart defaults avoid obvious unsafe deployment patterns;
+- Trivy scans repository files and container images in GitHub Actions;
+- Hadolint validates the control API Dockerfile;
+- OPA unit tests and Conftest validate rendered Kubernetes manifests;
+- Helm chart defaults avoid obvious unsafe deployment patterns (non-root, read-only root FS, dropped capabilities);
+- Release workflow publishes cosign-signed images with SBOM artifacts;
 - governance modules block or require review for unsafe AI operations.
 
 ## Extension Points
 
 The next realistic extensions are:
 
-- vLLM backend probe;
-- OpenWebUI deployment notes;
-- model gateway enforcement point;
+- OpenWebUI deployment notes and health checks;
+- model gateway enforcement point for governance verdicts;
 - live Prometheus query integration for governance inputs;
 - GitHub environment or Argo CD approval integration;
-- screenshots or exported Grafana panels for the portfolio README.
+- probe result caching to reduce synchronous backend calls on `/metrics` and `/topology`.

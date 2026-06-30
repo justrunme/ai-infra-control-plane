@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Infrastructure Control Plane</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #131a30;
+        --panel-2: #1b2440;
+        --border: #243150;
+        --text: #e6ecff;
+        --muted: #8a97bd;
+        --accent: #4f8cff;
+        --ok: #2ecc71;
+        --warn: #f1c40f;
+        --bad: #e74c3c;
+        --unknown: #6b7aa3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(1200px 600px at 80% -10%, #16224a 0, transparent 60%), var(--bg);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 28px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(79,140,255,0.08), transparent);
+      }
+      header h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }
+      header .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 13px;
+        border: 1px solid var(--border); background: var(--panel);
+      }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--unknown); }
+      .dot.ok { background: var(--ok); box-shadow: 0 0 10px rgba(46,204,113,0.7); }
+      .dot.warn { background: var(--warn); }
+      .dot.bad { background: var(--bad); }
+      main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
+      .grid { display: grid; gap: 16px; }
+      .cards { grid-template-columns: repeat(4, 1fr); margin-bottom: 24px; }
+      .card {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 14px; padding: 18px 20px;
+      }
+      .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+      .card .value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+      .card .unit { color: var(--muted); font-size: 13px; font-weight: 500; }
+      section h2 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin: 28px 0 14px; }
+      .nodes { grid-template-columns: repeat(3, 1fr); }
+      .node {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 12px; padding: 14px 16px;
+      }
+      .node .top { display: flex; align-items: center; justify-content: space-between; }
+      .node .name { font-weight: 600; }
+      .node .kind { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .node .signals { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip { font-size: 11px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; }
+      table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+      th, td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+      th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+      tr:last-child td { border-bottom: none; }
+      .backend { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; }
+      footer { color: var(--muted); font-size: 12px; padding: 24px 28px; border-top: 1px solid var(--border); display: flex; gap: 18px; }
+      footer a { color: var(--accent); text-decoration: none; }
+      .muted { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>AI Infrastructure Control Plane</h1>
+        <div class="sub">Operator dashboard · live platform telemetry</div>
+      </div>
+      <div class="pill"><span id="status-dot" class="dot"></span><span id="status-text">connecting…</span></div>
+    </header>
+
+    <main>
+      <div class="grid cards" id="cards"></div>
+
+      <section>
+        <h2>Platform Topology</h2>
+        <div class="grid nodes" id="nodes"></div>
+      </section>
+
+      <section>
+        <h2>Model Inventory</h2>
+        <table id="models">
+          <thead>
+            <tr><th>Model</th><th>Backend</th><th>Health</th><th>Capacity (tok/s)</th><th>Latency (ms)</th><th>Cost ($/h)</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      <span class="muted">Auto-refresh every 5s</span>
+      <a href="/docs">API docs</a>
+      <a href="/metrics">Metrics</a>
+      <a href="/topology">Topology JSON</a>
+      <span id="updated" class="muted"></span>
+    </footer>
+
+    <script>
+      const healthClass = (h) => h === "healthy" ? "ok" : h === "degraded" ? "bad" : "unknown";
+
+      async function getJSON(path) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(path + " -> " + res.status);
+        return res.json();
+      }
+
+      function renderCards(summary) {
+        const ready = summary.status === "ready";
+        document.getElementById("status-dot").className = "dot " + (ready ? "ok" : "warn");
+        document.getElementById("status-text").textContent = ready ? "READY" : "DEGRADED";
+        const cards = [
+          { label: "Models", value: summary.models, unit: "" },
+          { label: "Healthy models", value: summary.healthy_models, unit: "" },
+          { label: "Capacity", value: summary.total_capacity_tokens_per_second, unit: "tok/s" },
+          { label: "Est. hourly cost", value: "$" + summary.estimated_hourly_cost_usd, unit: "/ h" },
+        ];
+        document.getElementById("cards").innerHTML = cards.map(c => `
+          <div class="card">
+            <div class="label">${c.label}</div>
+            <div class="value">${c.value} <span class="unit">${c.unit}</span></div>
+          </div>`).join("");
+      }
+
+      function renderNodes(topology) {
+        document.getElementById("nodes").innerHTML = topology.nodes.map(n => `
+          <div class="node">
+            <div class="top">
+              <span class="name">${n.label}</span>
+              <span class="dot ${healthClass(n.health)}" title="${n.health}"></span>
+            </div>
+            <div class="kind">${n.kind}</div>
+            <div class="signals">
+              ${n.signals.map(s => `<span class="chip">${s.name}: ${s.value} ${s.unit}</span>`).join("")}
+            </div>
+          </div>`).join("");
+      }
+
+      function renderModels(models) {
+        const body = document.querySelector("#models tbody");
+        body.innerHTML = models.map(m => `
+          <tr>
+            <td>${m.name}</td>
+            <td><span class="backend">${m.backend}</span></td>
+            <td><span class="dot ${m.healthy ? "ok" : "bad"}"></span></td>
+            <td>${m.capacity_tokens_per_second}</td>
+            <td>${m.latency_ms}</td>
+            <td>$${m.estimated_hourly_cost_usd}</td>
+          </tr>`).join("");
+      }
+
+      async function refresh() {
+        try {
+          const [summary, topology, models] = await Promise.all([
+            getJSON("/summary"), getJSON("/topology"), getJSON("/models"),
+          ]);
+          renderCards(summary);
+          renderNodes(topology);
+          renderModels(models);
+          document.getElementById("updated").textContent = "updated " + new Date().toLocaleTimeString();
+        } catch (e) {
+          document.getElementById("status-dot").className = "dot bad";
+          document.getElementById("status-text").textContent = "API ERROR";
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 5000);
+    </script>
+  </body>
+</html>

@@ -65,18 +65,21 @@ flowchart TB
 
 ## Capabilities
 
-- FastAPI control API for health, model inventory, capacity, cost, metrics, and topology.
-- Ollama backend probes for health, model listing, and latency.
+- FastAPI control API with a live operator dashboard at `/`.
+- Configuration-driven model inventory via `MODEL_INVENTORY_PATH` or Helm ConfigMap.
+- Ollama and vLLM backend probes for health, model listing, and latency.
+- Live digital twin topology with backend probe health reflected in `/topology`.
 - Prometheus metrics for backend health, request latency, model availability, capacity, and estimated cost.
 - Grafana dashboards for latency, availability, cost, logs, and topology context.
 - Loki and Promtail examples for log collection.
 - Argo CD application manifest for GitOps deployment.
-- Helm chart with autoscaling support.
+- Production-hardened Helm chart with HPA, ServiceAccount, PDB, and optional ServiceMonitor/Ingress/NetworkPolicy.
 - Terraform k3s bootstrap example for end-to-end infrastructure setup.
 - TimesFM forecasting prototype for latency, traffic, capacity, and cost planning.
 - Forecast-driven inference autoscaling simulator.
 - OpenTelemetry GenAI telemetry prototype.
-- Trivy and OPA policy checks for security and deployment safety.
+- Trivy, Hadolint, OPA unit tests, and Conftest policy gates in CI.
+- GHCR image publish workflow with cosign signing and SPDX SBOM generation.
 
 ## Governance Pipeline
 
@@ -185,30 +188,32 @@ The repository keeps apply steps manual and review-oriented. This matches how pl
 
 Security is handled at several layers:
 
-- Trivy filesystem scan in CI;
-- OPA and Conftest checks against rendered Kubernetes manifests;
+- Trivy filesystem and container image scans in CI;
+- Hadolint Dockerfile linting;
+- OPA unit tests and Conftest checks against rendered Kubernetes manifests;
 - policies for privileged containers, latest image tags, missing resources, non-root execution, and read-only root filesystem recommendations;
+- cosign-signed container images with SPDX SBOM artifacts on release;
 - governance decisions for high-risk AI operations before execution.
 
 ## Demo Flow
 
-1. Start the control API locally and inspect `/health`, `/models`, `/capacity`, `/cost`, `/metrics`, and `/topology`.
-2. Run the governance pipeline:
+1. Start the control API locally and open `/` for the operator dashboard.
+2. Inspect `/health`, `/models`, `/capacity`, `/cost`, `/metrics`, `/topology`, and backend probes.
+3. Run the governance pipeline:
 
    ```sh
    python3.12 governance/pipeline/run_pipeline.py \
      --requests governance/pipeline/sample_requests.csv
    ```
 
-3. Inspect `governance/pipeline/results/example_decisions.json`.
-4. Render the Helm chart and test it with OPA:
+4. Inspect `governance/pipeline/results/example_decisions.json`.
+5. Render the Helm chart and test it with OPA:
 
    ```sh
-   helm template ai-control-plane infra/helm/ai-control-plane \
-     | conftest test - --policy security/opa/policies
+   make policy-check
    ```
 
-5. Review the Grafana dashboards and GitOps manifests to see how operations, observability, deployment, and governance fit together.
+6. Review the Grafana dashboards, release workflow, and GitOps manifests to see how operations, observability, deployment, and governance fit together.
 
 ## Outcome
 

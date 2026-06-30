@@ -7,6 +7,15 @@ app = app_main.app
 client = TestClient(app)
 
 
+def test_dashboard_served_at_root() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "AI Infrastructure Control Plane" in response.text
+    assert "Operator dashboard" in response.text
+
+
 def test_healthz() -> None:
     response = client.get("/healthz")
 
@@ -94,7 +103,11 @@ def test_metrics(monkeypatch) -> None:
     def fake_fetch_ollama_tags() -> tuple[dict, int, str | None]:
         return {"models": [{"name": "llama3.1:8b"}]}, 17, None
 
+    def fake_fetch_vllm_models() -> tuple[dict, int, str | None]:
+        return {"data": [{"id": "qwen2.5-14b"}]}, 23, None
+
     monkeypatch.setattr(app_main, "fetch_ollama_tags", fake_fetch_ollama_tags)
+    monkeypatch.setattr(app_main, "fetch_vllm_models", fake_fetch_vllm_models)
 
     client.get("/health")
     response = client.get("/metrics")
@@ -102,7 +115,13 @@ def test_metrics(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/plain")
     assert 'ai_control_backend_up{backend="ollama"} 1' in response.text
+    assert 'ai_control_backend_up{backend="vllm"} 1' in response.text
     assert 'ai_control_backend_latency_ms{backend="ollama"} 17' in response.text
+    assert 'ai_control_backend_latency_ms{backend="vllm"} 23' in response.text
+    assert (
+        'ai_control_model_available{backend="vllm",model="qwen2.5-14b"} 1'
+        in response.text
+    )
     assert (
         'ai_control_model_available{backend="mock",model="llama-3.1-8b-instruct"} 1'
         in response.text
@@ -219,6 +238,106 @@ def test_ollama_health_reports_down_on_error(monkeypatch) -> None:
     assert response.json()["healthy"] is False
     assert response.json()["status"] == "down"
     assert "connection refused" in response.json()["error"]
+
+
+def test_vllm_health(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        assert url == "http://vllm.local:8000/v1/models"
+        assert timeout == 2.0
+        return httpx.Response(
+            200,
+            json={"object": "list", "data": []},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setenv("VLLM_BASE_URL", "http://vllm.local:8000")
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/vllm/health")
+
+    assert response.status_code == 200
+    assert response.json()["backend"] == "vllm"
+    assert response.json()["base_url"] == "http://vllm.local:8000"
+    assert response.json()["healthy"] is True
+    assert response.json()["status"] == "up"
+
+
+def test_vllm_models(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "object": "list",
+                "data": [
+                    {"id": "qwen2.5-14b", "object": "model"},
+                    {"id": "gemma-3-12b", "object": "model"},
+                    {"object": "missing-id"},
+                ],
+            },
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/vllm/models")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is True
+    assert response.json()["models"] == [
+        {"name": "qwen2.5-14b"},
+        {"name": "gemma-3-12b"},
+    ]
+
+
+def test_vllm_latency(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"object": "list", "data": []},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/vllm/latency")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is True
+    assert response.json()["measured_endpoint"] == "/v1/models"
+    assert isinstance(response.json()["latency_ms"], int)
+
+
+def test_vllm_health_reports_down_on_error(monkeypatch) -> None:
+    def fake_get(url: str, timeout: float) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("app.main.httpx.get", fake_get)
+
+    response = client.get("/backends/vllm/health")
+
+    assert response.status_code == 200
+    assert response.json()["healthy"] is False
+    assert response.json()["status"] == "down"
+
+
+def test_topology_reflects_live_backend_health(monkeypatch) -> None:
+    monkeypatch.setattr(
+        app_main,
+        "fetch_ollama_tags",
+        lambda: ({"models": []}, 12, None),
+    )
+    monkeypatch.setattr(
+        app_main,
+        "fetch_vllm_models",
+        lambda: ({}, 2000, "connection refused"),
+    )
+
+    response = client.get("/topology")
+
+    assert response.status_code == 200
+    nodes = {node["id"]: node for node in response.json()["nodes"]}
+    assert nodes["ollama"]["health"] == "healthy"
+    assert nodes["vllm"]["health"] == "degraded"
 
 
 def test_default_inventory_loads_from_bundled_file() -> None:

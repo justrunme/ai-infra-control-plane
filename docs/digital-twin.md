@@ -2,11 +2,13 @@
 
 The AI Infrastructure Digital Twin is a live topology model of private AI platform components, their dependencies, health, telemetry, and operational signals.
 
-It is exposed by the control API:
+It is exposed by the control API and visualized in the operator dashboard at `/`:
 
 ```sh
 curl http://localhost:8080/topology
 ```
+
+Ollama and vLLM nodes reflect **live backend probe results** (healthy/degraded plus measured latency) rather than static placeholders.
 
 ## Purpose
 

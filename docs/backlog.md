@@ -2,100 +2,75 @@
 
 Use this backlog to create small, reviewable pull requests. Each item should produce working code, tests, documentation, or deployable infrastructure.
 
-## Week 1
+## Completed
 
-1. Add Ollama backend probe
-   - Add `/backends/ollama` health check support.
-   - Make the endpoint configurable through environment variables.
-   - Add tests for healthy, unhealthy, and timeout responses.
+- Ollama and vLLM backend probes with tests
+- Prometheus metrics and Grafana dashboards
+- Configuration-driven model inventory (`MODEL_INVENTORY_PATH`, Helm ConfigMap)
+- Live operator dashboard at `/`
+- Live digital twin topology with backend probe health
+- Argo CD application manifest
+- Helm chart with HPA and production hardening (SA, PDB, ServiceMonitor, Ingress, NetworkPolicy)
+- GHCR image publish workflow with cosign signing and SPDX SBOM
+- Terraform k3s bootstrap example
+- Trivy, Hadolint, OPA unit tests, and Conftest policy gates in CI
+- TimesFM forecasting and inference autoscaling simulator
+- OpenTelemetry GenAI telemetry prototype
+- AI governance engines (cost, risk, approval, pipeline) with unit tests
+- MIT LICENSE
 
-2. Add Prometheus metrics
-   - Expose `/metrics`.
-   - Track request count, latency, model health, and capacity.
-   - Document the metrics contract.
+## Next
 
-3. Add Grafana model latency dashboard
-   - Create dashboard JSON under `observability/grafana`.
-   - Include latency, availability, and estimated cost panels.
-   - Reference Prometheus metric names from the API.
+1. Add OpenWebUI service health checks
+   - Probe the UI endpoint from the control API.
+   - Reflect health in `/topology` and the operator dashboard.
 
-## Week 2
+2. Add gateway enforcement for governance verdicts
+   - Wire the governance pipeline into an admission or proxy hook.
+   - Block or require approval before high-risk requests execute.
 
-4. Add Argo CD application
-   - Add an application manifest under `infra/argocd`.
-   - Point it at the Helm chart.
-   - Document bootstrap assumptions.
+3. Add live Prometheus query integration
+   - Feed real latency and cost signals into governance decisions.
+   - Replace CSV-based telemetry samples where practical.
 
-5. Add Kubernetes autoscaling
-   - Add HPA template to the Helm chart.
-   - Make min and max replicas configurable.
-   - Document CPU and future latency-based scaling.
+4. Add probe result caching
+   - Cache Ollama and vLLM probe results for `/metrics` and `/topology`.
+   - Reduce synchronous backend calls under scrape load.
 
-6. Add container publish workflow
-   - Build and push image to GitHub Container Registry.
-   - Use semantic tags and commit SHA tags.
-   - Keep tests before publish.
+5. Add latency-based HPA metrics
+   - Extend the Helm chart with custom metrics from Prometheus Adapter.
+   - Document the ServiceMonitor and scaling contract.
 
-7. Add TimesFM forecasting prototype
-   - Add an experimental forecasting module under `forecasting/timesfm`.
-   - Forecast latency, request rate, capacity, and estimated hourly cost.
-   - Keep it separate from the control API and Helm chart.
+## Archive (original roadmap)
 
-## Week 3
+<details>
+<summary>Week 1–3 original items (mostly done)</summary>
 
-8. Add vLLM backend probe
-   - Add OpenAI-compatible health and model listing checks.
-   - Add timeout and circuit-breaker behavior.
-   - Add tests for degraded backend status.
+### Week 1
 
-9. Add Terraform example environment
-   - Add a complete example using the Hetzner VM module.
-   - Document required variables and secrets.
-   - Keep apply steps manual.
-   - Add a k3s bootstrap example with cloud-init and kubeconfig outputs.
+1. Add Ollama backend probe — **done**
+2. Add Prometheus metrics — **done**
+3. Add Grafana model latency dashboard — **done**
 
-10. Add security policy checks
-   - Add Trivy IaC examples.
-   - Add baseline Kubernetes policy notes.
-   - Add future OPA/Gatekeeper roadmap.
-   - Add OPA policy gates for rendered Kubernetes manifests.
+### Week 2
 
-11. Add Loki logging
-   - Add Loki and Promtail Helm values.
-   - Add a Grafana dashboard for application and platform logs.
-   - Document logging labels and production hardening notes.
+4. Add Argo CD application — **done**
+5. Add Kubernetes autoscaling — **done**
+6. Add container publish workflow — **done**
+7. Add TimesFM forecasting prototype — **done**
 
-12. Add AI inference autoscaling simulator
-   - Forecast request load, p95 latency, and token throughput from sample metrics.
-   - Recommend replicas before private AI inference workloads hit limits.
-   - Keep the simulator offline and separate from the production Helm chart.
+### Week 3
 
-13. Add OpenTelemetry GenAI telemetry prototype
-   - Emit GenAI-style spans for model requests, token usage, tool calls, latency, and cost.
-   - Keep prompt and response content out of the prototype artifact.
-   - Document semantic attributes for future collector integration.
+8. Add vLLM backend probe — **done**
+9. Add Terraform example environment — **done**
+10. Add security policy checks — **done**
+11. Add Loki logging — **done**
+12. Add AI inference autoscaling simulator — **done**
+13. Add OpenTelemetry GenAI telemetry prototype — **done**
+14. Add AI infrastructure digital twin — **done**
+15. Add AI cost governance engine — **done**
+16. Add AI approval workflow prototype — **done**
+17. Add AI risk scoring engine — **done**
+18. Add AI governance decision pipeline — **done**
 
-14. Add AI infrastructure digital twin
-   - Expose a control API topology graph.
-   - Document component dependencies, health, telemetry, and operational signals.
-   - Add a Grafana topology overview dashboard.
-
-15. Add AI cost governance engine
-   - Evaluate model usage, token spend, and forecasted monthly cost.
-   - Return allow, warn, or block decisions with reasons.
-   - Keep the prototype offline until gateway enforcement exists.
-
-16. Add AI approval workflow prototype
-   - Evaluate high-risk AI platform requests before execution.
-   - Return allow, approval_required, or block decisions with reasons.
-   - Keep the prototype offline until gateway or GitOps enforcement exists.
-
-17. Add AI risk scoring engine
-   - Score AI platform requests from 0 to 100.
-   - Classify requests as low, medium, high, or critical risk.
-   - Feed risk results into future approval and policy decisions.
-
-18. Add AI governance decision pipeline
-   - Connect request telemetry, cost governance, risk scoring, and approval gates.
-   - Produce a final allow, approval_required, or block verdict.
-   - Keep the pipeline offline until gateway or GitOps enforcement exists.
+</details>

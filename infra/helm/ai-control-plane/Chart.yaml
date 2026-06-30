@@ -4,4 +4,5 @@ description: Helm chart for the AI Infrastructure Control Plane API.
 type: application
 version: 0.2.0
 appVersion: "0.1.0"
+icon: https://raw.githubusercontent.com/justrunme/ai-infra-control-plane/main/docs/images/operator-dashboard.png
 
