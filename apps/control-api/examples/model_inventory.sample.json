@@ -1,0 +1,26 @@
+[
+  {
+    "name": "llama-3.1-8b-instruct",
+    "backend": "ollama",
+    "healthy": true,
+    "latency_ms": 38,
+    "capacity_tokens_per_second": 320,
+    "estimated_hourly_cost_usd": 0.18
+  },
+  {
+    "name": "qwen2.5-14b-instruct",
+    "backend": "vllm",
+    "healthy": true,
+    "latency_ms": 55,
+    "capacity_tokens_per_second": 540,
+    "estimated_hourly_cost_usd": 0.42
+  },
+  {
+    "name": "gemma-3-12b-it",
+    "backend": "vllm",
+    "healthy": false,
+    "latency_ms": 0,
+    "capacity_tokens_per_second": 0,
+    "estimated_hourly_cost_usd": 0.0
+  }
+]

@@ -29,6 +29,13 @@ AI request
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
+## Operator Dashboard
+
+The control API serves a live operator dashboard at `/` with platform status,
+topology health, and the model inventory, refreshed every few seconds.
+
+![AI Infrastructure Control Plane operator dashboard](docs/images/operator-dashboard.png)
+
 ## How the Projects Fit Together
 
 This repository is part of a larger AI Platform portfolio. Read the [portfolio overview](docs/portfolio-overview.md) for the full architecture.
@@ -253,6 +260,7 @@ The demo prints the key control API endpoints and runs the end-to-end governance
 
 The control API exposes operator-facing signals for private AI infrastructure:
 
+- `GET /` - live operator dashboard (HTML).
 - `GET /health` - operator-facing service health.
 - `GET /healthz` - Kubernetes-compatible health check.
 - `GET /models` - configured model backends and status.
@@ -260,6 +268,21 @@ The control API exposes operator-facing signals for private AI infrastructure:
 - `GET /capacity` - aggregate model serving capacity.
 - `GET /cost` - estimated hourly, daily, and monthly cost.
 - `GET /summary` - compact status for dashboards and demos.
+
+### Model Inventory
+
+The model inventory is configuration-driven. By default the API loads
+`app/model_inventory.json` shipped with the image, but you can point it at any
+JSON file:
+
+```sh
+export MODEL_INVENTORY_PATH=/etc/ai-control-plane/model_inventory.json
+```
+
+The file is a JSON array of model entries; see
+`apps/control-api/examples/model_inventory.sample.json` for a multi-backend
+example. If the file is missing or malformed, the API falls back to a built-in
+inventory so the control plane stays observable.
 
 ### Ollama Backend Probe
 
@@ -274,6 +297,20 @@ The API exposes:
 - `GET /backends/ollama/health` - backend reachability and status.
 - `GET /backends/ollama/models` - model names returned by Ollama `/api/tags`.
 - `GET /backends/ollama/latency` - lightweight latency measurement for `/api/tags`.
+
+### vLLM Backend Probe
+
+Set `VLLM_BASE_URL` to point the control API at a vLLM OpenAI-compatible server:
+
+```sh
+export VLLM_BASE_URL=http://localhost:8000
+```
+
+The API exposes:
+
+- `GET /backends/vllm/health` - backend reachability and status.
+- `GET /backends/vllm/models` - model ids returned by vLLM `/v1/models`.
+- `GET /backends/vllm/latency` - lightweight latency measurement for `/v1/models`.
 
 ### Prometheus Metrics
 
@@ -291,7 +328,7 @@ Core metrics:
 
 ### AI Infrastructure Digital Twin
 
-`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. See `docs/digital-twin.md`.
+`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. The Ollama and vLLM nodes reflect live backend probe results (healthy/degraded plus measured latency). See `docs/digital-twin.md`.
 
 ### AI Cost Governance
 
