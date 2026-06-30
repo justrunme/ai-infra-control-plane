@@ -1,16 +1,21 @@
+import json
 import os
 from collections import defaultdict
 from datetime import UTC, datetime
+from pathlib import Path
 from time import perf_counter
 from typing import Literal
 
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT_SECONDS = 2.0
+
+MODEL_INVENTORY_ENV = "MODEL_INVENTORY_PATH"
+DEFAULT_MODEL_INVENTORY_PATH = Path(__file__).with_name("model_inventory.json")
 
 HTTP_REQUESTS_TOTAL: dict[tuple[str, str, int], int] = defaultdict(int)
 HTTP_REQUEST_LATENCY_MS_TOTAL: dict[tuple[str, str, int], float] = defaultdict(float)
@@ -129,17 +134,41 @@ app = FastAPI(
 )
 
 
+BUILTIN_MODEL_INVENTORY: list[ModelStatus] = [
+    ModelStatus(
+        name="llama-3.1-8b-instruct",
+        backend="mock",
+        healthy=True,
+        latency_ms=42,
+        capacity_tokens_per_second=320,
+        estimated_hourly_cost_usd=0.18,
+    )
+]
+
+
+def get_model_inventory_path() -> Path:
+    override = os.getenv(MODEL_INVENTORY_ENV)
+    return Path(override) if override else DEFAULT_MODEL_INVENTORY_PATH
+
+
+def load_model_inventory(path: Path) -> list[ModelStatus]:
+    payload = json.loads(path.read_text())
+    if not isinstance(payload, list):
+        raise ValueError("model inventory must be a JSON array")
+    return [ModelStatus.model_validate(item) for item in payload]
+
+
 def get_model_inventory() -> list[ModelStatus]:
-    return [
-        ModelStatus(
-            name="llama-3.1-8b-instruct",
-            backend="mock",
-            healthy=True,
-            latency_ms=42,
-            capacity_tokens_per_second=320,
-            estimated_hourly_cost_usd=0.18,
-        )
-    ]
+    path = get_model_inventory_path()
+    if not path.exists():
+        return list(BUILTIN_MODEL_INVENTORY)
+
+    try:
+        return load_model_inventory(path)
+    except (OSError, ValueError, ValidationError):
+        # Fall back to the built-in inventory so the control plane stays
+        # observable even with a malformed or unreadable inventory file.
+        return list(BUILTIN_MODEL_INVENTORY)
 
 
 def get_capacity_status(models: list[ModelStatus]) -> CapacityStatus:
