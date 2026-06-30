@@ -57,8 +57,9 @@ flowchart TB
   Observability --> Governance
   Observability --> Forecasting
   Governance -. policy and operational decisions .-> Runtime
+  Gateway -->|optional CONTROL_PLANE_URL| Governance
   Forecasting -. capacity and scaling guidance .-> Runtime
   GitOps -. reconciles .-> Runtime
 ```
 
-The Runtime Platform executes AI workloads. The Control Plane observes, governs, predicts, and controls those workloads. Together they demonstrate a complete AI Platform architecture rather than a standalone gateway or an isolated governance service.
+The Runtime Platform executes AI workloads. The Control Plane evaluates governance policy; the runtime enforces verdicts at the inference boundary when `CONTROL_PLANE_URL` is configured. See [runtime enforcement integration](runtime-enforcement.md).
