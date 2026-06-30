@@ -290,6 +290,20 @@ The API exposes:
 - `GET /backends/ollama/models` - model names returned by Ollama `/api/tags`.
 - `GET /backends/ollama/latency` - lightweight latency measurement for `/api/tags`.
 
+### vLLM Backend Probe
+
+Set `VLLM_BASE_URL` to point the control API at a vLLM OpenAI-compatible server:
+
+```sh
+export VLLM_BASE_URL=http://localhost:8000
+```
+
+The API exposes:
+
+- `GET /backends/vllm/health` - backend reachability and status.
+- `GET /backends/vllm/models` - model ids returned by vLLM `/v1/models`.
+- `GET /backends/vllm/latency` - lightweight latency measurement for `/v1/models`.
+
 ### Prometheus Metrics
 
 `GET /metrics` exposes Prometheus-compatible metrics for request traffic, backend health, model inventory, capacity, and estimated cost.
@@ -306,7 +320,7 @@ Core metrics:
 
 ### AI Infrastructure Digital Twin
 
-`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. See `docs/digital-twin.md`.
+`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. The Ollama and vLLM nodes reflect live backend probe results (healthy/degraded plus measured latency). See `docs/digital-twin.md`.
 
 ### AI Cost Governance
 
