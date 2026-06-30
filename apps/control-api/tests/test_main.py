@@ -7,6 +7,15 @@ app = app_main.app
 client = TestClient(app)
 
 
+def test_dashboard_served_at_root() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "AI Infrastructure Control Plane" in response.text
+    assert "Operator dashboard" in response.text
+
+
 def test_healthz() -> None:
     response = client.get("/healthz")
 

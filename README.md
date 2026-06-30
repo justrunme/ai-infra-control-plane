@@ -29,6 +29,13 @@ AI request
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
 
+## Operator Dashboard
+
+The control API serves a live operator dashboard at `/` with platform status,
+topology health, and the model inventory, refreshed every few seconds.
+
+![AI Infrastructure Control Plane operator dashboard](docs/images/operator-dashboard.png)
+
 ## How the Projects Fit Together
 
 This repository is part of a larger AI Platform portfolio. Read the [portfolio overview](docs/portfolio-overview.md) for the full architecture.
@@ -253,6 +260,7 @@ The demo prints the key control API endpoints and runs the end-to-end governance
 
 The control API exposes operator-facing signals for private AI infrastructure:
 
+- `GET /` - live operator dashboard (HTML).
 - `GET /health` - operator-facing service health.
 - `GET /healthz` - Kubernetes-compatible health check.
 - `GET /models` - configured model backends and status.
