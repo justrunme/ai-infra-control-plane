@@ -1,0 +1,10 @@
+[
+  {
+    "name": "llama-3.1-8b-instruct",
+    "backend": "mock",
+    "healthy": true,
+    "latency_ms": 42,
+    "capacity_tokens_per_second": 320,
+    "estimated_hourly_cost_usd": 0.18
+  }
+]

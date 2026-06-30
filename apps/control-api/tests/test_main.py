@@ -219,3 +219,46 @@ def test_ollama_health_reports_down_on_error(monkeypatch) -> None:
     assert response.json()["healthy"] is False
     assert response.json()["status"] == "down"
     assert "connection refused" in response.json()["error"]
+
+
+def test_default_inventory_loads_from_bundled_file() -> None:
+    models = app_main.get_model_inventory()
+
+    assert app_main.DEFAULT_MODEL_INVENTORY_PATH.exists()
+    assert [model.name for model in models] == ["llama-3.1-8b-instruct"]
+
+
+def test_inventory_loads_from_custom_path(tmp_path, monkeypatch) -> None:
+    inventory_file = tmp_path / "inventory.json"
+    inventory_file.write_text(
+        '[{"name": "qwen2.5-14b", "backend": "vllm", "healthy": true, '
+        '"latency_ms": 55, "capacity_tokens_per_second": 540, '
+        '"estimated_hourly_cost_usd": 0.42}]'
+    )
+    monkeypatch.setenv("MODEL_INVENTORY_PATH", str(inventory_file))
+
+    response = client.get("/models")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["name"] == "qwen2.5-14b"
+    assert payload[0]["backend"] == "vllm"
+
+
+def test_inventory_falls_back_on_malformed_file(tmp_path, monkeypatch) -> None:
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not valid json")
+    monkeypatch.setenv("MODEL_INVENTORY_PATH", str(broken))
+
+    models = app_main.get_model_inventory()
+
+    assert [model.name for model in models] == ["llama-3.1-8b-instruct"]
+
+
+def test_inventory_missing_file_uses_builtin(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("MODEL_INVENTORY_PATH", str(tmp_path / "absent.json"))
+
+    models = app_main.get_model_inventory()
+
+    assert models == app_main.BUILTIN_MODEL_INVENTORY

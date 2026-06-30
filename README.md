@@ -261,6 +261,21 @@ The control API exposes operator-facing signals for private AI infrastructure:
 - `GET /cost` - estimated hourly, daily, and monthly cost.
 - `GET /summary` - compact status for dashboards and demos.
 
+### Model Inventory
+
+The model inventory is configuration-driven. By default the API loads
+`app/model_inventory.json` shipped with the image, but you can point it at any
+JSON file:
+
+```sh
+export MODEL_INVENTORY_PATH=/etc/ai-control-plane/model_inventory.json
+```
+
+The file is a JSON array of model entries; see
+`apps/control-api/examples/model_inventory.sample.json` for a multi-backend
+example. If the file is missing or malformed, the API falls back to a built-in
+inventory so the control plane stays observable.
+
 ### Ollama Backend Probe
 
 Set `OLLAMA_BASE_URL` to point the control API at an Ollama backend:
