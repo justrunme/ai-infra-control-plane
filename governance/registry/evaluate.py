@@ -52,7 +52,8 @@ def parse_registry(path: Path) -> dict[str, dict[str, Any]]:
 
         if indent == 4 and current_model is not None:
             if line.startswith("- "):
-                registry[current_model].setdefault("allowed_namespaces", []).append(line[2:])
+                allowed = registry[current_model].setdefault("allowed_namespaces", [])
+                allowed.append(line[2:])
                 continue
             key, _, value = line.partition(":")
             if not key:
@@ -66,7 +67,8 @@ def parse_registry(path: Path) -> dict[str, dict[str, Any]]:
             continue
 
         if indent == 6 and current_model is not None and line.startswith("- "):
-            registry[current_model].setdefault("allowed_namespaces", []).append(line[2:])
+            allowed = registry[current_model].setdefault("allowed_namespaces", [])
+            allowed.append(line[2:])
             continue
 
         raise ValueError(f"unsupported registry format line: {raw_line}")
@@ -74,7 +76,9 @@ def parse_registry(path: Path) -> dict[str, dict[str, Any]]:
     return registry
 
 
-def lookup_model(registry: dict[str, dict[str, Any]], model: str) -> dict[str, Any] | None:
+def lookup_model(
+    registry: dict[str, dict[str, Any]], model: str
+) -> dict[str, Any] | None:
     return registry.get(model)
 
 
@@ -96,10 +100,14 @@ def evaluate_model_policy(
         reasons.append(f"model {request['model']} is forbidden in the risk registry")
 
     allowed_namespaces = entry.get("allowed_namespaces")
-    if isinstance(allowed_namespaces, list) and request["namespace"] not in allowed_namespaces:
+    if (
+        isinstance(allowed_namespaces, list)
+        and request["namespace"] not in allowed_namespaces
+    ):
         forbidden = True
         reasons.append(
-            f"namespace {request['namespace']} is not allowed for model {request['model']}"
+            f"namespace {request['namespace']} is not allowed "
+            f"for model {request['model']}"
         )
 
     if request.get("sensitive_data") and not entry.get("pii_allowed", False):

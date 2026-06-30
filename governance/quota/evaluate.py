@@ -83,7 +83,8 @@ def evaluate_request(
     rpm_limit = int(tenant.get("requests_per_minute", 0))
     if rpm_limit and requests_last_minute >= rpm_limit:
         reasons.append(
-            f"team {team} exceeded requests_per_minute ({requests_last_minute}/{rpm_limit})"
+            f"team {team} exceeded requests_per_minute "
+            f"({requests_last_minute}/{rpm_limit})"
         )
 
     token_limit = int(tenant.get("tokens_per_day", 0))
@@ -98,7 +99,8 @@ def evaluate_request(
     request_cost = float(request.get("cost_per_request_usd", 0))
     if budget is not None and month_to_date + request_cost > float(budget):
         reasons.append(
-            f"team {team} would exceed max_monthly_budget_usd ({month_to_date + request_cost}/{budget})"
+            f"team {team} would exceed max_monthly_budget_usd "
+            f"({month_to_date + request_cost}/{budget})"
         )
 
     if request.get("sensitive_data") and not tenant.get("sensitive_data_allowed", False):
