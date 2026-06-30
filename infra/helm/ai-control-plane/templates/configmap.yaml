@@ -1,0 +1,11 @@
+{{- if .Values.modelInventory.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-control-plane.fullname" . }}-inventory
+  labels:
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
+data:
+  model_inventory.json: |-
+    {{- .Values.modelInventory.models | toJson | nindent 4 }}
+{{- end }}

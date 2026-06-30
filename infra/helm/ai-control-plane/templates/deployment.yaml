@@ -3,19 +3,24 @@ kind: Deployment
 metadata:
   name: {{ include "ai-control-plane.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
+      {{- include "ai-control-plane.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
+        {{- include "ai-control-plane.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      serviceAccountName: {{ include "ai-control-plane.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -27,6 +32,12 @@ spec:
           env:
             - name: OLLAMA_BASE_URL
               value: {{ .Values.ollama.baseUrl | quote }}
+            - name: VLLM_BASE_URL
+              value: {{ .Values.vllm.baseUrl | quote }}
+            {{- if .Values.modelInventory.enabled }}
+            - name: MODEL_INVENTORY_PATH
+              value: {{ printf "%s/model_inventory.json" .Values.modelInventory.mountPath | quote }}
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -38,5 +49,17 @@ spec:
             httpGet:
               path: /healthz
               port: http
+          {{- if .Values.modelInventory.enabled }}
+          volumeMounts:
+            - name: model-inventory
+              mountPath: {{ .Values.modelInventory.mountPath }}
+              readOnly: true
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.modelInventory.enabled }}
+      volumes:
+        - name: model-inventory
+          configMap:
+            name: {{ include "ai-control-plane.fullname" . }}-inventory
+      {{- end }}
