@@ -5,10 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY apps/control-api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
+COPY apps/control-api/app ./app
+COPY governance ./governance
 
 # Run as a non-root user (GID 0 for OpenShift compatibility) to match the
 # runAsNonRoot security context enforced by the Helm chart.
@@ -18,4 +19,3 @@ USER 10001
 
 EXPOSE 8080
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
-

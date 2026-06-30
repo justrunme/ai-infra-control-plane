@@ -10,4 +10,5 @@ terraform.tfstate*
 dist/
 build/
 *.egg-info/
+docs/videos/frames/
 

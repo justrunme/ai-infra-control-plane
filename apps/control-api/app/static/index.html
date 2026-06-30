@@ -40,13 +40,13 @@
         padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 13px;
         border: 1px solid var(--border); background: var(--panel);
       }
-      .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--unknown); }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--unknown); flex-shrink: 0; }
       .dot.ok { background: var(--ok); box-shadow: 0 0 10px rgba(46,204,113,0.7); }
       .dot.warn { background: var(--warn); }
       .dot.bad { background: var(--bad); }
       main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
       .grid { display: grid; gap: 16px; }
-      .cards { grid-template-columns: repeat(4, 1fr); margin-bottom: 24px; }
+      .cards { grid-template-columns: repeat(4, 1fr); margin-bottom: 8px; }
       .card {
         background: var(--panel); border: 1px solid var(--border);
         border-radius: 14px; padding: 18px 20px;
@@ -66,26 +66,132 @@
       .node .signals { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
       .chip { font-size: 11px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; }
       table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-      th, td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+      th, td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: top; }
       th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
       tr:last-child td { border-bottom: none; }
       .backend { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; }
-      footer { color: var(--muted); font-size: 12px; padding: 24px 28px; border-top: 1px solid var(--border); display: flex; gap: 18px; }
+      footer { color: var(--muted); font-size: 12px; padding: 24px 28px; border-top: 1px solid var(--border); display: flex; gap: 18px; flex-wrap: wrap; }
       footer a { color: var(--accent); text-decoration: none; }
       .muted { color: var(--muted); }
+      .split { grid-template-columns: 1fr 1fr; gap: 20px; }
+      .panel {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 14px; padding: 18px 20px;
+      }
+      .panel h3 { margin: 0 0 12px; font-size: 15px; }
+      .panel p { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+      label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+      input, select {
+        width: 100%; background: var(--panel-2); color: var(--text);
+        border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;
+      }
+      .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .checks { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; }
+      .checks label { display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; color: var(--text); margin: 0; }
+      .checks input { width: auto; margin: 0; }
+      button, .preset {
+        background: var(--accent); color: white; border: none; border-radius: 8px;
+        padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 13px;
+      }
+      .preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+      .preset { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+      .verdict {
+        border-radius: 12px; padding: 16px; margin-top: 16px; border: 1px solid var(--border);
+        background: var(--panel-2);
+      }
+      .verdict.allow { border-color: rgba(46,204,113,0.5); }
+      .verdict.approval_required { border-color: rgba(241,196,15,0.5); }
+      .verdict.block { border-color: rgba(231,76,60,0.5); }
+      .verdict-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+      .stage-list { display: grid; gap: 10px; margin-top: 12px; }
+      .stage {
+        border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+        background: rgba(255,255,255,0.02);
+      }
+      .stage .title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+      .stage ul { margin: 6px 0 0 18px; padding: 0; color: var(--muted); font-size: 12px; }
+      .drift-banner {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; border: 1px solid var(--border);
+      }
+      .drift-banner.sync { background: rgba(46,204,113,0.08); border-color: rgba(46,204,113,0.35); }
+      .drift-banner.drift { background: rgba(231,76,60,0.08); border-color: rgba(231,76,60,0.35); }
+      .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+      .tag.missing { color: var(--bad); border-color: rgba(231,76,60,0.4); }
+      .tag.extra { color: var(--warn); border-color: rgba(241,196,15,0.4); }
+      @media (max-width: 900px) {
+        .cards, .nodes, .split, .field-row { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
     <header>
       <div>
         <h1>AI Infrastructure Control Plane</h1>
-        <div class="sub">Operator dashboard · live platform telemetry</div>
+        <div class="sub">Operator dashboard · governance playground · inventory drift</div>
       </div>
       <div class="pill"><span id="status-dot" class="dot"></span><span id="status-text">connecting…</span></div>
     </header>
 
     <main>
       <div class="grid cards" id="cards"></div>
+
+      <section>
+        <h2>Governance Playground</h2>
+        <div class="grid split">
+          <div class="panel">
+            <h3>Simulate an AI request</h3>
+            <p>Submit a request through cost, risk, and approval stages and see the final verdict instantly.</p>
+            <div class="preset-row">
+              <button type="button" class="preset" data-preset="allow">Low-risk dev</button>
+              <button type="button" class="preset" data-preset="approval">Production external</button>
+              <button type="button" class="preset" data-preset="block">Budget exceeded</button>
+            </div>
+            <form id="playground-form">
+              <div class="field-row">
+                <div><label for="team">Team</label><select id="team"><option>platform</option><option>search</option><option>mlops</option><option>finance</option></select></div>
+                <div><label for="owner">Owner</label><input id="owner" value="alice" /></div>
+              </div>
+              <div class="field-row">
+                <div><label for="environment">Environment</label><select id="environment"><option>development</option><option>staging</option><option>production</option></select></div>
+                <div><label for="namespace">Namespace</label><input id="namespace" value="ai-dev" /></div>
+              </div>
+              <div class="field-row">
+                <div><label for="model">Model</label><input id="model" value="llama3.1:8b" /></div>
+                <div><label for="provider">Provider</label><select id="provider"><option>ollama</option><option>openai</option><option>anthropic</option><option>external</option></select></div>
+              </div>
+              <div class="field-row">
+                <div><label for="action">Action</label><select id="action"><option>invoke_model</option><option>deploy_model</option><option>enable_external_model</option><option>scale_replicas</option></select></div>
+                <div><label for="forecast_monthly_cost_usd">Forecast monthly cost ($)</label><input id="forecast_monthly_cost_usd" type="number" step="0.01" value="400" /></div>
+              </div>
+              <div class="field-row">
+                <div><label for="input_tokens">Input tokens</label><input id="input_tokens" type="number" value="1000" /></div>
+                <div><label for="output_tokens">Output tokens</label><input id="output_tokens" type="number" value="500" /></div>
+              </div>
+              <div class="field-row">
+                <div><label for="cost_per_hour_usd">Cost per hour ($)</label><input id="cost_per_hour_usd" type="number" step="0.01" value="0.18" /></div>
+                <div><label for="month_to_date_cost_usd">Month-to-date cost ($)</label><input id="month_to_date_cost_usd" type="number" step="0.01" value="100" /></div>
+              </div>
+              <div class="checks">
+                <label><input id="sensitive_data" type="checkbox" /> Sensitive data</label>
+                <label><input id="tool_access" type="checkbox" /> Tool access</label>
+                <label><input id="write_permission" type="checkbox" /> Write permission</label>
+              </div>
+              <button type="submit">Evaluate governance</button>
+            </form>
+          </div>
+          <div class="panel">
+            <h3>Decision pipeline</h3>
+            <p id="playground-hint">Choose a preset or submit the form to run the governance pipeline.</p>
+            <div id="playground-result"></div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Inventory Drift</h2>
+        <div id="drift-panel" class="panel"><p class="muted">Loading drift status…</p></div>
+      </section>
 
       <section>
         <h2>Platform Topology</h2>
@@ -107,15 +213,21 @@
       <span class="muted">Auto-refresh every 5s</span>
       <a href="/docs">API docs</a>
       <a href="/metrics">Metrics</a>
+      <a href="/drift">Drift JSON</a>
       <a href="/topology">Topology JSON</a>
       <span id="updated" class="muted"></span>
     </footer>
 
     <script>
       const healthClass = (h) => h === "healthy" ? "ok" : h === "degraded" ? "bad" : "unknown";
+      const presets = {
+        allow: { team: "platform", owner: "alice", environment: "development", namespace: "ai-dev", model: "llama3.1:8b", provider: "ollama", action: "invoke_model", forecast_monthly_cost_usd: 400, input_tokens: 1000, output_tokens: 500, cost_per_hour_usd: 0.18, month_to_date_cost_usd: 100, sensitive_data: false, tool_access: false, write_permission: false },
+        approval: { team: "mlops", owner: "bob", environment: "production", namespace: "ai-prod", model: "claude-3.7-sonnet", provider: "anthropic", action: "deploy_model", forecast_monthly_cost_usd: 1800, input_tokens: 12000, output_tokens: 4000, cost_per_hour_usd: 0.82, month_to_date_cost_usd: 900, sensitive_data: true, tool_access: true, write_permission: false },
+        block: { team: "platform", owner: "", environment: "production", namespace: "ai-prod", model: "gpt-4.1-mini", provider: "openai", action: "enable_external_model", forecast_monthly_cost_usd: 2600, input_tokens: 50000, output_tokens: 20000, cost_per_hour_usd: 1.20, month_to_date_cost_usd: 650, sensitive_data: true, tool_access: true, write_permission: true },
+      };
 
-      async function getJSON(path) {
-        const res = await fetch(path);
+      async function getJSON(path, options) {
+        const res = await fetch(path, options);
         if (!res.ok) throw new Error(path + " -> " + res.status);
         return res.json();
       }
@@ -152,8 +264,7 @@
       }
 
       function renderModels(models) {
-        const body = document.querySelector("#models tbody");
-        body.innerHTML = models.map(m => `
+        document.querySelector("#models tbody").innerHTML = models.map(m => `
           <tr>
             <td>${m.name}</td>
             <td><span class="backend">${m.backend}</span></td>
@@ -164,20 +275,103 @@
           </tr>`).join("");
       }
 
+      function renderDrift(drift) {
+        const bannerClass = drift.in_sync ? "sync" : "drift";
+        const rows = drift.backends.map(b => `
+          <tr>
+            <td><span class="backend">${b.backend}</span></td>
+            <td><span class="dot ${b.in_sync ? "ok" : "bad"}"></span> ${b.in_sync ? "in sync" : "drift"}</td>
+            <td>${b.desired_models.join(", ") || "—"}</td>
+            <td>${b.actual_models.join(", ") || (b.probe_healthy ? "—" : "probe down")}</td>
+            <td>${b.missing_on_backend.map(x => `<span class="tag missing">${x}</span>`).join(" ") || "—"}</td>
+            <td>${b.unexpected_on_backend.map(x => `<span class="tag extra">${x}</span>`).join(" ") || "—"}</td>
+          </tr>`).join("");
+        document.getElementById("drift-panel").innerHTML = `
+          <div class="drift-banner ${bannerClass}">
+            <div><strong>${drift.in_sync ? "Inventory in sync" : "Drift detected"}</strong><div class="muted">${drift.summary}</div></div>
+            <span class="pill"><span class="dot ${drift.in_sync ? "ok" : "bad"}"></span>${drift.in_sync ? "SYNCED" : "DRIFT"}</span>
+          </div>
+          <table>
+            <thead><tr><th>Backend</th><th>Status</th><th>Configured</th><th>Live probe</th><th>Missing</th><th>Unexpected</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+
+      function applyPreset(name) {
+        const preset = presets[name];
+        Object.entries(preset).forEach(([key, value]) => {
+          const el = document.getElementById(key);
+          if (!el) return;
+          if (el.type === "checkbox") el.checked = value;
+          else el.value = value;
+        });
+      }
+
+      function renderPlaygroundResult(result) {
+        document.getElementById("playground-hint").textContent = "Live governance pipeline result";
+        const stages = ["cost", "risk", "approval"].map(stage => {
+          const data = result.stages[stage];
+          const headline = stage === "risk"
+            ? `Risk: ${data.level} (${data.score}/100)`
+            : `${stage}: ${data.decision}`;
+          const reasons = (data.reasons || data.factors?.map(f => f.reason) || []).map(r => `<li>${r}</li>`).join("");
+          return `<div class="stage"><div class="title">${headline}</div>${reasons ? `<ul>${reasons}</ul>` : ""}</div>`;
+        }).join("");
+        document.getElementById("playground-result").innerHTML = `
+          <div class="verdict ${result.final_verdict}">
+            <div class="verdict-title">${result.final_verdict.replace("_", " ")}</div>
+            <div class="muted">${result.reasons.join(" · ")}</div>
+            <div class="stage-list">${stages}</div>
+          </div>`;
+      }
+
+      async function evaluatePlayground(event) {
+        event.preventDefault();
+        const payload = {
+          team: document.getElementById("team").value,
+          owner: document.getElementById("owner").value,
+          environment: document.getElementById("environment").value,
+          namespace: document.getElementById("namespace").value,
+          model: document.getElementById("model").value,
+          provider: document.getElementById("provider").value,
+          action: document.getElementById("action").value,
+          forecast_monthly_cost_usd: Number(document.getElementById("forecast_monthly_cost_usd").value),
+          input_tokens: Number(document.getElementById("input_tokens").value),
+          output_tokens: Number(document.getElementById("output_tokens").value),
+          cost_per_hour_usd: Number(document.getElementById("cost_per_hour_usd").value),
+          month_to_date_cost_usd: Number(document.getElementById("month_to_date_cost_usd").value),
+          sensitive_data: document.getElementById("sensitive_data").checked,
+          tool_access: document.getElementById("tool_access").checked,
+          write_permission: document.getElementById("write_permission").checked,
+        };
+        const result = await getJSON("/governance/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        renderPlaygroundResult(result);
+      }
+
       async function refresh() {
         try {
-          const [summary, topology, models] = await Promise.all([
-            getJSON("/summary"), getJSON("/topology"), getJSON("/models"),
+          const [summary, topology, models, drift] = await Promise.all([
+            getJSON("/summary"), getJSON("/topology"), getJSON("/models"), getJSON("/drift"),
           ]);
           renderCards(summary);
           renderNodes(topology);
           renderModels(models);
+          renderDrift(drift);
           document.getElementById("updated").textContent = "updated " + new Date().toLocaleTimeString();
         } catch (e) {
           document.getElementById("status-dot").className = "dot bad";
           document.getElementById("status-text").textContent = "API ERROR";
         }
       }
+
+      document.querySelectorAll(".preset").forEach(btn => {
+        btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+      });
+      document.getElementById("playground-form").addEventListener("submit", evaluatePlayground);
 
       refresh();
       setInterval(refresh, 5000);
