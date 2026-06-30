@@ -165,8 +165,12 @@ def evaluate_pipeline(
     cost_policy_path: Path,
     risk_rule_path: Path,
 ) -> dict[str, Any]:
-    quota_module = load_module("quota_governance", GOVERNANCE_ROOT / "quota" / "evaluate.py")
-    registry_module = load_module("model_registry", GOVERNANCE_ROOT / "registry" / "evaluate.py")
+    quota_module = load_module(
+        "quota_governance", GOVERNANCE_ROOT / "quota" / "evaluate.py"
+    )
+    registry_module = load_module(
+        "model_registry", GOVERNANCE_ROOT / "registry" / "evaluate.py"
+    )
     cost_module = load_module("cost_governance", GOVERNANCE_ROOT / "cost" / "evaluate.py")
     risk_module = load_module("risk_governance", GOVERNANCE_ROOT / "risk" / "evaluate.py")
     approval_module = load_module(
@@ -174,8 +178,12 @@ def evaluate_pipeline(
         GOVERNANCE_ROOT / "approval" / "evaluate.py",
     )
 
-    quota_policies = quota_module.parse_policies(GOVERNANCE_ROOT / "quota" / "policies.yaml")
-    registry = registry_module.parse_registry(GOVERNANCE_ROOT / "registry" / "models.yaml")
+    quota_policies = quota_module.parse_policies(
+        GOVERNANCE_ROOT / "quota" / "policies.yaml"
+    )
+    registry = registry_module.parse_registry(
+        GOVERNANCE_ROOT / "registry" / "models.yaml"
+    )
     cost_policies = cost_module.parse_policy_file(cost_policy_path)
     risk_rules = risk_module.parse_rules(risk_rule_path)
     requests = load_requests(request_path)

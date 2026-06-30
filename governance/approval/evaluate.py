@@ -155,7 +155,8 @@ def evaluate_request(
                 and request["namespace"] not in allowed_namespaces
             ):
                 block_reasons.append(
-                    f"namespace {request['namespace']} is not allowed for model {request['model']}"
+                    f"namespace {request['namespace']} is not allowed "
+                    f"for model {request['model']}"
                 )
         elif request["model"] in FORBIDDEN_MODELS:
             block_reasons.append(f"model {request['model']} is forbidden")
