@@ -405,14 +405,22 @@ def get_platform_topology() -> TopologyStatus:
             TopologyEdge(source="control-api", target="ollama", relationship="probes"),
             TopologyEdge(source="control-api", target="vllm", relationship="probes"),
             TopologyEdge(source="openwebui", target="control-api", relationship="serves"),
-            TopologyEdge(source="prometheus", target="control-api", relationship="scrapes"),
-            TopologyEdge(source="grafana", target="prometheus", relationship="visualizes"),
+            TopologyEdge(
+                source="prometheus", target="control-api", relationship="scrapes"
+            ),
+            TopologyEdge(
+                source="grafana", target="prometheus", relationship="visualizes"
+            ),
             TopologyEdge(source="grafana", target="loki", relationship="visualizes"),
             TopologyEdge(source="loki", target="control-api", relationship="collects"),
             TopologyEdge(source="argocd", target="helm-chart", relationship="deploys"),
-            TopologyEdge(source="helm-chart", target="control-api", relationship="packages"),
+            TopologyEdge(
+                source="helm-chart", target="control-api", relationship="packages"
+            ),
             TopologyEdge(source="control-api", target="k3s", relationship="runs-on"),
-            TopologyEdge(source="forecasting", target="control-api", relationship="forecasts"),
+            TopologyEdge(
+                source="forecasting", target="control-api", relationship="forecasts"
+            ),
             TopologyEdge(source="opa", target="helm-chart", relationship="enforces"),
         ],
     )
