@@ -1,6 +1,7 @@
 # AI Infrastructure Control Plane
 
 [![CI](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml)
+[![Release](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-control%20API-009688)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-platform%20engineering-326CE5)
@@ -28,6 +29,13 @@ AI request
 ```
 
 Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
+
+## Operator Dashboard
+
+The control API serves a live operator dashboard at `/` with platform status,
+topology health, and the model inventory, refreshed every few seconds.
+
+![AI Infrastructure Control Plane operator dashboard](docs/images/operator-dashboard.png)
 
 ## How the Projects Fit Together
 
@@ -253,6 +261,7 @@ The demo prints the key control API endpoints and runs the end-to-end governance
 
 The control API exposes operator-facing signals for private AI infrastructure:
 
+- `GET /` - live operator dashboard (HTML).
 - `GET /health` - operator-facing service health.
 - `GET /healthz` - Kubernetes-compatible health check.
 - `GET /models` - configured model backends and status.
@@ -290,6 +299,20 @@ The API exposes:
 - `GET /backends/ollama/models` - model names returned by Ollama `/api/tags`.
 - `GET /backends/ollama/latency` - lightweight latency measurement for `/api/tags`.
 
+### vLLM Backend Probe
+
+Set `VLLM_BASE_URL` to point the control API at a vLLM OpenAI-compatible server:
+
+```sh
+export VLLM_BASE_URL=http://localhost:8000
+```
+
+The API exposes:
+
+- `GET /backends/vllm/health` - backend reachability and status.
+- `GET /backends/vllm/models` - model ids returned by vLLM `/v1/models`.
+- `GET /backends/vllm/latency` - lightweight latency measurement for `/v1/models`.
+
 ### Prometheus Metrics
 
 `GET /metrics` exposes Prometheus-compatible metrics for request traffic, backend health, model inventory, capacity, and estimated cost.
@@ -306,7 +329,7 @@ Core metrics:
 
 ### AI Infrastructure Digital Twin
 
-`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. See `docs/digital-twin.md`.
+`GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. The Ollama and vLLM nodes reflect live backend probe results (healthy/degraded plus measured latency). See `docs/digital-twin.md`.
 
 ### AI Cost Governance
 
@@ -329,18 +352,32 @@ python3.12 governance/pipeline/run_pipeline.py \
   --requests governance/pipeline/sample_requests.csv
 ```
 
+## Container Images
+
+Every merge to `main` builds and pushes the control API image to GitHub Container Registry:
+
+```text
+ghcr.io/justrunme/ai-infra-control-plane:latest
+ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
+```
+
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.2.0`) to publish semver tags.
+
+## Kubernetes Deployment
+
+```sh
+helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
+  --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
+  --set image.tag=latest
+```
+
+The chart ships production defaults: non-root execution, read-only root filesystem, model inventory ConfigMap, HPA, PodDisruptionBudget, and optional ServiceMonitor, Ingress, and NetworkPolicy. See `infra/helm/ai-control-plane/README.md`.
+
 ## Portfolio Docs
 
 - `docs/case-study.md` explains the problem, architecture, capabilities, governance pipeline, observability, forecasting, GitOps, security, and demo flow.
 - `docs/platform-architecture.md` describes the system boundary, logical layers, control API, governance architecture, delivery path, and extension points.
 
-## First Backlog
+## Remaining Backlog
 
-- Add vLLM backend probes.
-- Add OpenWebUI service health checks.
-- Add a Grafana dashboard for request latency and model availability.
-- Add Argo CD application manifests.
-- Add horizontal pod autoscaling based on CPU and request latency.
-- Add Loki log collection examples.
-- Add OPA policy checks for Kubernetes manifests.
-- Add Terraform examples for Hetzner and local k3s bootstrap.
+See `docs/backlog.md` for the full roadmap. Next items: OpenWebUI health checks, gateway enforcement for governance verdicts, and live Prometheus integration for policy inputs.

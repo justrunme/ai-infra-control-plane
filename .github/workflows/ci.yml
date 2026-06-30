@@ -5,6 +5,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -26,14 +27,43 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install API dependencies
-        run: pip install -r apps/control-api/requirements.txt
-      - name: Run API tests
-        run: cd apps/control-api && PYTHONPATH=. pytest
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run API tests with coverage
+        run: |
+          cd apps/control-api
+          PYTHONPATH=. pytest --cov=app --cov-report=term-missing --cov-fail-under=85
       - name: Run governance and forecasting tests
         run: pytest tests
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/control-api/Dockerfile
+          failure-threshold: warning
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform fmt (hetzner-vm)
+        run: terraform -chdir=infra/terraform/hetzner-vm fmt -check -recursive
+      - name: Terraform fmt (k3s-bootstrap)
+        run: terraform -chdir=infra/terraform/k3s-bootstrap fmt -check -recursive
+      - name: Terraform validate (hetzner-vm)
+        run: |
+          terraform -chdir=infra/terraform/hetzner-vm init -backend=false
+          terraform -chdir=infra/terraform/hetzner-vm validate
+      - name: Terraform validate (k3s-bootstrap)
+        run: |
+          terraform -chdir=infra/terraform/k3s-bootstrap init -backend=false
+          terraform -chdir=infra/terraform/k3s-bootstrap validate
 
   helm:
     runs-on: ubuntu-latest
@@ -63,6 +93,16 @@ jobs:
           curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${version}/conftest_${version}_Linux_x86_64.tar.gz" \
             | tar -xz conftest
           sudo install conftest /usr/local/bin/conftest
+      - name: Install OPA
+        run: |
+          version="$(curl -fsSL https://api.github.com/repos/open-policy-agent/opa/releases/latest \
+            | grep -m1 tag_name | cut -d '"' -f4 | sed 's/^v//')"
+          curl -fsSL "https://github.com/open-policy-agent/opa/releases/download/v${version}/opa_linux_amd64_static" \
+            -o opa
+          chmod +x opa
+          sudo install opa /usr/local/bin/opa
+      - name: OPA unit tests
+        run: opa test security/opa/tests security/opa/policies -v
       - name: Render manifests
         run: |
           helm template ai-control-plane infra/helm/ai-control-plane \
