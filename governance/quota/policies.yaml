@@ -1,0 +1,16 @@
+tenants:
+  platform:
+    requests_per_minute: 120
+    tokens_per_day: 2000000
+    max_monthly_budget_usd: 2000
+    sensitive_data_allowed: true
+  search:
+    requests_per_minute: 80
+    tokens_per_day: 1500000
+    max_monthly_budget_usd: 1200
+    sensitive_data_allowed: false
+  finance:
+    requests_per_minute: 30
+    tokens_per_day: 500000
+    max_monthly_budget_usd: 800
+    sensitive_data_allowed: false

@@ -21,7 +21,8 @@ The core workflow is:
 
 ```text
 AI request
-  -> telemetry
+  -> tenant quota
+  -> model risk registry
   -> cost decision
   -> risk score
   -> approval decision
@@ -46,7 +47,7 @@ drift detection**, refreshed every few seconds.
 
 Submit an AI platform request through the live governance pipeline without leaving the browser:
 
-- `POST /governance/evaluate` — cost → risk → approval → final verdict
+- `POST /governance/evaluate` — quota → registry → cost → risk → approval → final verdict
 - Presets on `/` for low-risk dev, production external, and budget-exceeded scenarios
 
 ### Inventory Drift Detection

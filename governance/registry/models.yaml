@@ -1,0 +1,32 @@
+models:
+  qwen2.5-7b:
+    risk_tier: low
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    max_monthly_budget_usd: 500
+    pii_allowed: false
+    external_provider: false
+  llama3.1:8b:
+    risk_tier: low
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    max_monthly_budget_usd: 400
+    pii_allowed: false
+    external_provider: false
+  gpt-4.1-mini:
+    risk_tier: high
+    allowed_namespaces:
+      - ai-prod
+    max_monthly_budget_usd: 1500
+    pii_allowed: false
+    external_provider: true
+  unknown-frontier-model:
+    risk_tier: critical
+    allowed_namespaces:
+      - ai-dev
+    max_monthly_budget_usd: 0
+    pii_allowed: false
+    external_provider: true
+    forbidden: true

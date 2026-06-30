@@ -29,6 +29,8 @@ class GovernanceEvaluateRequest(BaseModel):
     sensitive_data: bool = False
     tool_access: bool = False
     write_permission: bool = False
+    requests_last_minute: int = Field(default=0, ge=0)
+    tokens_today: int = Field(default=0, ge=0)
 
 
 class GovernanceStageResult(BaseModel):
@@ -37,6 +39,8 @@ class GovernanceStageResult(BaseModel):
     score: int | None = None
     level: str | None = None
     factors: list[dict[str, Any]] = Field(default_factory=list)
+    risk_tier: str | None = None
+    known_model: bool | None = None
 
 
 class GovernanceEvaluateResponse(BaseModel):
@@ -89,10 +93,16 @@ def build_approval_request(
 
 
 def final_verdict(
+    quota_result: dict[str, Any],
+    registry_result: dict[str, Any],
     cost_result: dict[str, Any],
     risk_result: dict[str, Any],
     approval_result: dict[str, Any],
 ) -> tuple[str, list[str]]:
+    if quota_result["decision"] == "block":
+        return "block", quota_result["reasons"]
+    if registry_result["forbidden"]:
+        return "block", registry_result["reasons"]
     if cost_result["decision"] == "block":
         return "block", ["cost governance blocked the request"]
     if approval_result["decision"] == "block":
@@ -126,6 +136,8 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
         "sensitive_data": payload.sensitive_data,
         "tool_access": payload.tool_access,
         "write_permission": payload.write_permission,
+        "requests_last_minute": payload.requests_last_minute,
+        "tokens_today": payload.tokens_today,
     }
 
 
@@ -133,35 +145,55 @@ def evaluate_governance_request(
     payload: GovernanceEvaluateRequest,
 ) -> GovernanceEvaluateResponse:
     root = get_governance_root()
+    quota_module = load_module("quota_governance", root / "quota" / "evaluate.py")
+    registry_module = load_module("model_registry", root / "registry" / "evaluate.py")
     cost_module = load_module("cost_governance", root / "cost" / "evaluate.py")
     risk_module = load_module("risk_governance", root / "risk" / "evaluate.py")
     approval_module = load_module(
         "approval_governance", root / "approval" / "evaluate.py"
     )
 
+    quota_policies = quota_module.parse_policies(root / "quota" / "policies.yaml")
+    registry = registry_module.parse_registry(root / "registry" / "models.yaml")
     policies = cost_module.parse_policy_file(root / "cost" / "policies.yaml")
     rules = risk_module.parse_rules(root / "risk" / "rules.yaml")
     row = to_pipeline_row(payload)
 
+    quota_result = quota_module.evaluate_request(row, quota_policies)
+    registry_result = registry_module.evaluate_model_policy(row, registry)
     cost_result = cost_module.evaluate_row(row, policies)
-    risk_result = risk_module.evaluate_request(row, rules)
+    risk_result = risk_module.evaluate_request(row, rules, registry)
     approval_request = build_approval_request(
         row, cost_result["decision"], risk_result["level"]
     )
-    approval_result = approval_module.evaluate_request(approval_request)
-    verdict, reasons = final_verdict(cost_result, risk_result, approval_result)
+    approval_result = approval_module.evaluate_request(approval_request, registry)
+    verdict, reasons = final_verdict(
+        quota_result, registry_result, cost_result, risk_result, approval_result
+    )
 
     return GovernanceEvaluateResponse(
         final_verdict=verdict,
         reasons=reasons,
         flow=[
             "request",
+            "tenant_quota",
+            "model_registry",
             "cost_decision",
             "risk_score",
             "approval_decision",
             "final_verdict",
         ],
         stages={
+            "quota": GovernanceStageResult(
+                decision=quota_result["decision"],
+                reasons=quota_result["reasons"],
+            ),
+            "registry": GovernanceStageResult(
+                decision="block" if registry_result["forbidden"] else "allow",
+                reasons=registry_result["reasons"],
+                risk_tier=registry_result.get("risk_tier"),
+                known_model=registry_result.get("known_model"),
+            ),
             "cost": GovernanceStageResult(
                 decision=cost_result["decision"],
                 reasons=cost_result["reasons"],

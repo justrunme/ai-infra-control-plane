@@ -51,6 +51,16 @@ def forecast_module() -> ModuleType:
 
 
 @pytest.fixture(scope="session")
+def registry_module() -> ModuleType:
+    return load_module("model_registry", "governance/registry/evaluate.py")
+
+
+@pytest.fixture(scope="session")
+def quota_module() -> ModuleType:
+    return load_module("quota_governance", "governance/quota/evaluate.py")
+
+
+@pytest.fixture(scope="session")
 def risk_rules(risk_module: ModuleType) -> dict:
     return risk_module.parse_rules(REPO_ROOT / "governance/risk/rules.yaml")
 

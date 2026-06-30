@@ -130,7 +130,10 @@ def load_requests(path: Path) -> list[dict[str, Any]]:
     return requests
 
 
-def evaluate_request(request: dict[str, Any]) -> dict[str, Any]:
+def evaluate_request(
+    request: dict[str, Any],
+    registry: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     block_reasons: list[str] = []
     approval_reasons: list[str] = []
 
@@ -141,7 +144,22 @@ def evaluate_request(request: dict[str, Any]) -> dict[str, Any]:
     if request["team"] not in SUPPORTED_TEAMS:
         block_reasons.append(f"team {request['team']} is not onboarded for AI governance")
 
-    if request["model"] in FORBIDDEN_MODELS:
+    if registry is not None:
+        entry = registry.get(request["model"])
+        if entry is not None:
+            if entry.get("forbidden"):
+                block_reasons.append(f"model {request['model']} is forbidden")
+            allowed_namespaces = entry.get("allowed_namespaces")
+            if (
+                isinstance(allowed_namespaces, list)
+                and request["namespace"] not in allowed_namespaces
+            ):
+                block_reasons.append(
+                    f"namespace {request['namespace']} is not allowed for model {request['model']}"
+                )
+        elif request["model"] in FORBIDDEN_MODELS:
+            block_reasons.append(f"model {request['model']} is forbidden")
+    elif request["model"] in FORBIDDEN_MODELS:
         block_reasons.append(f"model {request['model']} is forbidden")
 
     if request["cost_decision"] == "block":

@@ -152,7 +152,11 @@ def risk_level(score: int, thresholds: dict[str, Any]) -> str:
     return "low"
 
 
-def evaluate_request(request: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any]:
+def evaluate_request(
+    request: dict[str, Any],
+    rules: dict[str, Any],
+    registry: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     weights = rules["score_weights"]
     thresholds = rules["thresholds"]
     score = 0
@@ -232,6 +236,35 @@ def evaluate_request(request: dict[str, Any], rules: dict[str, Any]) -> dict[str
             int(weights["deploy_permission"]),
             f"action {request['action']} can change serving state",
         )
+
+    if registry is not None:
+        entry = registry.get(request["model"])
+        if entry is None:
+            add_factor(
+                "unregistered_model",
+                int(weights.get("missing_owner", 10)),
+                f"model {request['model']} is not in the risk registry",
+            )
+        else:
+            tier = entry.get("risk_tier")
+            if tier == "critical":
+                add_factor(
+                    "registry_critical_tier",
+                    int(weights.get("high_cost_forecast", 20)),
+                    f"model {request['model']} is tagged critical in the registry",
+                )
+            elif tier == "high":
+                add_factor(
+                    "registry_high_tier",
+                    int(weights.get("external_provider", 15)),
+                    f"model {request['model']} is tagged high risk in the registry",
+                )
+            if request["sensitive_data"] and not entry.get("pii_allowed", False):
+                add_factor(
+                    "registry_pii_denied",
+                    int(weights["sensitive_data"]),
+                    f"model {request['model']} does not allow sensitive data",
+                )
 
     bounded_score = min(score, 100)
 

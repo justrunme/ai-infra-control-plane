@@ -130,10 +130,16 @@ def build_approval_request(
 
 
 def final_verdict(
+    quota_result: dict[str, Any],
+    registry_result: dict[str, Any],
     cost_result: dict[str, Any],
     risk_result: dict[str, Any],
     approval_result: dict[str, Any],
 ) -> tuple[str, list[str]]:
+    if quota_result["decision"] == "block":
+        return "block", quota_result["reasons"]
+    if registry_result["forbidden"]:
+        return "block", registry_result["reasons"]
     if cost_result["decision"] == "block":
         return "block", ["cost governance blocked the request"]
     if approval_result["decision"] == "block":
@@ -159,6 +165,8 @@ def evaluate_pipeline(
     cost_policy_path: Path,
     risk_rule_path: Path,
 ) -> dict[str, Any]:
+    quota_module = load_module("quota_governance", GOVERNANCE_ROOT / "quota" / "evaluate.py")
+    registry_module = load_module("model_registry", GOVERNANCE_ROOT / "registry" / "evaluate.py")
     cost_module = load_module("cost_governance", GOVERNANCE_ROOT / "cost" / "evaluate.py")
     risk_module = load_module("risk_governance", GOVERNANCE_ROOT / "risk" / "evaluate.py")
     approval_module = load_module(
@@ -166,21 +174,27 @@ def evaluate_pipeline(
         GOVERNANCE_ROOT / "approval" / "evaluate.py",
     )
 
+    quota_policies = quota_module.parse_policies(GOVERNANCE_ROOT / "quota" / "policies.yaml")
+    registry = registry_module.parse_registry(GOVERNANCE_ROOT / "registry" / "models.yaml")
     cost_policies = cost_module.parse_policy_file(cost_policy_path)
     risk_rules = risk_module.parse_rules(risk_rule_path)
     requests = load_requests(request_path)
 
     decisions = []
     for request in requests:
+        quota_result = quota_module.evaluate_request(request, quota_policies)
+        registry_result = registry_module.evaluate_model_policy(request, registry)
         cost_result = cost_module.evaluate_row(request, cost_policies)
-        risk_result = risk_module.evaluate_request(request, risk_rules)
+        risk_result = risk_module.evaluate_request(request, risk_rules, registry)
         approval_request = build_approval_request(
             request,
             cost_result["decision"],
             risk_result["level"],
         )
-        approval_result = approval_module.evaluate_request(approval_request)
-        verdict, reasons = final_verdict(cost_result, risk_result, approval_result)
+        approval_result = approval_module.evaluate_request(approval_request, registry)
+        verdict, reasons = final_verdict(
+            quota_result, registry_result, cost_result, risk_result, approval_result
+        )
 
         decisions.append(
             {
@@ -208,6 +222,15 @@ def evaluate_pipeline(
                     "write_permission": request["write_permission"],
                 },
                 "stages": {
+                    "quota": {
+                        "decision": quota_result["decision"],
+                        "reasons": quota_result["reasons"],
+                    },
+                    "registry": {
+                        "decision": "block" if registry_result["forbidden"] else "allow",
+                        "reasons": registry_result["reasons"],
+                        "risk_tier": registry_result.get("risk_tier"),
+                    },
                     "cost": {
                         "decision": cost_result["decision"],
                         "reasons": cost_result["reasons"],
@@ -237,6 +260,8 @@ def evaluate_pipeline(
         "flow": [
             "request",
             "telemetry_sample",
+            "tenant_quota",
+            "model_registry",
             "cost_decision",
             "risk_score",
             "approval_decision",

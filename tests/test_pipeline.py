@@ -5,6 +5,14 @@ from __future__ import annotations
 from types import ModuleType
 
 
+def quota(decision: str, reasons: list[str] | None = None) -> dict:
+    return {"decision": decision, "reasons": reasons or []}
+
+
+def registry(forbidden: bool = False, reasons: list[str] | None = None) -> dict:
+    return {"forbidden": forbidden, "reasons": reasons or []}
+
+
 def cost(decision: str) -> dict:
     return {"decision": decision, "reasons": []}
 
@@ -17,37 +25,79 @@ def approval(decision: str) -> dict:
     return {"decision": decision, "reasons": []}
 
 
+def test_quota_block_wins(pipeline_module: ModuleType) -> None:
+    verdict, _ = pipeline_module.final_verdict(
+        quota("block", ["rpm exceeded"]),
+        registry(),
+        cost("allow"),
+        risk("low"),
+        approval("allow"),
+    )
+    assert verdict == "block"
+
+
+def test_registry_block_wins(pipeline_module: ModuleType) -> None:
+    verdict, _ = pipeline_module.final_verdict(
+        quota("allow"),
+        registry(True, ["forbidden model"]),
+        cost("allow"),
+        risk("low"),
+        approval("allow"),
+    )
+    assert verdict == "block"
+
+
 def test_cost_block_wins(pipeline_module: ModuleType) -> None:
     verdict, _ = pipeline_module.final_verdict(
-        cost("block"), risk("low"), approval("allow")
+        quota("allow"),
+        registry(),
+        cost("block"),
+        risk("low"),
+        approval("allow"),
     )
     assert verdict == "block"
 
 
 def test_approval_block_wins(pipeline_module: ModuleType) -> None:
     verdict, _ = pipeline_module.final_verdict(
-        cost("allow"), risk("low"), approval("block")
+        quota("allow"),
+        registry(),
+        cost("allow"),
+        risk("low"),
+        approval("block"),
     )
     assert verdict == "block"
 
 
 def test_critical_risk_requires_approval(pipeline_module: ModuleType) -> None:
     verdict, _ = pipeline_module.final_verdict(
-        cost("allow"), risk("critical"), approval("allow")
+        quota("allow"),
+        registry(),
+        cost("allow"),
+        risk("critical"),
+        approval("allow"),
     )
     assert verdict == "approval_required"
 
 
 def test_cost_warn_requires_approval(pipeline_module: ModuleType) -> None:
     verdict, _ = pipeline_module.final_verdict(
-        cost("warn"), risk("low"), approval("allow")
+        quota("allow"),
+        registry(),
+        cost("warn"),
+        risk("low"),
+        approval("allow"),
     )
     assert verdict == "approval_required"
 
 
 def test_all_clear_allows(pipeline_module: ModuleType) -> None:
     verdict, reasons = pipeline_module.final_verdict(
-        cost("allow"), risk("low"), approval("allow")
+        quota("allow"),
+        registry(),
+        cost("allow"),
+        risk("low"),
+        approval("allow"),
     )
     assert verdict == "allow"
     assert reasons == ["all governance stages allow the request"]
