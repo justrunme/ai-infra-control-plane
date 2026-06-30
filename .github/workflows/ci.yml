@@ -30,6 +30,8 @@ jobs:
         run: pip install -r apps/control-api/requirements.txt
       - name: Run API tests
         run: cd apps/control-api && PYTHONPATH=. pytest
+      - name: Run governance and forecasting tests
+        run: pytest tests
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
 
