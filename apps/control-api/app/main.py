@@ -8,11 +8,14 @@ from typing import Literal
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field, ValidationError
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT_SECONDS = 2.0
+
+STATIC_DIR = Path(__file__).with_name("static")
+DASHBOARD_HTML_PATH = STATIC_DIR / "index.html"
 
 VLLM_DEFAULT_BASE_URL = "http://localhost:8000"
 VLLM_TIMEOUT_SECONDS = 2.0
@@ -531,6 +534,11 @@ async def record_http_metrics(request: Request, call_next):
     HTTP_REQUEST_LATENCY_MS_TOTAL[metric_key] += latency_ms
 
     return response
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def dashboard() -> str:
+    return DASHBOARD_HTML_PATH.read_text()
 
 
 @app.get("/health", response_model=HealthStatus)
