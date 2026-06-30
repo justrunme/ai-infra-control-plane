@@ -8,3 +8,4 @@ These H.264 MP4 walkthroughs complement the written architecture and keep the po
 | [Governance decision flow](governance-pipeline.mp4) | 10 seconds | Portfolio case study |
 | [Digital twin](digital-twin.mp4) | 10 seconds | Platform architecture |
 | [Forecast-driven scaling](forecast-driven-scaling.mp4) | 10 seconds | Platform architecture |
+| [Governance playground & drift](governance-playground.mp4) | 10 seconds | Repository README |

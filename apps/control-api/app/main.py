@@ -11,6 +11,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field, ValidationError
 
+from app.drift_service import DriftStatus, build_drift_status
+from app.governance_service import (
+    GovernanceEvaluateRequest,
+    GovernanceEvaluateResponse,
+    evaluate_governance_request,
+)
+
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT_SECONDS = 2.0
 
@@ -274,6 +281,28 @@ def extract_vllm_models(payload: dict) -> list[VllmModel]:
         for model in models
         if isinstance(model, dict) and isinstance(model.get("id"), str)
     ]
+
+
+def probe_ollama_model_names() -> tuple[list[str], bool, str | None]:
+    payload, _, error = fetch_ollama_tags()
+    if error is not None:
+        return [], False, error
+    return [model.name for model in extract_ollama_models(payload)], True, None
+
+
+def probe_vllm_model_names() -> tuple[list[str], bool, str | None]:
+    payload, _, error = fetch_vllm_models()
+    if error is not None:
+        return [], False, error
+    return [model.name for model in extract_vllm_models(payload)], True, None
+
+
+def get_inventory_drift() -> DriftStatus:
+    return build_drift_status(
+        get_model_inventory(),
+        probe_ollama_model_names,
+        probe_vllm_model_names,
+    )
 
 
 def metric_label_value(value: str | int) -> str:
@@ -571,6 +600,18 @@ def topology() -> TopologyStatus:
     return get_platform_topology()
 
 
+@app.get("/drift", response_model=DriftStatus)
+def drift() -> DriftStatus:
+    return get_inventory_drift()
+
+
+@app.post("/governance/evaluate", response_model=GovernanceEvaluateResponse)
+def governance_evaluate(
+    payload: GovernanceEvaluateRequest,
+) -> GovernanceEvaluateResponse:
+    return evaluate_governance_request(payload)
+
+
 @app.get("/metrics", response_class=PlainTextResponse)
 def metrics() -> str:
     models = get_model_inventory()
@@ -582,6 +623,7 @@ def metrics() -> str:
     vllm_payload, vllm_latency_ms, vllm_error = fetch_vllm_models()
     vllm_models = extract_vllm_models(vllm_payload) if vllm_error is None else []
     vllm_up = 1 if vllm_error is None else 0
+    drift_status = get_inventory_drift()
 
     lines = [
         "# HELP ai_control_http_requests_total Total HTTP requests.",
@@ -696,8 +738,25 @@ def metrics() -> str:
                 "ai_control_estimated_hourly_cost_usd",
                 cost_status.estimated_hourly_cost,
             ),
+            "# HELP ai_control_inventory_in_sync Inventory drift status.",
+            "# TYPE ai_control_inventory_in_sync gauge",
+            metric_line(
+                "ai_control_inventory_in_sync",
+                1 if drift_status.in_sync else 0,
+            ),
+            "# HELP ai_control_inventory_drift Backend inventory drift flag.",
+            "# TYPE ai_control_inventory_drift gauge",
         ]
     )
+
+    for backend in drift_status.backends:
+        lines.append(
+            metric_line(
+                "ai_control_inventory_drift",
+                0 if backend.in_sync else 1,
+                backend=backend.backend,
+            )
+        )
 
     return "\n".join(lines) + "\n"
 

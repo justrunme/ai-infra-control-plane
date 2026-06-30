@@ -33,9 +33,28 @@ Read the portfolio overview in `docs/case-study.md` and the technical system des
 ## Operator Dashboard
 
 The control API serves a live operator dashboard at `/` with platform status,
-topology health, and the model inventory, refreshed every few seconds.
+topology health, model inventory, a **governance playground**, and **inventory
+drift detection**, refreshed every few seconds.
 
 ![AI Infrastructure Control Plane operator dashboard](docs/images/operator-dashboard.png)
+
+### Governance Playground
+
+> **Interactive demo** | Click the animated preview to watch the governance playground and drift detection walkthrough.
+
+[![Animated preview of the governance playground and inventory drift](docs/videos/previews/governance-playground.gif)](docs/videos/governance-playground.mp4)
+
+Submit an AI platform request through the live governance pipeline without leaving the browser:
+
+- `POST /governance/evaluate` — cost → risk → approval → final verdict
+- Presets on `/` for low-risk dev, production external, and budget-exceeded scenarios
+
+### Inventory Drift Detection
+
+Compare configured model inventory (`MODEL_INVENTORY_PATH` / Helm ConfigMap) against live Ollama and vLLM probes:
+
+- `GET /drift` — desired vs actual models per backend, missing/unexpected lists
+- Prometheus gauges: `ai_control_inventory_in_sync`, `ai_control_inventory_drift`
 
 ## How the Projects Fit Together
 
@@ -261,7 +280,7 @@ The demo prints the key control API endpoints and runs the end-to-end governance
 
 The control API exposes operator-facing signals for private AI infrastructure:
 
-- `GET /` - live operator dashboard (HTML).
+- `GET /` - live operator dashboard with governance playground and drift panel (HTML).
 - `GET /health` - operator-facing service health.
 - `GET /healthz` - Kubernetes-compatible health check.
 - `GET /models` - configured model backends and status.
@@ -330,6 +349,10 @@ Core metrics:
 ### AI Infrastructure Digital Twin
 
 `GET /topology` exposes a live platform graph for private AI infrastructure components, dependencies, health, telemetry, and operational signals. The Ollama and vLLM nodes reflect live backend probe results (healthy/degraded plus measured latency). See `docs/digital-twin.md`.
+
+`GET /drift` compares configured model inventory against live Ollama and vLLM probes and reports missing or unexpected models per backend.
+
+`POST /governance/evaluate` runs a single AI request through the cost, risk, and approval pipeline and returns the final verdict for the operator dashboard playground.
 
 ### AI Cost Governance
 

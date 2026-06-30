@@ -16,7 +16,7 @@ lint:
 validate: lint test helm-template policy-check terraform-fmt
 
 docker-build:
-	docker build -t ai-infra-control-plane:local apps/control-api
+	docker build -f apps/control-api/Dockerfile -t ai-infra-control-plane:local .
 
 helm-template:
 	helm template ai-control-plane infra/helm/ai-control-plane
@@ -37,7 +37,7 @@ demo:
 	@echo "AI Infrastructure Control Plane demo"
 	@echo
 	@echo "Operator dashboard:"
-	@echo "  GET /"
+	@echo "  GET /  (governance playground + inventory drift)"
 	@echo
 	@echo "Control API endpoints:"
 	@echo "  GET /health"
