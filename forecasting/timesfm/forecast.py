@@ -7,8 +7,8 @@ import argparse
 import csv
 import json
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 METRICS = (
     "request_latency_ms",
@@ -65,7 +65,8 @@ def load_metric(path: Path, metric: str) -> list[float]:
                 values.append(float(raw_value))
             except ValueError as exc:
                 raise ValueError(
-                    f"invalid numeric value for {metric} on CSV row {row_number}: {raw_value}"
+                    f"invalid numeric value for {metric} on CSV row "
+                    f"{row_number}: {raw_value}"
                 ) from exc
 
     if len(values) < 4:

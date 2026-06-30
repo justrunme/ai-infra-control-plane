@@ -7,9 +7,9 @@ import argparse
 import csv
 import json
 import math
+from collections.abc import Iterable
 from pathlib import Path
 from statistics import mean
-from typing import Iterable
 
 FORECAST_METRICS = (
     "request_rate_rps",
@@ -29,7 +29,9 @@ def parse_args() -> argparse.Namespace:
         default=Path(__file__).with_name("sample_load.csv"),
         help="CSV file with inference load signals.",
     )
-    parser.add_argument("--horizon", type=int, default=6, help="Forecast horizon in points.")
+    parser.add_argument(
+        "--horizon", type=int, default=6, help="Forecast horizon in points."
+    )
     parser.add_argument(
         "--target-utilization",
         type=float,
@@ -129,9 +131,13 @@ def recommend_replicas(
 
     request_replicas = math.ceil(peak_rps / (capacity_per_replica * target_utilization))
     latency_replicas = math.ceil(current_replicas * (peak_latency / latency_slo_ms))
-    token_replicas = math.ceil(peak_tokens / (token_capacity_per_replica * target_utilization))
+    token_replicas = math.ceil(
+        peak_tokens / (token_capacity_per_replica * target_utilization)
+    )
 
-    unconstrained = max(current_replicas, request_replicas, latency_replicas, token_replicas)
+    unconstrained = max(
+        current_replicas, request_replicas, latency_replicas, token_replicas
+    )
     recommended = min(unconstrained, current_replicas + max_scale_up_step)
 
     reasons = []

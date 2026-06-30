@@ -48,7 +48,9 @@ SUPPORTED_TEAMS = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate AI approval workflow requests.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate AI approval workflow requests."
+    )
     parser.add_argument(
         "--requests",
         type=Path,

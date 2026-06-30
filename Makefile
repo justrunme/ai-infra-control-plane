@@ -4,13 +4,13 @@ PYTHON ?= python3.12
 
 venv:
 	$(PYTHON) -m venv .venv
-	. .venv/bin/activate && pip install -r apps/control-api/requirements.txt
+	. .venv/bin/activate && pip install -r requirements-dev.txt
 
 test:
 	. .venv/bin/activate && cd apps/control-api && PYTHONPATH=. pytest
 
 lint:
-	$(PYTHON) -m compileall apps/control-api/app apps/control-api/tests forecasting/timesfm experiments/inference-autoscaling observability/otel-genai governance/cost governance/approval governance/risk governance/pipeline
+	. .venv/bin/activate && ruff check .
 
 docker-build:
 	docker build -t ai-infra-control-plane:local apps/control-api
