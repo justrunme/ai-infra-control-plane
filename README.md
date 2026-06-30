@@ -9,13 +9,15 @@
 ![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **Product walkthrough** | Click the animated preview to watch the full 10-second platform overview.
+> **AI Infrastructure OS** — open-source operating layer for private AI platforms: policy, cost, capacity, observability, and fleet operations on Kubernetes.
 
 [![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
 
-A Kubernetes-native platform for operating private AI workloads with observability, forecasting, GitOps delivery, security policy, cost governance, risk scoring, and human approval gates.
+This repository is the **Control Plane** of the AI Infrastructure OS. The reference **Execution Plane** is [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform).
 
-This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It focuses on the platform engineering layer around Ollama, vLLM, OpenWebUI, and future private inference backends: deployment, health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.
+Read the [product roadmap](docs/product-roadmap.md) and [portfolio overview](docs/portfolio-overview.md) for the full platform map.
+
+This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It operates private inference fleets on Kubernetes through deployment health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.
 
 The core workflow is:
 
@@ -29,7 +31,7 @@ AI request
   -> final verdict
 ```
 
-Read the portfolio overview in `docs/case-study.md` and the technical system design in `docs/platform-architecture.md`.
+Read the portfolio overview in `docs/portfolio-overview.md`, the [product roadmap](docs/product-roadmap.md), and the technical system design in `docs/platform-architecture.md`.
 
 ## Operator Dashboard
 
@@ -59,14 +61,14 @@ Compare configured model inventory (`MODEL_INVENTORY_PATH` / Helm ConfigMap) aga
 
 ## How the Projects Fit Together
 
-This repository is part of a larger AI Platform portfolio. Read the [portfolio overview](docs/portfolio-overview.md) for the full architecture.
+This repository is the **Control Plane** of the [AI Infrastructure OS](docs/product-roadmap.md). The **Execution Plane** lives in [ai-runtime-platform](https://github.com/justrunme/ai-runtime-platform).
 
-| Layer | Responsibility | Repository |
+| Layer | Role in AI Infrastructure OS | Repository |
 | --- | --- | --- |
-| **AI Infrastructure Control Plane** | Observes, governs, forecasts, and operates AI workloads through telemetry, policy, cost control, risk scoring, approvals, digital twin topology, and GitOps. | [justrunme/ai-infra-control-plane](https://github.com/justrunme/ai-infra-control-plane) |
-| **AI Runtime Platform** | Executes private LLM inference through an OpenAI-compatible gateway, model routing, vLLM/Ollama, KServe, and KEDA. | [justrunme/ai-runtime-platform](https://github.com/justrunme/ai-runtime-platform) |
+| **Execution Plane** | Runs inference, routes traffic, enforces governance verdicts | [justrunme/ai-runtime-platform](https://github.com/justrunme/ai-runtime-platform) |
+| **Control Plane** | Policy, cost, topology, drift, SLO, fleet operations | [justrunme/ai-infra-control-plane](https://github.com/justrunme/ai-infra-control-plane) |
 
-The Runtime Platform executes AI workloads. The Control Plane uses their operational signals to observe, govern, predict, and control the platform.
+The Execution Plane runs workloads. The Control Plane evaluates policy and the runtime enforces verdicts at the inference boundary via `CONTROL_PLANE_URL`.
 
 ## Product Walkthroughs
 

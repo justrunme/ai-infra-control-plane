@@ -49,17 +49,36 @@ spec:
             httpGet:
               path: /healthz
               port: http
-          {{- if .Values.modelInventory.enabled }}
+          {{- if or .Values.modelInventory.enabled .Values.governance.enabled }}
           volumeMounts:
+            {{- if .Values.modelInventory.enabled }}
             - name: model-inventory
               mountPath: {{ .Values.modelInventory.mountPath }}
               readOnly: true
+            {{- end }}
+            {{- if .Values.governance.enabled }}
+            - name: governance-config
+              mountPath: /app/governance/registry/models.yaml
+              subPath: models.yaml
+              readOnly: true
+            - name: governance-config
+              mountPath: /app/governance/quota/policies.yaml
+              subPath: policies.yaml
+              readOnly: true
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.modelInventory.enabled }}
+      {{- if or .Values.modelInventory.enabled .Values.governance.enabled }}
       volumes:
+        {{- if .Values.modelInventory.enabled }}
         - name: model-inventory
           configMap:
             name: {{ include "ai-control-plane.fullname" . }}-inventory
+        {{- end }}
+        {{- if .Values.governance.enabled }}
+        - name: governance-config
+          configMap:
+            name: {{ include "ai-control-plane.fullname" . }}-governance
+        {{- end }}
       {{- end }}

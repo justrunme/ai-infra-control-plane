@@ -6,7 +6,7 @@ This directory contains Grafana dashboards for the AI Infrastructure Control Pla
 
 - `dashboards/ai-control-plane.json` - overview dashboard for backend health, latency, request traffic, model availability, capacity, and hourly cost.
 - `dashboards/loki-logs.json` - Loki dashboard for control plane logs, Argo CD deployment signals, and observability stack logs.
-- `dashboards/topology-overview.json` - digital twin overview for platform dependencies and operational signals.
+- `dashboards/chargeback-attribution.json` - FinOps view combining runtime tenant metrics (`gateway_tenant_*`), governance verdicts, and estimated inference cost. Import when the Execution Plane and Control Plane metrics are federated into one Prometheus.
 
 ## Required Metrics
 
@@ -33,3 +33,5 @@ Core metrics:
 For the Loki logs dashboard, import `dashboards/loki-logs.json` and select the Loki datasource configured for the cluster.
 
 For the digital twin dashboard, import `dashboards/topology-overview.json` and select the Prometheus datasource that scrapes the control API.
+
+For chargeback and tenant attribution, import `dashboards/chargeback-attribution.json`. It expects runtime gateway metrics (`gateway_tenant_requests_total`, `gateway_governance_decisions_total`) alongside control-plane signals.

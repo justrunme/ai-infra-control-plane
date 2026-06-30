@@ -22,6 +22,7 @@ Apply `prometheus-rules.yaml` in your monitoring stack or reference the expressi
 
 - **Runtime gateway dashboard** (`ai-runtime-platform/deploy/observability/gateway-dashboard.yaml`): add panels for TTFT proxy via `gateway_chat_duration_seconds` and fallback ratio.
 - **Control plane dashboard** (`observability/grafana/`): add governance verdict and drift panels using `gateway_governance_decisions_total` (remote write or federation) and `ai_control_inventory_in_sync`.
+- **Chargeback dashboard** (`observability/grafana/dashboards/chargeback-attribution.json`): tenant request/token rates, governance block ratio, and backend cost rate.
 - **Error budget policy**: burn > 2x for 1 h → page; burn > 5x for 15 min → block canary promotion.
 
 ## Related work
