@@ -35,6 +35,43 @@ jobs:
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
 
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Helm lint
+        run: helm lint infra/helm/ai-control-plane
+      - name: Helm template (defaults)
+        run: helm template ai-control-plane infra/helm/ai-control-plane
+      - name: Helm template (all optional resources enabled)
+        run: |
+          helm template ai-control-plane infra/helm/ai-control-plane \
+            --set metrics.serviceMonitor.enabled=true \
+            --set ingress.enabled=true \
+            --set networkPolicy.enabled=true
+
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Install conftest
+        run: |
+          version="$(curl -fsSL https://api.github.com/repos/open-policy-agent/conftest/releases/latest \
+            | grep -m1 tag_name | cut -d '"' -f4 | sed 's/^v//')"
+          curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${version}/conftest_${version}_Linux_x86_64.tar.gz" \
+            | tar -xz conftest
+          sudo install conftest /usr/local/bin/conftest
+      - name: Render manifests
+        run: |
+          helm template ai-control-plane infra/helm/ai-control-plane \
+            --set metrics.serviceMonitor.enabled=true \
+            --set ingress.enabled=true \
+            --set networkPolicy.enabled=true > rendered-manifests.yaml
+      - name: Conftest policy gate
+        run: conftest test --policy security/opa/policies rendered-manifests.yaml
+
   trivy:
     runs-on: ubuntu-latest
     steps:

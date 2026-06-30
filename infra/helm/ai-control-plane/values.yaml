@@ -1,5 +1,7 @@
 replicaCount: 1
 
+nameOverride: ""
+
 autoscaling:
   enabled: true
   minReplicas: 1
@@ -10,6 +12,16 @@ image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
   tag: "0.1.0"
   pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: "8080"
 
 podSecurityContext:
   runAsNonRoot: true
@@ -30,9 +42,58 @@ securityContext:
 ollama:
   baseUrl: http://ollama:11434
 
+vllm:
+  baseUrl: http://vllm:8000
+
+# Model inventory rendered into a ConfigMap and mounted into the container.
+# The API reads it through MODEL_INVENTORY_PATH.
+modelInventory:
+  enabled: true
+  mountPath: /etc/ai-control-plane
+  models:
+    - name: llama-3.1-8b-instruct
+      backend: ollama
+      healthy: true
+      latency_ms: 38
+      capacity_tokens_per_second: 320
+      estimated_hourly_cost_usd: 0.18
+    - name: qwen2.5-14b-instruct
+      backend: vllm
+      healthy: true
+      latency_ms: 55
+      capacity_tokens_per_second: 540
+      estimated_hourly_cost_usd: 0.42
+
 service:
   type: ClusterIP
   port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ai-control-plane.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    additionalLabels: {}
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  # Extra ingress rules merged with the default metrics/HTTP allowance.
+  extraIngress: []
 
 resources:
   requests:

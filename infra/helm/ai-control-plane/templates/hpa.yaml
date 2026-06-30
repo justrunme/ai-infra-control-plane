@@ -4,7 +4,7 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "ai-control-plane.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "ai-control-plane.name" . }}
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -20,4 +20,3 @@ spec:
           type: Utilization
           averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
-
