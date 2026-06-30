@@ -65,6 +65,53 @@ def test_governance_evaluate_block_on_budget(monkeypatch) -> None:
     assert payload["final_verdict"] == "block"
 
 
+def test_governance_evaluate_blocks_forbidden_model() -> None:
+    response = client.post(
+        "/governance/evaluate",
+        json={
+            "team": "platform",
+            "owner": "alice",
+            "environment": "development",
+            "namespace": "ai-dev",
+            "action": "invoke_model",
+            "model": "unknown-frontier-model",
+            "provider": "external",
+            "input_tokens": 1000,
+            "output_tokens": 500,
+            "forecast_monthly_cost_usd": 100.0,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["final_verdict"] == "block"
+    assert payload["stages"]["registry"]["decision"] == "block"
+
+
+def test_governance_evaluate_blocks_tenant_quota() -> None:
+    response = client.post(
+        "/governance/evaluate",
+        json={
+            "team": "finance",
+            "owner": "bob",
+            "environment": "development",
+            "namespace": "ai-dev",
+            "action": "invoke_model",
+            "model": "llama3.1:8b",
+            "provider": "ollama",
+            "input_tokens": 1000,
+            "output_tokens": 500,
+            "requests_last_minute": 30,
+            "sensitive_data": True,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["final_verdict"] == "block"
+    assert payload["stages"]["quota"]["decision"] == "block"
+
+
 def test_drift_endpoint(monkeypatch) -> None:
     monkeypatch.setattr(
         app_main,
