@@ -1,0 +1,13 @@
+{{- if .Values.governance.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-control-plane.fullname" . }}-governance
+  labels:
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
+data:
+  models.yaml: |
+{{ .Values.governance.registryModels | nindent 4 }}
+  policies.yaml: |
+{{ .Values.governance.quotaPolicies | nindent 4 }}
+{{- end }}

@@ -39,6 +39,7 @@ The chart renders a production-oriented set of resources:
 | HorizontalPodAutoscaler | enabled | `autoscaling.enabled` |
 | ServiceAccount (token automount off) | enabled | `serviceAccount.create` |
 | ConfigMap (model inventory, mounted read-only) | enabled | `modelInventory.enabled` |
+| ConfigMap (governance registry + tenant quota) | enabled | `governance.enabled` |
 | PodDisruptionBudget | enabled | `podDisruptionBudget.enabled` |
 | ServiceMonitor (Prometheus Operator) | disabled | `metrics.serviceMonitor.enabled` |
 | Ingress | disabled | `ingress.enabled` |
@@ -50,6 +51,14 @@ When `modelInventory.enabled` is true, the chart renders the inventory into a
 ConfigMap, mounts it read-only at `modelInventory.mountPath`, and sets
 `MODEL_INVENTORY_PATH` so the control API serves it. Edit `modelInventory.models`
 in `values.yaml` to declare your backends.
+
+## Governance Policies
+
+When `governance.enabled` is true, the chart renders a ConfigMap with the model
+risk registry and tenant quota policies, then mounts them over the bundled
+`/app/governance/registry/models.yaml` and `/app/governance/quota/policies.yaml`
+files inside the container. Edit `governance.registryModels` and
+`governance.quotaPolicies` in `values.yaml` for GitOps-driven policy updates.
 
 ## Observability
 
