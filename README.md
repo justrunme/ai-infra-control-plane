@@ -17,7 +17,18 @@ This repository is the **Control Plane** of the AI Infrastructure OS. The refere
 
 Read the [product roadmap](docs/product-roadmap.md) and [portfolio overview](docs/portfolio-overview.md) for the full platform map.
 
-This project is intentionally scoped as an AI infrastructure platform, not an agent framework. It operates private inference fleets on Kubernetes through deployment health, latency, capacity, cost, dashboards, forecasting, policy, and operational readiness.
+### One-command platform demo
+
+Bring up **Control Plane + Execution Plane + Ollama** and verify governance enforcement:
+
+```sh
+make platform-demo          # terminal 1
+make platform-demo-verify   # terminal 2
+```
+
+See [demo/platform/README.md](demo/platform/README.md) for URLs and manual curls.
+
+This project is intentionally scoped as an AI infrastructure platform, not an agent framework.
 
 The core workflow is:
 

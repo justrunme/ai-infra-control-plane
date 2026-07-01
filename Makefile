@@ -1,6 +1,6 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint validate docker-build helm-template demo
+.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down
 
 venv:
 	$(PYTHON) -m venv .venv
@@ -8,7 +8,7 @@ venv:
 
 test:
 	. .venv/bin/activate && cd apps/control-api && PYTHONPATH=. pytest
-	. .venv/bin/activate && pytest tests
+	. .venv/bin/activate && pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests
 
 lint:
 	. .venv/bin/activate && ruff check .
@@ -36,6 +36,9 @@ terraform-fmt:
 demo:
 	@echo "AI Infrastructure Control Plane demo"
 	@echo
+	@echo "Full platform (Control + Execution planes):"
+	@echo "  make platform-demo"
+	@echo
 	@echo "Operator dashboard:"
 	@echo "  GET /  (governance playground + inventory drift)"
 	@echo
@@ -51,3 +54,14 @@ demo:
 	@echo
 	@echo "Governance pipeline:"
 	$(PYTHON) governance/pipeline/run_pipeline.py --requests governance/pipeline/sample_requests.csv
+
+PLATFORM_COMPOSE = docker compose -f demo/platform/docker-compose.yaml
+
+platform-demo:
+	$(PLATFORM_COMPOSE) up --build
+
+platform-demo-verify:
+	bash demo/platform/verify-demo.sh
+
+platform-demo-down:
+	$(PLATFORM_COMPOSE) down
