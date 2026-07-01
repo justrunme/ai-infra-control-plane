@@ -34,7 +34,7 @@ jobs:
           cd apps/control-api
           PYTHONPATH=. pytest --cov=app --cov-report=term-missing --cov-fail-under=85
       - name: Run governance and forecasting tests
-        run: pytest tests
+        run: pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
 

@@ -27,10 +27,12 @@ AI Infrastructure OS
 | Policy Engine | `governance/` + OPA | 7/10 | Quota → registry → cost → risk → approval |
 | Cost & Chargeback | cost + quota + tenant metrics | 6/10 | Helm-wired policies, Grafana chargeback |
 | Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
-| Capacity Planner | `experiments/inference-autoscaling` | 5/10 | Offline forecast → replica recommendation |
+| Capacity Planner | `experiments/inference-autoscaling` + `experiments/capacity-loop` | 6/10 | Forecast → KEDA hints |
 | Model Registry | `governance/registry/` | 6/10 | Risk tier, namespace, PII, budget |
 | Observability & SLO | `observability/slo/` | 6/10 | Prometheus rules + alert catalog |
 | Canary Analysis | `ai-runtime-platform/experiments/canary-analysis` | 5/10 | Promote/hold/rollback from shadow metrics |
+| Platform Demo | `demo/platform/` | 7/10 | One-command Control + Execution planes |
+| GPU Placement | `experiments/gpu-placement/` | 5/10 | VRAM / utilization / cost scoring |
 
 ## Decision vs execution
 
@@ -53,7 +55,8 @@ These are **not** new repositories — they extend the flagship:
 | --- | --- | --- |
 | GPU Scheduler | `experiments/gpu-placement/` | Placement scoring prototype |
 | AI Chargeback | Grafana + tenant metrics | ✅ chargeback dashboard |
-| Capacity closed loop | forecasting + autoscaling | Wire forecast output to HPA hints |
+| Capacity closed loop | forecasting + autoscaling | ✅ `experiments/capacity-loop/bridge.py` |
+| Platform demo | `demo/platform/` | ✅ `make platform-demo` |
 | Incident Copilot | `docs/runbooks/` | Alert → playbook JSON |
 | Multi-cloud placement | registry + topology | Cloud/region labels on models |
 

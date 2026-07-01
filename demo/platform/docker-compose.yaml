@@ -1,0 +1,103 @@
+# AI Infrastructure OS — one-command platform demo
+# Control Plane + Execution Plane + Ollama on a laptop.
+name: ai-infrastructure-os-demo
+
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.30.10}
+    dns:
+      - ${LOCAL_DEMO_DNS_PRIMARY:-1.1.1.1}
+      - ${LOCAL_DEMO_DNS_SECONDARY:-8.8.8.8}
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  ollama-init:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.30.10}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODELS: ${OLLAMA_MODELS:-llama3.1:8b}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for model in $$(echo $$OLLAMA_MODELS | tr ',' ' '); do
+          ollama pull $$model
+        done
+    restart: "no"
+
+  control-api:
+    build:
+      context: ../..
+      dockerfile: apps/control-api/Dockerfile
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      VLLM_BASE_URL: http://127.0.0.1:8000
+      MODEL_INVENTORY_PATH: /etc/ai-control-plane/model_inventory.json
+    volumes:
+      - ./model_inventory.json:/etc/ai-control-plane/model_inventory.json:ro
+    ports:
+      - "8091:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  gateway:
+    build:
+      context: ${RUNTIME_PLATFORM_PATH:-../../../ai-runtime-platform}
+      dockerfile: Dockerfile
+    depends_on:
+      control-api:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      OLLAMA_MODELS: ${OLLAMA_MODELS:-llama3.1:8b}
+      MODEL_TARGETS: "{}"
+      MODEL_ROUTES: "{}"
+      CONTROL_PLANE_URL: http://control-api:8080
+      GOVERNANCE_ENFORCEMENT: "true"
+      GOVERNANCE_FAIL_OPEN: "false"
+      TENANT_ATTRIBUTION_ENABLED: "true"
+      GOVERNANCE_DEFAULT_TEAM: platform
+      GOVERNANCE_DEFAULT_NAMESPACE: ai-dev
+    ports:
+      - "8090:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+volumes:
+  ollama-models:

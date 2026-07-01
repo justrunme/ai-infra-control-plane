@@ -1,0 +1,6 @@
+workload_id,model_size_gb,batch_size,queue_depth,gpu_name,gpu_vram_gb,gpu_utilization,cost_per_hour_usd
+chat-prod-a,14,8,3,a100-40gb,40,0.42,2.8
+chat-prod-a,14,8,3,l4-24gb,24,0.25,0.9
+chat-prod-a,14,8,3,t4-16gb,16,0.18,0.4
+batch-embed-b,8,32,12,a100-40gb,40,0.68,2.8
+batch-embed-b,8,32,12,l4-24gb,24,0.55,0.9
