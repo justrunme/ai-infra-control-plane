@@ -1,6 +1,6 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down
+.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down
 
 venv:
 	$(PYTHON) -m venv .venv
@@ -56,6 +56,7 @@ demo:
 	$(PYTHON) governance/pipeline/run_pipeline.py --requests governance/pipeline/sample_requests.csv
 
 PLATFORM_COMPOSE = docker compose -f demo/platform/docker-compose.yaml
+PLATFORM_OIDC_COMPOSE = docker compose -f demo/platform/docker-compose.yaml -f demo/platform/docker-compose.oidc.yaml
 
 platform-demo:
 	$(PLATFORM_COMPOSE) up --build
@@ -65,3 +66,12 @@ platform-demo-verify:
 
 platform-demo-down:
 	$(PLATFORM_COMPOSE) down
+
+platform-demo-oidc:
+	$(PLATFORM_OIDC_COMPOSE) up --build
+
+platform-demo-oidc-verify:
+	bash demo/platform/verify-oidc-demo.sh
+
+platform-demo-oidc-down:
+	$(PLATFORM_OIDC_COMPOSE) down
