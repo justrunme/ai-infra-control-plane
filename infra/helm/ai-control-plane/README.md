@@ -40,6 +40,7 @@ The chart renders a production-oriented set of resources:
 | ServiceAccount (token automount off) | enabled | `serviceAccount.create` |
 | ConfigMap (model inventory, mounted read-only) | enabled | `modelInventory.enabled` |
 | ConfigMap (governance registry + tenant quota) | enabled | `governance.enabled` |
+| ExternalSecret (Vault sync) | disabled | `secrets.externalSecrets.enabled` |
 | PodDisruptionBudget | enabled | `podDisruptionBudget.enabled` |
 | ServiceMonitor (Prometheus Operator) | disabled | `metrics.serviceMonitor.enabled` |
 | Ingress | disabled | `ingress.enabled` |
@@ -59,6 +60,25 @@ risk registry and tenant quota policies, then mounts them over the bundled
 `/app/governance/registry/models.yaml` and `/app/governance/quota/policies.yaml`
 files inside the container. Edit `governance.registryModels` and
 `governance.quotaPolicies` in `values.yaml` for GitOps-driven policy updates.
+
+## External Secrets
+
+When `secrets.externalSecrets.enabled` is true, the chart renders an
+`ExternalSecret` that syncs Vault paths into a Kubernetes `Secret` and mounts
+them with `envFrom` on the control-api container. Provider API keys and gateway
+credentials must not live in `values.yaml`.
+
+```yaml
+secrets:
+  externalSecrets:
+    enabled: true
+    secretStoreRef:
+      name: vault-ai-platform
+      kind: ClusterSecretStore
+```
+
+See `security/secrets/` for Vault policy and example manifests. The control API
+exposes `GET /secrets/status` with redacted fingerprints only.
 
 ## Observability
 

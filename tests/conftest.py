@@ -61,6 +61,16 @@ def quota_module() -> ModuleType:
 
 
 @pytest.fixture(scope="session")
+def pack_module() -> ModuleType:
+    return load_module("policy_packs", "governance/policy-packs/evaluate.py")
+
+
+@pytest.fixture(scope="session")
+def fleet_module() -> ModuleType:
+    return load_module("fleet_evaluate", "fleet/evaluate.py")
+
+
+@pytest.fixture(scope="session")
 def risk_rules(risk_module: ModuleType) -> dict:
     return risk_module.parse_rules(REPO_ROOT / "governance/risk/rules.yaml")
 

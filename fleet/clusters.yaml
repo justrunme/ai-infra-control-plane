@@ -1,0 +1,29 @@
+clusters:
+  local-demo:
+    label: Local Demo Cluster
+    cloud: local
+    region: local
+    environment: development
+    primary: true
+    probe_enabled: true
+    node_count: 1
+  eu-prod:
+    label: EU Production
+    cloud: hetzner
+    region: eu-central
+    environment: production
+    probe_enabled: false
+    node_count: 3
+    ollama_healthy: true
+    vllm_healthy: true
+    healthy_models: 4
+  us-research:
+    label: US Research
+    cloud: aws
+    region: us-east-1
+    environment: research
+    probe_enabled: false
+    node_count: 2
+    ollama_healthy: true
+    vllm_healthy: false
+    healthy_models: 2

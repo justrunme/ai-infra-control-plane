@@ -38,6 +38,15 @@ spec:
             - name: MODEL_INVENTORY_PATH
               value: {{ printf "%s/model_inventory.json" .Values.modelInventory.mountPath | quote }}
             {{- end }}
+            {{- if .Values.secrets.externalSecrets.enabled }}
+            - name: EXTERNAL_SECRETS_ENABLED
+              value: "true"
+            {{- end }}
+          {{- if .Values.secrets.externalSecrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ai-control-plane.fullname" . }}-synced-secrets
+          {{- end }}
           ports:
             - name: http
               containerPort: 8080

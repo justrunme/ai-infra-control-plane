@@ -11,4 +11,5 @@ dist/
 build/
 *.egg-info/
 docs/videos/frames/
+demo/platform/secrets.env
 

@@ -1,0 +1,33 @@
+default_pack: development
+
+environment_map:
+  production: production
+  prod: production
+  development: development
+  dev: development
+  research: research
+  staging: research
+
+packs:
+  production:
+    description: Hardened controls for customer-facing inference
+    require_environment: production
+    block_unknown_models: true
+    block_external_providers: true
+    block_sensitive_data: false
+    quota_multiplier: 1.0
+    min_risk_for_approval: medium
+  development:
+    description: Default engineering sandbox with relaxed throughput
+    block_unknown_models: false
+    block_external_providers: false
+    block_sensitive_data: false
+    quota_multiplier: 2.0
+    min_risk_for_approval: high
+  research:
+    description: Experimentation workloads with higher quota headroom
+    block_unknown_models: false
+    block_external_providers: false
+    block_sensitive_data: false
+    quota_multiplier: 5.0
+    min_risk_for_approval: critical

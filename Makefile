@@ -8,7 +8,7 @@ venv:
 
 test:
 	. .venv/bin/activate && cd apps/control-api && PYTHONPATH=. pytest
-	. .venv/bin/activate && pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests
+	. .venv/bin/activate && pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests experiments/finops-recommendations/tests
 
 lint:
 	. .venv/bin/activate && ruff check .

@@ -22,6 +22,8 @@ Client
 | --- | --- |
 | `x-ai-team` | Tenant or team identifier used for quota and cost attribution |
 | `x-ai-owner` | Human owner for approval workflows |
+| `x-ai-subject` | Stable user or service principal ID (audit trail) |
+| `x-ai-groups` | Comma-separated groups; maps to team when JWT is absent |
 | `x-ai-tenant` | Optional alias for team when integrating with SSO claims |
 | `x-ai-environment` | Environment label (`development`, `production`) |
 | `x-ai-namespace` | Kubernetes namespace or logical isolation boundary |
