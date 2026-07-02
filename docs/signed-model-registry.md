@@ -30,9 +30,17 @@ Demo signing key default: `ai-platform-registry-demo` (override with `MODEL_REGI
 | default | Expose attestation metadata; verify signatures when present |
 | `MODEL_REGISTRY_VERIFY=true` | Block models with `artifact_digest` but missing/invalid signature |
 
-Runtime clients can pass the artifact they are about to serve:
+Runtime clients can pass the artifact they are about to serve via the gateway or control plane API:
 
 ```bash
+# Through execution plane gateway
+curl -sS -X POST http://127.0.0.1:8090/v1/chat/completions \
+  -H 'x-ai-model-digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' \
+  -H 'x-ai-team: platform' \
+  -H 'content-type: application/json' \
+  -d '{"model":"llama3.1:8b","messages":[{"role":"user","content":"hi"}]}'
+
+# Direct control plane evaluate
 curl -sS -X POST http://127.0.0.1:8091/governance/evaluate \
   -H 'x-ai-model-digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' \
   -H 'content-type: application/json' \
