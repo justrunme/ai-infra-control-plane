@@ -55,12 +55,12 @@ flowchart LR
 
 | Epic | Priority | Target | Status |
 | --- | --- | --- | --- |
-| MCP Gateway + Tool Registry | P0 | runtime + `governance/tools/` | In progress |
-| Prompt Security | P1 | `governance/prompt-security/` | In progress |
-| Agent Registry | P2 | `governance/agents/` | In progress |
-| Model Supply Chain (SBOM) | P3 | `governance/registry/` | In progress |
-| AI Evaluations (post-response) | P4 | control-api | Planned |
-| Sovereign AI (region routing) | P5 | policy packs + fleet | Planned |
+| MCP Gateway + Tool Registry | P0 | runtime + `governance/tools/` | Done |
+| Prompt Security | P1 | `governance/prompt-security/` | Done |
+| Agent Registry | P2 | `governance/agents/` | Done |
+| Model Supply Chain (SBOM) | P3 | `governance/registry/` | Done |
+| AI Evaluations (post-response) | P4 | control-api | Done |
+| Sovereign AI (region routing) | P5 | policy packs + sovereign | Done |
 | Intent Engine | P6 | orchestration layer | Deferred |
 
 ## Public narrative
@@ -73,6 +73,8 @@ flowchart LR
 - [Tool Registry](tool-registry.md)
 - [Prompt Governance](prompt-governance.md)
 - [Agent Registry](agent-registry.md)
+- [Sovereign AI](sovereign-ai.md)
+- [AI Evaluations](ai-evaluations.md)
 - [Signed model registry](signed-model-registry.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)

@@ -40,6 +40,7 @@ class GovernanceEvaluateRequest(BaseModel):
     model_artifact_digest: str = ""
     prompt_text: str = ""
     agent: str = ""
+    region: str = ""
 
 
 class GovernanceStageResult(BaseModel):
@@ -111,6 +112,7 @@ def final_verdict(
     agent_result: dict[str, Any],
     quota_result: dict[str, Any],
     registry_result: dict[str, Any],
+    sovereign_result: dict[str, Any],
     cost_result: dict[str, Any],
     risk_result: dict[str, Any],
     approval_result: dict[str, Any],
@@ -125,6 +127,8 @@ def final_verdict(
         return "block", quota_result["reasons"]
     if registry_result["forbidden"]:
         return "block", registry_result["reasons"]
+    if sovereign_result.get("forbidden"):
+        return "block", sovereign_result["reasons"]
     if cost_result["decision"] == "block":
         return "block", ["cost governance blocked the request"]
     if approval_result["decision"] == "block":
@@ -168,6 +172,7 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
         "model_artifact_digest": payload.model_artifact_digest,
         "prompt_text": payload.prompt_text,
         "agent": payload.agent,
+        "region": payload.region,
     }
 
 
@@ -192,10 +197,12 @@ def evaluate_governance_request(
     )
     agent_module = load_module("agent_registry", root / "agents" / "evaluate.py")
     tools_module = load_module("tool_registry_bind", root / "tools" / "evaluate.py")
+    sovereign_module = load_module("sovereign_ai", root / "sovereign" / "evaluate.py")
 
     quota_policies = quota_module.parse_policies(root / "quota" / "policies.yaml")
     pack_config = pack_module.parse_packs(root / "policy-packs" / "packs.yaml")
     registry = registry_module.parse_registry(root / "registry" / "models.yaml")
+    residency = sovereign_module.parse_residency(root / "sovereign" / "residency.yaml")
     agent_registry = agent_module.parse_registry(root / "agents" / "agents.yaml")
     tools_registry = tools_module.parse_registry(root / "tools" / "tools.yaml")
     policies = cost_module.parse_policy_file(root / "cost" / "policies.yaml")
@@ -230,6 +237,11 @@ def evaluate_governance_request(
             "known_model": None,
             "risk_tier": None,
         }
+        sovereign_result = {
+            "forbidden": False,
+            "reasons": [],
+            "region": row.get("region", ""),
+        }
         cost_result = {"decision": "allow", "reasons": []}
         risk_result = {"score": 0, "level": "low", "factors": []}
         approval_result = {"decision": "allow", "reasons": []}
@@ -243,6 +255,12 @@ def evaluate_governance_request(
         row["_pack_quota_multiplier"] = pack_pre["quota_multiplier"]
         quota_result = quota_module.evaluate_request(row, quota_policies)
         registry_result = registry_module.evaluate_model_policy(row, registry)
+        model_entry = registry_module.lookup_model(registry, row["model"])
+        sovereign_result = sovereign_module.evaluate_residency(
+            row,
+            residency,
+            model_entry,
+        )
         cost_result = cost_module.evaluate_row(row, policies)
         risk_result = risk_module.evaluate_request(row, rules, registry)
         approval_request = build_approval_request(
@@ -263,6 +281,7 @@ def evaluate_governance_request(
         agent_result,
         quota_result,
         registry_result,
+        sovereign_result,
         cost_result,
         risk_result,
         approval_result,
@@ -290,6 +309,7 @@ def evaluate_governance_request(
             "agent_registry",
             "tenant_quota",
             "model_registry",
+            "sovereign_ai",
             "cost_decision",
             "risk_score",
             "approval_decision",
@@ -321,6 +341,11 @@ def evaluate_governance_request(
                 reasons=registry_result["reasons"],
                 risk_tier=registry_result.get("risk_tier"),
                 known_model=registry_result.get("known_model"),
+            ),
+            "sovereign": GovernanceStageResult(
+                decision="block" if sovereign_result.get("forbidden") else "allow",
+                reasons=list(sovereign_result.get("reasons", [])),
+                pack=str(sovereign_result.get("region")),
             ),
             "cost": GovernanceStageResult(
                 decision=cost_result["decision"],

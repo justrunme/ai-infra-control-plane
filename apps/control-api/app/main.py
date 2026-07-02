@@ -21,6 +21,13 @@ from app.agent_registry_service import (
 from app.audit_service import AUDIT_STORE, AuditEvent
 from app.audit_sink import AUDIT_SINK, AuditSinkStatus
 from app.drift_service import DriftStatus, build_drift_status
+from app.evaluation_service import (
+    EVALUATION_STORE,
+    EvaluationListResponse,
+    EvaluationRecord,
+    ResponseEvaluateRequest,
+    evaluate_model_response,
+)
 from app.finops_service import (
     FinOpsRecommendationsResponse,
     build_finops_recommendations,
@@ -728,10 +735,13 @@ def apply_supply_chain_headers(
     updates: dict[str, str] = {}
     digest = headers.get("x-ai-model-digest", "").strip()
     revision = headers.get("x-ai-model-revision", "").strip()
+    region = headers.get("x-ai-region", "").strip()
     if digest:
         updates["model_artifact_digest"] = digest
     if revision:
         updates["model_revision"] = revision
+    if region:
+        updates["region"] = region
     return payload.model_copy(update=updates) if updates else payload
 
 
@@ -821,6 +831,24 @@ def governance_evaluate_tool(
     header_map = dict(request.headers)
     identity = resolve_workload_identity(header_map, payload)
     return evaluate_tool_governance(payload, identity=identity)
+
+
+@app.post("/governance/evaluate-response", response_model=EvaluationRecord)
+def governance_evaluate_response(payload: ResponseEvaluateRequest) -> EvaluationRecord:
+    return evaluate_model_response(payload)
+
+
+@app.get("/evaluations/recent", response_model=EvaluationListResponse)
+def evaluations_recent(
+    limit: int = Query(default=50, ge=1, le=500),
+    team: str | None = None,
+    model: str | None = None,
+) -> EvaluationListResponse:
+    evaluations = EVALUATION_STORE.list_evaluations(limit=limit, team=team, model=model)
+    return EvaluationListResponse(
+        evaluation_count=len(evaluations),
+        evaluations=evaluations,
+    )
 
 
 @app.get("/audit/events", response_model=list[AuditEvent])

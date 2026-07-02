@@ -31,3 +31,11 @@ packs:
     block_sensitive_data: false
     quota_multiplier: 5.0
     min_risk_for_approval: critical
+  eu-sovereign:
+    description: EU data residency — local models in eu-central only
+    require_region: eu-central
+    block_unknown_models: true
+    block_external_providers: true
+    block_sensitive_data: false
+    quota_multiplier: 1.0
+    min_risk_for_approval: medium

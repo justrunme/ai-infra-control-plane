@@ -1,0 +1,15 @@
+default_region: local
+
+regions:
+  eu-central:
+    label: EU Central
+    block_external_providers: true
+    require_local_model: true
+  us-east-1:
+    label: US East
+    block_external_providers: false
+    require_local_model: false
+  local:
+    label: Local Demo
+    block_external_providers: false
+    require_local_model: false

@@ -40,7 +40,16 @@ def blocking_stage_from_response(
     if response.final_verdict == "allow":
         return None
 
-    for stage_name in ("policy_pack", "quota", "registry", "cost", "approval"):
+    for stage_name in (
+        "policy_pack",
+        "prompt_security",
+        "agent",
+        "quota",
+        "registry",
+        "sovereign",
+        "cost",
+        "approval",
+    ):
         stage = response.stages.get(stage_name)
         if stage is not None and stage.decision == "block":
             return stage_name

@@ -12,6 +12,10 @@ models:
     allowed_teams:
       - platform
       - search
+    allowed_regions:
+      - eu-central
+      - local
+      - us-east-1
     max_monthly_budget_usd: 500
     pii_allowed: false
     external_provider: false
@@ -29,6 +33,10 @@ models:
       - platform
       - finance
       - search
+    allowed_regions:
+      - eu-central
+      - local
+      - us-east-1
     max_monthly_budget_usd: 400
     pii_allowed: false
     external_provider: false
@@ -41,6 +49,8 @@ models:
       - ai-prod
     allowed_teams:
       - platform
+    allowed_regions:
+      - us-east-1
     max_monthly_budget_usd: 1500
     pii_allowed: false
     external_provider: true
