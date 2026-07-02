@@ -66,7 +66,7 @@ def test_resolve_identity_prefers_headers_without_jwt() -> None:
 
 
 def test_governance_evaluate_records_audit_event() -> None:
-    before = len(AUDIT_STORE.list_events(limit=500))
+    before = len(AUDIT_STORE.list_events(limit=500, team="finance"))
 
     response = client.post(
         "/governance/evaluate",

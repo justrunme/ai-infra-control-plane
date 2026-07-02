@@ -2,6 +2,7 @@ models:
   qwen2.5-7b:
     revision: "2025.03"
     artifact_digest: sha256:abc111
+    sbom_ref: spdx:qwen2.5-7b-2025.03
     license: apache-2.0
     attestation_signature: d1d3623edbe57409ae5aeab1cdef8f4f56446bf031ea2f8e71fcc6d1956010c2
     risk_tier: low
@@ -17,6 +18,7 @@ models:
   llama3.1:8b:
     revision: v1
     artifact_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    sbom_ref: spdx:llama3.1-8b-v1
     license: llama3-community
     attestation_signature: 87cc7f4fc7dce78389e5dafc75ac614cf098f96f02877d7f79836180d0a633b7
     risk_tier: low

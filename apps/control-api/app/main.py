@@ -12,6 +12,12 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, ValidationError
 
+from app.agent_registry_service import (
+    AgentRegistryEntry,
+    AgentRegistryResponse,
+    build_agent_registry,
+    get_agent_registry_entry,
+)
 from app.audit_service import AUDIT_STORE, AuditEvent
 from app.audit_sink import AUDIT_SINK, AuditSinkStatus
 from app.drift_service import DriftStatus, build_drift_status
@@ -49,6 +55,17 @@ from app.model_registry_service import (
     get_model_registry_entry,
 )
 from app.secrets_service import SecretsStatusResponse, build_secrets_status
+from app.tool_governance_service import (
+    ToolEvaluateRequest,
+    ToolEvaluateResponse,
+    evaluate_tool_governance,
+)
+from app.tool_registry_service import (
+    ToolRegistryEntry,
+    ToolRegistryResponse,
+    build_tool_registry,
+    get_tool_registry_entry,
+)
 from app.topology import (
     TopologyEdge,
     TopologyNode,
@@ -762,6 +779,48 @@ def registry_model(model_name: str) -> ModelRegistryEntry:
             detail={"error": "model not registered", "model": model_name},
         )
     return entry
+
+
+@app.get("/registry/tools", response_model=ToolRegistryResponse)
+def registry_tools() -> ToolRegistryResponse:
+    return build_tool_registry()
+
+
+@app.get("/registry/tools/{tool_name}", response_model=ToolRegistryEntry)
+def registry_tool(tool_name: str) -> ToolRegistryEntry:
+    entry = get_tool_registry_entry(tool_name)
+    if entry is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "tool not registered", "tool": tool_name},
+        )
+    return entry
+
+
+@app.get("/registry/agents", response_model=AgentRegistryResponse)
+def registry_agents() -> AgentRegistryResponse:
+    return build_agent_registry()
+
+
+@app.get("/registry/agents/{agent_name}", response_model=AgentRegistryEntry)
+def registry_agent(agent_name: str) -> AgentRegistryEntry:
+    entry = get_agent_registry_entry(agent_name)
+    if entry is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "agent not registered", "agent": agent_name},
+        )
+    return entry
+
+
+@app.post("/governance/evaluate-tool", response_model=ToolEvaluateResponse)
+def governance_evaluate_tool(
+    payload: ToolEvaluateRequest,
+    request: Request,
+) -> ToolEvaluateResponse:
+    header_map = dict(request.headers)
+    identity = resolve_workload_identity(header_map, payload)
+    return evaluate_tool_governance(payload, identity=identity)
 
 
 @app.get("/audit/events", response_model=list[AuditEvent])
