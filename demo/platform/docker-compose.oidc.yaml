@@ -1,0 +1,43 @@
+# OIDC overlay — Keycloak IdP with JWKS verification on both planes.
+#
+#   make platform-demo-oidc
+#   make platform-demo-oidc-verify
+name: ai-infrastructure-os-demo
+
+services:
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.0.7}
+    command: start-dev --import-realm --http-port=8080
+    environment:
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8180
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realm-ai-platform.json:/opt/keycloak/data/import/realm-ai-platform.json:ro
+    ports:
+      - "8180:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 45s
+
+  control-api:
+    depends_on:
+      keycloak:
+        condition: service_started
+    environment:
+      OIDC_JWT_VERIFY: "true"
+      OIDC_JWKS_URL: http://keycloak:8080/realms/ai-platform/protocol/openid-connect/certs
+      OIDC_JWT_ISSUER: http://localhost:8180/realms/ai-platform
+
+  gateway:
+    depends_on:
+      keycloak:
+        condition: service_started
+    environment:
+      OIDC_JWT_VERIFY: "true"
+      OIDC_JWKS_URL: http://keycloak:8080/realms/ai-platform/protocol/openid-connect/certs
+      OIDC_JWT_ISSUER: http://localhost:8180/realms/ai-platform

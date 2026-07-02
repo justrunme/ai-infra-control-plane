@@ -44,6 +44,17 @@ With the stack running, in a second terminal:
 make platform-demo-verify
 ```
 
+### OIDC / Keycloak overlay
+
+For signed JWT + JWKS verification with demo users `alice` / `bob`:
+
+```sh
+make platform-demo-oidc
+make platform-demo-oidc-verify
+```
+
+See [docs/oidc-keycloak-demo.md](../../docs/oidc-keycloak-demo.md).
+
 This script checks:
 
 1. Governance **allow** for `platform` team
