@@ -8,7 +8,7 @@ from typing import Literal
 from uuid import uuid4
 
 import httpx
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, ValidationError
 
@@ -36,6 +36,12 @@ from app.governance_service import (
     evaluate_governance_request,
 )
 from app.identity_service import apply_identity, resolve_workload_identity
+from app.incident_runbook_service import (
+    IncidentRunbookResponse,
+    build_incident_runbook,
+    get_alert_definition,
+    list_supported_alerts,
+)
 from app.secrets_service import SecretsStatusResponse, build_secrets_status
 from app.topology import (
     TopologyEdge,
@@ -752,6 +758,39 @@ def finops_recommendations(
     limit: int = Query(default=20, ge=1, le=100),
 ) -> FinOpsRecommendationsResponse:
     return build_finops_recommendations(team=team, severity=severity, limit=limit)
+
+
+@app.get("/incidents/alerts")
+def incident_alerts() -> dict[str, list[str]]:
+    return {"alerts": list_supported_alerts()}
+
+
+@app.get("/incidents/runbook", response_model=IncidentRunbookResponse)
+def incident_runbook(
+    alert: str = Query(..., description="Prometheus alert name from the SLO catalog"),
+    team: str | None = None,
+    model: str | None = None,
+) -> IncidentRunbookResponse:
+    if get_alert_definition(alert) is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unsupported alert",
+                "alert": alert,
+                "supported_alerts": list_supported_alerts(),
+            },
+        )
+
+    return build_incident_runbook(
+        alert,
+        team=team,
+        model=model,
+        drift=get_inventory_drift(),
+        topology=get_platform_topology(),
+        audit_events=AUDIT_STORE.list_events(limit=100),
+        fleet=build_fleet_clusters(),
+        finops=build_finops_recommendations(limit=10),
+    )
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
