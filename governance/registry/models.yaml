@@ -1,28 +1,51 @@
 models:
   qwen2.5-7b:
+    revision: "2025.03"
+    artifact_digest: sha256:abc111
+    license: apache-2.0
+    attestation_signature: d1d3623edbe57409ae5aeab1cdef8f4f56446bf031ea2f8e71fcc6d1956010c2
     risk_tier: low
     allowed_namespaces:
       - ai-dev
       - ai-prod
+    allowed_teams:
+      - platform
+      - search
     max_monthly_budget_usd: 500
     pii_allowed: false
     external_provider: false
   llama3.1:8b:
+    revision: v1
+    artifact_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    license: llama3-community
+    attestation_signature: 87cc7f4fc7dce78389e5dafc75ac614cf098f96f02877d7f79836180d0a633b7
     risk_tier: low
     allowed_namespaces:
       - ai-dev
       - ai-prod
+    allowed_teams:
+      - platform
+      - finance
+      - search
     max_monthly_budget_usd: 400
     pii_allowed: false
     external_provider: false
   gpt-4.1-mini:
+    revision: "2025.01"
+    artifact_digest: sha256:openai-gpt41mini
+    license: openai-commercial
     risk_tier: high
     allowed_namespaces:
       - ai-prod
+    allowed_teams:
+      - platform
     max_monthly_budget_usd: 1500
     pii_allowed: false
     external_provider: true
   unknown-frontier-model:
+    revision: untrusted
+    artifact_digest: sha256:unknown
+    license: unknown
     risk_tier: critical
     allowed_namespaces:
       - ai-dev

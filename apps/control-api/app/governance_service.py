@@ -36,6 +36,8 @@ class GovernanceEvaluateRequest(BaseModel):
     write_permission: bool = False
     requests_last_minute: int = Field(default=0, ge=0)
     tokens_today: int = Field(default=0, ge=0)
+    model_revision: str = ""
+    model_artifact_digest: str = ""
 
 
 class GovernanceStageResult(BaseModel):
@@ -154,6 +156,8 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
         "write_permission": payload.write_permission,
         "requests_last_minute": payload.requests_last_minute,
         "tokens_today": payload.tokens_today,
+        "model_revision": payload.model_revision,
+        "model_artifact_digest": payload.model_artifact_digest,
     }
 
 

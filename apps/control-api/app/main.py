@@ -42,6 +42,12 @@ from app.incident_runbook_service import (
     get_alert_definition,
     list_supported_alerts,
 )
+from app.model_registry_service import (
+    ModelRegistryEntry,
+    ModelRegistryResponse,
+    build_model_registry,
+    get_model_registry_entry,
+)
 from app.secrets_service import SecretsStatusResponse, build_secrets_status
 from app.topology import (
     TopologyEdge,
@@ -698,12 +704,28 @@ def drift() -> DriftStatus:
     return get_inventory_drift()
 
 
+def apply_supply_chain_headers(
+    payload: GovernanceEvaluateRequest,
+    headers: dict[str, str],
+) -> GovernanceEvaluateRequest:
+    updates: dict[str, str] = {}
+    digest = headers.get("x-ai-model-digest", "").strip()
+    revision = headers.get("x-ai-model-revision", "").strip()
+    if digest:
+        updates["model_artifact_digest"] = digest
+    if revision:
+        updates["model_revision"] = revision
+    return payload.model_copy(update=updates) if updates else payload
+
+
 @app.post("/governance/evaluate", response_model=GovernanceEvaluateResponse)
 def governance_evaluate(
     payload: GovernanceEvaluateRequest,
     request: Request,
 ) -> GovernanceEvaluateResponse:
-    identity = resolve_workload_identity(dict(request.headers), payload)
+    header_map = dict(request.headers)
+    payload = apply_supply_chain_headers(payload, header_map)
+    identity = resolve_workload_identity(header_map, payload)
     merged = apply_identity(payload, identity)
     enriched, quota_snapshot, signals = enrich_governance_request(merged)
     telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
@@ -724,6 +746,22 @@ def governance_evaluate(
 @app.get("/governance/inputs/status", response_model=GovernanceInputsStatus)
 def governance_inputs_status_endpoint() -> GovernanceInputsStatus:
     return governance_inputs_status()
+
+
+@app.get("/registry/models", response_model=ModelRegistryResponse)
+def registry_models() -> ModelRegistryResponse:
+    return build_model_registry()
+
+
+@app.get("/registry/models/{model_name}", response_model=ModelRegistryEntry)
+def registry_model(model_name: str) -> ModelRegistryEntry:
+    entry = get_model_registry_entry(model_name)
+    if entry is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "model not registered", "model": model_name},
+        )
+    return entry
 
 
 @app.get("/audit/events", response_model=list[AuditEvent])
