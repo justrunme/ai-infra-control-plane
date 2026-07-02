@@ -24,11 +24,21 @@ Text overlay (or browser tab title):
 
 ## Scene 2 — Architecture (8s)
 
-Open `docs/product-roadmap.md` or draw.io diagram:
+Open `docs/portfolio/reference-architecture.md` or product roadmap diagram:
 
 - Control Plane → governance
-- Execution Plane → gateway + MCP
+- Execution Plane → gateway + MCP + intent
+- Redis + Prometheus + Keycloak in enterprise tier
 - Highlight: **decision vs execution**
+
+## Scene 2b — Enterprise demo (optional, 8s)
+
+```bash
+make platform-demo-enterprise
+make platform-demo-enterprise-verify
+```
+
+Let production-demo Redis/Prometheus checks scroll briefly.
 
 ## Scene 3 — One-command demo (5s)
 
