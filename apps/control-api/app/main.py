@@ -24,6 +24,12 @@ from app.fleet_service import (
     build_fleet_clusters,
     fleet_cluster_metrics,
 )
+from app.governance_inputs import (
+    GovernanceInputsStatus,
+    build_telemetry_stage,
+    enrich_governance_request,
+    governance_inputs_status,
+)
 from app.governance_service import (
     GovernanceEvaluateRequest,
     GovernanceEvaluateResponse,
@@ -693,11 +699,13 @@ def governance_evaluate(
 ) -> GovernanceEvaluateResponse:
     identity = resolve_workload_identity(dict(request.headers), payload)
     merged = apply_identity(payload, identity)
-    result = evaluate_governance_request(merged)
+    enriched, quota_snapshot, signals = enrich_governance_request(merged)
+    telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
+    result = evaluate_governance_request(enriched, telemetry=telemetry)
     request_id = request.headers.get("x-request-id") or str(uuid4())
     AUDIT_STORE.record_governance_evaluate(
         identity=identity,
-        request=merged,
+        request=enriched,
         response=result,
         request_id=request_id,
     )
@@ -705,6 +713,11 @@ def governance_evaluate(
         (result.final_verdict, merged.team, merged.environment)
     ] += 1
     return result
+
+
+@app.get("/governance/inputs/status", response_model=GovernanceInputsStatus)
+def governance_inputs_status_endpoint() -> GovernanceInputsStatus:
+    return governance_inputs_status()
 
 
 @app.get("/audit/events", response_model=list[AuditEvent])

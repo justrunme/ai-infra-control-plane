@@ -11,6 +11,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.governance_telemetry import GovernanceTelemetryStage
+
 
 class GovernanceEvaluateRequest(BaseModel):
     subject: str = ""
@@ -53,6 +55,7 @@ class GovernanceEvaluateResponse(BaseModel):
     reasons: list[str]
     flow: list[str]
     stages: dict[str, GovernanceStageResult]
+    telemetry: GovernanceTelemetryStage | None = None
 
 
 def get_governance_root() -> Path:
@@ -156,6 +159,8 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
 
 def evaluate_governance_request(
     payload: GovernanceEvaluateRequest,
+    *,
+    telemetry: GovernanceTelemetryStage | None = None,
 ) -> GovernanceEvaluateResponse:
     root = get_governance_root()
     pack_module = load_module(
@@ -224,6 +229,10 @@ def evaluate_governance_request(
         approval_result,
     )
 
+    if telemetry and telemetry.block_reasons:
+        verdict = "block"
+        reasons = telemetry.block_reasons + reasons
+
     pack_stage_decision = pack_pre["decision"]
     pack_stage_reasons = list(pack_pre["reasons"])
     if pack_pre["decision"] != "block" and pack_post["decision"] == "approval_required":
@@ -236,6 +245,7 @@ def evaluate_governance_request(
         reasons=reasons,
         flow=[
             "request",
+            "live_inputs",
             "policy_pack",
             "tenant_quota",
             "model_registry",
@@ -245,6 +255,7 @@ def evaluate_governance_request(
             "policy_pack_approval",
             "final_verdict",
         ],
+        telemetry=telemetry,
         stages={
             "policy_pack": GovernanceStageResult(
                 decision=pack_stage_decision,

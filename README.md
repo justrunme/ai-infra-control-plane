@@ -243,15 +243,15 @@ infra/
 observability/
   grafana/            Dashboards and metrics notes
   loki/               Loki and Promtail logging examples
-  otel-genai/         OpenTelemetry GenAI telemetry prototype
+  otel-genai/         OpenTelemetry GenAI telemetry reference implementation
 forecasting/
-  timesfm/            Experimental capacity forecasting prototype
+  timesfm/            Experimental capacity forecasting module
 experiments/
   inference-autoscaling/ Forecast-driven inference scaling recommendations
 governance/
   cost/               AI cost governance policy engine
   risk/               AI request risk scoring engine
-  approval/           Human approval workflow prototype
+  approval/           Human approval workflow reference implementation
   pipeline/           End-to-end AI governance decision pipeline
 security/
   trivy/              Container and IaC scan configuration
