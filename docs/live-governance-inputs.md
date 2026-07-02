@@ -27,12 +27,12 @@ Enable live SLO-style inputs from a Prometheus query API:
 | `PROMETHEUS_MAX_ERROR_RATE` | Block when gateway error rate exceeds threshold (default `0.05`) |
 | `PROMETHEUS_MAX_P95_LATENCY_MS` | Block when p95 latency exceeds threshold (default `2500`) |
 
-Queries align with the [SLO catalog](../observability/slo/README.md):
+Queries align with execution-plane gateway metrics and the [SLO catalog](../observability/slo/README.md):
 
-- `gateway_chat_duration_seconds_bucket` → p95 latency
-- `gateway_chat_errors_total` / `gateway_chat_requests_total` → error rate
+- `gateway_chat_duration_seconds_bucket` → p95 latency (histogram label: `routing_reason` only)
+- `gateway_chat_requests_total{outcome="error"}` / `gateway_chat_requests_total` → error rate (labels: `requested_model`, `selected_backend`, `routing_reason`, `outcome`)
 - `gateway_governance_decisions_total` → governance block rate
-- `gateway_tenant_requests_total` → tenant request rate
+- `gateway_tenant_requests_total{team="..."}` → tenant request rate
 
 Responses include a `telemetry` object with fetched values. Threshold breaches prepend block reasons to the final verdict.
 

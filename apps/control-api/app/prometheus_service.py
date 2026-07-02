@@ -79,22 +79,27 @@ def _instant_query(client: httpx.Client, promql: str) -> float | None:
     return float(value)
 
 
-def fetch_prometheus_signals(*, team: str, model: str) -> PrometheusSignals:
-    base_url = get_prometheus_url()
-    if not is_prometheus_enabled() or not base_url:
-        return PrometheusSignals(enabled=False, team=team, model=model)
-
+def _build_prometheus_queries(*, team: str, model: str) -> dict[str, str]:
+    """Build PromQL aligned with execution-plane gateway metric labels."""
     team_label = _escape_label(team)
-    model_label = _escape_label(model)
-    queries = {
+    model_label = _escape_label(model).strip()
+
+    if model_label:
+        model_filter = f'requested_model="{model_label}"'
+        error_filter = f'outcome="error",{model_filter}'
+        request_rate = f"sum(rate(gateway_chat_requests_total{{{error_filter}}}[5m]))"
+        request_total = f"sum(rate(gateway_chat_requests_total{{{model_filter}}}[5m]))"
+    else:
+        request_rate = 'sum(rate(gateway_chat_requests_total{outcome="error"}[5m]))'
+        request_total = "sum(rate(gateway_chat_requests_total[5m]))"
+
+    return {
         "gateway_p95_latency_ms": (
-            "histogram_quantile(0.95, sum(rate(gateway_chat_duration_seconds_bucket"
-            f'{{team="{team_label}"}}[5m])) by (le)) * 1000'
+            "histogram_quantile(0.95, "
+            "sum(rate(gateway_chat_duration_seconds_bucket[5m])) by (le)) * 1000"
         ),
         "gateway_error_rate": (
-            f'sum(rate(gateway_chat_errors_total{{team="{team_label}"}}[5m])) '
-            "/ clamp_min(sum(rate(gateway_chat_requests_total"
-            f'{{team="{team_label}"}}[5m])), 1)'
+            f"{request_rate} / clamp_min({request_total}, 1)"
         ),
         "governance_block_rate": (
             'sum(rate(gateway_governance_decisions_total{verdict="block"}[5m])) '
@@ -104,11 +109,14 @@ def fetch_prometheus_signals(*, team: str, model: str) -> PrometheusSignals:
             f'sum(rate(gateway_tenant_requests_total{{team="{team_label}"}}[5m]))'
         ),
     }
-    if model:
-        queries["gateway_p95_latency_ms"] = (
-            "histogram_quantile(0.95, sum(rate(gateway_chat_duration_seconds_bucket"
-            f'{{team="{team_label}",model="{model_label}"}}[5m])) by (le)) * 1000'
-        )
+
+
+def fetch_prometheus_signals(*, team: str, model: str) -> PrometheusSignals:
+    base_url = get_prometheus_url()
+    if not is_prometheus_enabled() or not base_url:
+        return PrometheusSignals(enabled=False, team=team, model=model)
+
+    queries = _build_prometheus_queries(team=team, model=model)
 
     signals = PrometheusSignals(
         enabled=True,
