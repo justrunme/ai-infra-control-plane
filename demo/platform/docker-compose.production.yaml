@@ -1,0 +1,54 @@
+# Production overlay — Redis shared quota state + Prometheus live governance inputs.
+#
+#   make platform-demo-production
+#   make platform-demo-production-verify
+#
+# Stack with OIDC:
+#   make platform-demo-enterprise
+#   make platform-demo-enterprise-verify
+name: ai-infrastructure-os-demo
+
+services:
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      control-api:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+
+  control-api:
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      QUOTA_REDIS_URL: redis://redis:6379/0
+      PROMETHEUS_GOVERNANCE_ENABLED: "true"
+      PROMETHEUS_URL: http://prometheus:9090
+      PROMETHEUS_MAX_ERROR_RATE: "0.95"
+      PROMETHEUS_MAX_P95_LATENCY_MS: "60000"
+
+  gateway:
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379/0

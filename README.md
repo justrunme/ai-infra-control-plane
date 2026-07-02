@@ -22,8 +22,14 @@ Read the [product roadmap](docs/product-roadmap.md) and [portfolio overview](doc
 Bring up **Control Plane + Execution Plane + Ollama** and verify governance enforcement:
 
 ```sh
-make platform-demo          # terminal 1
-make platform-demo-verify   # terminal 2
+make platform-demo              # laptop demo
+make platform-demo-verify
+
+make platform-demo-production   # + Redis quota + Prometheus inputs
+make platform-demo-production-verify
+
+make platform-demo-enterprise   # + Keycloak OIDC (reference architecture)
+make platform-demo-enterprise-verify
 ```
 
 See [demo/platform/README.md](demo/platform/README.md) for URLs and manual curls.

@@ -4,7 +4,26 @@ from __future__ import annotations
 
 import httpx
 
-from app.prometheus_service import fetch_prometheus_signals, prometheus_block_reasons
+from app.prometheus_service import (
+    _build_prometheus_queries,
+    fetch_prometheus_signals,
+    prometheus_block_reasons,
+)
+
+
+def test_build_prometheus_queries_match_runtime_metric_labels() -> None:
+    queries = _build_prometheus_queries(team="finance", model="llama3.1:8b")
+
+    assert "gateway_chat_errors_total" not in queries["gateway_error_rate"]
+    assert 'outcome="error"' in queries["gateway_error_rate"]
+    assert 'requested_model="llama3.1:8b"' in queries["gateway_error_rate"]
+    assert 'team="finance"' in queries["tenant_request_rate"]
+    assert "team=" not in queries["gateway_p95_latency_ms"]
+    assert "model=" not in queries["gateway_p95_latency_ms"]
+
+    without_model = _build_prometheus_queries(team="finance", model="")
+    assert 'outcome="error"' in without_model["gateway_error_rate"]
+    assert "requested_model=" not in without_model["gateway_error_rate"]
 
 
 def test_fetch_prometheus_signals_parses_instant_query(monkeypatch) -> None:
@@ -15,7 +34,7 @@ def test_fetch_prometheus_signals_parses_instant_query(monkeypatch) -> None:
         query = request.url.params.get("query", "")
         if "gateway_chat_duration_seconds_bucket" in query:
             value = "2500"
-        elif "gateway_chat_errors_total" in query:
+        elif 'outcome="error"' in query:
             value = "0.12"
         elif "gateway_governance_decisions_total" in query:
             value = "0.03"
@@ -40,6 +59,7 @@ def test_fetch_prometheus_signals_parses_instant_query(monkeypatch) -> None:
     assert signals.gateway_p95_latency_ms == 2500.0
     assert signals.gateway_error_rate == 0.12
     assert signals.tenant_request_rate == 4.5
+    assert signals.errors == []
 
 
 def test_prometheus_block_reasons_trigger_on_threshold(monkeypatch) -> None:

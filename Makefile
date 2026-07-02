@@ -1,6 +1,6 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down
+.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down platform-demo-production platform-demo-production-verify platform-demo-production-down platform-demo-enterprise platform-demo-enterprise-verify platform-demo-enterprise-down
 
 venv:
 	$(PYTHON) -m venv .venv
@@ -57,6 +57,8 @@ demo:
 
 PLATFORM_COMPOSE = docker compose -f demo/platform/docker-compose.yaml
 PLATFORM_OIDC_COMPOSE = docker compose -f demo/platform/docker-compose.yaml -f demo/platform/docker-compose.oidc.yaml
+PLATFORM_PRODUCTION_COMPOSE = docker compose -f demo/platform/docker-compose.yaml -f demo/platform/docker-compose.production.yaml
+PLATFORM_ENTERPRISE_COMPOSE = docker compose -f demo/platform/docker-compose.yaml -f demo/platform/docker-compose.production.yaml -f demo/platform/docker-compose.oidc.yaml
 
 platform-demo:
 	$(PLATFORM_COMPOSE) up --build
@@ -66,6 +68,24 @@ platform-demo-verify:
 
 platform-demo-down:
 	$(PLATFORM_COMPOSE) down
+
+platform-demo-production:
+	$(PLATFORM_PRODUCTION_COMPOSE) up --build
+
+platform-demo-production-verify:
+	bash demo/platform/verify-production-demo.sh
+
+platform-demo-production-down:
+	$(PLATFORM_PRODUCTION_COMPOSE) down
+
+platform-demo-enterprise:
+	$(PLATFORM_ENTERPRISE_COMPOSE) up --build
+
+platform-demo-enterprise-verify:
+	bash demo/platform/verify-enterprise-demo.sh
+
+platform-demo-enterprise-down:
+	$(PLATFORM_ENTERPRISE_COMPOSE) down
 
 platform-demo-oidc:
 	$(PLATFORM_OIDC_COMPOSE) up --build

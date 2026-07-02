@@ -24,6 +24,31 @@ From the **ai-infra-control-plane** repository root:
 make platform-demo
 ```
 
+### Production overlay (Redis + Prometheus)
+
+Shared tenant quota in Redis and live Prometheus governance inputs:
+
+```sh
+make platform-demo-production
+make platform-demo-production-verify
+```
+
+| Service | URL |
+| --- | --- |
+| Prometheus | http://localhost:9090 |
+| Redis | redis://localhost:6379/0 |
+
+### Enterprise reference (production + OIDC)
+
+Full stack for portfolio demos and architecture reviews:
+
+```sh
+make platform-demo-enterprise
+make platform-demo-enterprise-verify
+```
+
+Combines Redis quota, Prometheus telemetry, Keycloak JWKS, and the full agentic governance verify path.
+
 Or directly:
 
 ```sh
