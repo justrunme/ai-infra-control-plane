@@ -38,17 +38,37 @@ Responses include a `telemetry` object with fetched values. Threshold breaches p
 
 ## Local overlay
 
+### Platform demo (recommended)
+
+```sh
+# Production path: Redis + Prometheus + full governance verify
+make platform-demo-production
+make platform-demo-production-verify
+
+# Enterprise reference: production + Keycloak OIDC
+make platform-demo-enterprise
+make platform-demo-enterprise-verify
+```
+
+### Manual env (control plane + runtime outside Compose)
+
 ```sh
 # Runtime: shared Redis tenant counters
-docker compose \
-  -f deploy/local/docker-compose.yaml \
-  -f deploy/local/docker-compose.shared-state.yaml \
-  up --build
+export REDIS_URL=redis://127.0.0.1:6379/0
 
 # Control plane: point at the same Redis + Prometheus
 export QUOTA_REDIS_URL=redis://127.0.0.1:6379/0
 export PROMETHEUS_GOVERNANCE_ENABLED=true
 export PROMETHEUS_URL=http://127.0.0.1:9090
+```
+
+Legacy runtime compose overlays:
+
+```sh
+docker compose \
+  -f deploy/local/docker-compose.yaml \
+  -f deploy/local/docker-compose.shared-state.yaml \
+  up --build
 ```
 
 ## Related

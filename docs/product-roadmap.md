@@ -36,7 +36,7 @@ AI Infrastructure OS
 | Intent Engine | `governance/intent/` | 5/10 | NL → agent/model/tools/region plan |
 | Cost & Chargeback | cost + quota + tenant metrics | 6/10 | Helm-wired policies, Grafana chargeback |
 | Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
-| Platform Demo | `demo/platform/` | 7/10 | One-command Control + Execution planes |
+| Platform Demo | `demo/platform/` | 8/10 | `make platform-demo-enterprise` reference stack |
 
 ## Decision vs execution
 
@@ -79,6 +79,7 @@ flowchart LR
 - [Intent Engine](intent-engine.md)
 - [Portfolio blog outline](portfolio/blog-outline-enterprise-ai-os.md)
 - [Demo GIF script](portfolio/demo-gif-script.md)
+- [Reference architecture](portfolio/reference-architecture.md)
 - [Signed model registry](signed-model-registry.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
