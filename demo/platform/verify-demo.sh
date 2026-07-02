@@ -172,6 +172,19 @@ eval_result="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate-respo
   }')"
 printf '%s\n' "$eval_result" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["decision"]=="pass", d; print("  groundedness:", d["scores"].get("groundedness"))'
 
+log "intent engine — expect finance_report orchestration plan"
+intent_result="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/intent/resolve" \
+  -H 'content-type: application/json' \
+  -H 'x-ai-team: finance' \
+  -d '{
+    "message": "Generate quarterly revenue report",
+    "team": "finance",
+    "environment": "production",
+    "namespace": "ai-prod",
+    "run_governance": false
+  }')"
+printf '%s\n' "$intent_result" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["intent"]=="finance_report", d; assert d["plan"]["agent"]=="finance-copilot", d; print("  region:", d["plan"].get("region"), "cluster:", d.get("cluster",{}).get("name"))'
+
 log "governance metrics — expect control plane decision counter"
 curl -fsS "${CONTROL_PLANE_URL}/metrics" | grep -q 'ai_control_governance_decisions_total' && log "  ai_control_governance_decisions_total present"
 

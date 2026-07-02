@@ -81,6 +81,11 @@ def evaluations_module() -> ModuleType:
 
 
 @pytest.fixture(scope="session")
+def intent_module() -> ModuleType:
+    return load_module("intent_engine", "governance/intent/evaluate.py")
+
+
+@pytest.fixture(scope="session")
 def quota_module() -> ModuleType:
     return load_module("quota_governance", "governance/quota/evaluate.py")
 
