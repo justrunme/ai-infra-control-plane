@@ -13,6 +13,9 @@ from pydantic import BaseModel, Field
 
 
 class GovernanceEvaluateRequest(BaseModel):
+    subject: str = ""
+    groups: list[str] = Field(default_factory=list)
+    policy_pack: str = ""
     team: str = "platform"
     owner: str = "alice"
     environment: str = "development"
@@ -38,6 +41,7 @@ class GovernanceStageResult(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     score: int | None = None
     level: str | None = None
+    pack: str | None = None
     factors: list[dict[str, Any]] = Field(default_factory=list)
     risk_tier: str | None = None
     known_model: bool | None = None
@@ -45,6 +49,7 @@ class GovernanceStageResult(BaseModel):
 
 class GovernanceEvaluateResponse(BaseModel):
     final_verdict: str
+    policy_pack: str
     reasons: list[str]
     flow: list[str]
     stages: dict[str, GovernanceStageResult]
@@ -93,12 +98,16 @@ def build_approval_request(
 
 
 def final_verdict(
+    pack_pre_result: dict[str, Any],
+    pack_post_result: dict[str, Any],
     quota_result: dict[str, Any],
     registry_result: dict[str, Any],
     cost_result: dict[str, Any],
     risk_result: dict[str, Any],
     approval_result: dict[str, Any],
 ) -> tuple[str, list[str]]:
+    if pack_pre_result["decision"] == "block":
+        return "block", pack_pre_result["reasons"]
     if quota_result["decision"] == "block":
         return "block", quota_result["reasons"]
     if registry_result["forbidden"]:
@@ -107,6 +116,8 @@ def final_verdict(
         return "block", ["cost governance blocked the request"]
     if approval_result["decision"] == "block":
         return "block", ["approval workflow blocked the request"]
+    if pack_post_result["decision"] == "approval_required":
+        return "approval_required", pack_post_result["reasons"]
     if risk_result["level"] == "critical":
         return "approval_required", ["critical risk score requires human approval"]
     if approval_result["decision"] == "approval_required":
@@ -120,8 +131,10 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
     return {
         "id": "playground",
         "timestamp": datetime.now(UTC).isoformat(),
+        "subject": payload.subject or payload.owner,
         "team": payload.team,
         "owner": payload.owner,
+        "policy_pack": payload.policy_pack,
         "environment": payload.environment,
         "namespace": payload.namespace,
         "action": payload.action,
@@ -145,6 +158,9 @@ def evaluate_governance_request(
     payload: GovernanceEvaluateRequest,
 ) -> GovernanceEvaluateResponse:
     root = get_governance_root()
+    pack_module = load_module(
+        "policy_packs", root / "policy-packs" / "evaluate.py"
+    )
     quota_module = load_module("quota_governance", root / "quota" / "evaluate.py")
     registry_module = load_module("model_registry", root / "registry" / "evaluate.py")
     cost_module = load_module("cost_governance", root / "cost" / "evaluate.py")
@@ -154,36 +170,87 @@ def evaluate_governance_request(
     )
 
     quota_policies = quota_module.parse_policies(root / "quota" / "policies.yaml")
+    pack_config = pack_module.parse_packs(root / "policy-packs" / "packs.yaml")
     registry = registry_module.parse_registry(root / "registry" / "models.yaml")
     policies = cost_module.parse_policy_file(root / "cost" / "policies.yaml")
     rules = risk_module.parse_rules(root / "risk" / "rules.yaml")
     row = to_pipeline_row(payload)
+    registry_models = set(registry.keys())
 
-    quota_result = quota_module.evaluate_request(row, quota_policies)
-    registry_result = registry_module.evaluate_model_policy(row, registry)
-    cost_result = cost_module.evaluate_row(row, policies)
-    risk_result = risk_module.evaluate_request(row, rules, registry)
-    approval_request = build_approval_request(
-        row, cost_result["decision"], risk_result["level"]
+    pack_pre = pack_module.evaluate_pack(
+        row,
+        pack_config,
+        registry_models=registry_models,
     )
-    approval_result = approval_module.evaluate_request(approval_request, registry)
+    if pack_pre["decision"] == "block":
+        pack_post = pack_pre
+        quota_result = {
+            "decision": "allow",
+            "reasons": ["skipped after policy pack block"],
+        }
+        registry_result = {
+            "forbidden": False,
+            "reasons": [],
+            "known_model": None,
+            "risk_tier": None,
+        }
+        cost_result = {"decision": "allow", "reasons": []}
+        risk_result = {"score": 0, "level": "low", "factors": []}
+        approval_result = {"decision": "allow", "reasons": []}
+    else:
+        row["_pack_quota_multiplier"] = pack_pre["quota_multiplier"]
+        quota_result = quota_module.evaluate_request(row, quota_policies)
+        registry_result = registry_module.evaluate_model_policy(row, registry)
+        cost_result = cost_module.evaluate_row(row, policies)
+        risk_result = risk_module.evaluate_request(row, rules, registry)
+        approval_request = build_approval_request(
+            row, cost_result["decision"], risk_result["level"]
+        )
+        approval_result = approval_module.evaluate_request(approval_request, registry)
+        pack_post = pack_module.evaluate_pack(
+            row,
+            pack_config,
+            registry_models=registry_models,
+            risk_level=risk_result["level"],
+        )
+
     verdict, reasons = final_verdict(
-        quota_result, registry_result, cost_result, risk_result, approval_result
+        pack_pre,
+        pack_post,
+        quota_result,
+        registry_result,
+        cost_result,
+        risk_result,
+        approval_result,
     )
+
+    pack_stage_decision = pack_pre["decision"]
+    pack_stage_reasons = list(pack_pre["reasons"])
+    if pack_pre["decision"] != "block" and pack_post["decision"] == "approval_required":
+        pack_stage_decision = "approval_required"
+        pack_stage_reasons = list(pack_post["reasons"])
 
     return GovernanceEvaluateResponse(
         final_verdict=verdict,
+        policy_pack=str(pack_pre["pack"]),
         reasons=reasons,
         flow=[
             "request",
+            "policy_pack",
             "tenant_quota",
             "model_registry",
             "cost_decision",
             "risk_score",
             "approval_decision",
+            "policy_pack_approval",
             "final_verdict",
         ],
         stages={
+            "policy_pack": GovernanceStageResult(
+                decision=pack_stage_decision,
+                reasons=pack_stage_reasons,
+                pack=str(pack_pre["pack"]),
+            ),
             "quota": GovernanceStageResult(
                 decision=quota_result["decision"],
                 reasons=quota_result["reasons"],

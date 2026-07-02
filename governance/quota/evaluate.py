@@ -81,6 +81,9 @@ def evaluate_request(
     )
 
     rpm_limit = int(tenant.get("requests_per_minute", 0))
+    multiplier = float(request.get("_pack_quota_multiplier", 1.0))
+    if rpm_limit:
+        rpm_limit = int(rpm_limit * multiplier)
     if rpm_limit and requests_last_minute >= rpm_limit:
         reasons.append(
             f"team {team} exceeded requests_per_minute "
@@ -88,6 +91,8 @@ def evaluate_request(
         )
 
     token_limit = int(tenant.get("tokens_per_day", 0))
+    if token_limit:
+        token_limit = int(token_limit * multiplier)
     projected_tokens = tokens_today + request_tokens
     if token_limit and projected_tokens > token_limit:
         reasons.append(

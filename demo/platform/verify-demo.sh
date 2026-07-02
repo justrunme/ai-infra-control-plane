@@ -59,6 +59,42 @@ block_payload="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate" \
   }')"
 printf '%s\n' "$block_payload" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["final_verdict"]=="block", d; print("  verdict:", d["final_verdict"])'
 
+log "audit trail — expect finance block recorded"
+audit_events="$(curl -fsS "${CONTROL_PLANE_URL}/audit/events?team=finance&verdict=block&limit=5")"
+printf '%s\n' "$audit_events" | python3 -c 'import json,sys; events=json.load(sys.stdin); assert events, events; e=events[0]; assert e["final_verdict"]=="block", e; print("  subject:", e.get("subject"), "stage:", e.get("blocking_stage"))'
+
+log "policy pack production — expect block on unregistered model"
+pack_block="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate" \
+  -H 'x-ai-policy-pack: production' \
+  -H 'content-type: application/json' \
+  -d '{
+    "team": "platform",
+    "owner": "alice",
+    "environment": "production",
+    "namespace": "ai-prod",
+    "model": "experimental-model",
+    "provider": "ollama"
+  }')"
+printf '%s\n' "$pack_block" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["final_verdict"]=="block", d; assert d["policy_pack"]=="production", d; print("  pack:", d["policy_pack"], "stage:", d["stages"]["policy_pack"]["decision"])'
+
+log "secrets catalog — expect status endpoint without raw values"
+secrets_status="$(curl -fsS "${CONTROL_PLANE_URL}/secrets/status")"
+printf '%s\n' "$secrets_status" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["items"])>=4, d; assert "sk-" not in json.dumps(d), d; print("  backend:", d["backend"], "configured:", d["configured_count"])'
+
+log "fleet registry — expect multi-cluster summary"
+fleet_summary="$(curl -fsS "${CONTROL_PLANE_URL}/fleet/clusters")"
+printf '%s\n' "$fleet_summary" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["summary"]["cluster_count"]>=3, d; print("  clusters:", d["summary"]["cluster_count"], "healthy:", d["summary"]["healthy_clusters"])'
+
+log "fleet topology — expect federation graph"
+curl -fsS "${CONTROL_PLANE_URL}/fleet/topology" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["graph_version"]=="v2-fleet", d; assert any(n["id"]=="cluster-eu-prod" for n in d["nodes"]), d; print("  nodes:", len(d["nodes"]))'
+
+log "finops recommendations — expect actionable savings"
+finops="$(curl -fsS "${CONTROL_PLANE_URL}/finops/recommendations?limit=5")"
+printf '%s\n' "$finops" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["recommendation_count"]>=3, d; assert d["estimated_monthly_savings_usd"]>0, d; print("  recommendations:", d["recommendation_count"], "savings:", d["estimated_monthly_savings_usd"])'
+
+log "governance metrics — expect control plane decision counter"
+curl -fsS "${CONTROL_PLANE_URL}/metrics" | grep -q 'ai_control_governance_decisions_total' && log "  ai_control_governance_decisions_total present"
+
 log "runtime enforcement — expect allowed chat completion"
 curl -fsS -X POST "${GATEWAY_URL}/v1/chat/completions" \
   -H 'content-type: application/json' \
@@ -97,7 +133,11 @@ log "prometheus metrics smoke check"
 metrics="$(curl -fsS "${GATEWAY_URL}/metrics")"
 echo "$metrics" | grep -q 'gateway_governance_decisions_total' && log "  gateway_governance_decisions_total present"
 echo "$metrics" | grep -q 'gateway_tenant_requests_total' && log "  gateway_tenant_requests_total present"
-curl -fsS "${CONTROL_PLANE_URL}/metrics" | grep -q 'ai_control_' && log "  control plane metrics present"
+control_metrics="$(curl -fsS "${CONTROL_PLANE_URL}/metrics")"
+echo "$control_metrics" | grep -q 'ai_control_' && log "  control plane metrics present"
+echo "$control_metrics" | grep -q 'ai_control_secret_configured' && log "  ai_control_secret_configured present"
+echo "$control_metrics" | grep -q 'ai_control_fleet_cluster_up' && log "  ai_control_fleet_cluster_up present"
+echo "$control_metrics" | grep -q 'ai_control_finops_recommendations_total' && log "  ai_control_finops_recommendations_total present"
 
 log ""
 log "Platform demo verification passed."

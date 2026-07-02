@@ -5,17 +5,36 @@ from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Literal
+from uuid import uuid4
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 
+from app.audit_service import AUDIT_STORE, AuditEvent
 from app.drift_service import DriftStatus, build_drift_status
+from app.finops_service import (
+    FinOpsRecommendationsResponse,
+    build_finops_recommendations,
+)
+from app.fleet_service import (
+    FleetClustersResponse,
+    build_fleet_clusters,
+    fleet_cluster_metrics,
+)
 from app.governance_service import (
     GovernanceEvaluateRequest,
     GovernanceEvaluateResponse,
     evaluate_governance_request,
+)
+from app.identity_service import apply_identity, resolve_workload_identity
+from app.secrets_service import SecretsStatusResponse, build_secrets_status
+from app.topology import (
+    TopologyEdge,
+    TopologyNode,
+    TopologySignal,
+    TopologyStatus,
 )
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
@@ -32,6 +51,7 @@ DEFAULT_MODEL_INVENTORY_PATH = Path(__file__).with_name("model_inventory.json")
 
 HTTP_REQUESTS_TOTAL: dict[tuple[str, str, int], int] = defaultdict(int)
 HTTP_REQUEST_LATENCY_MS_TOTAL: dict[tuple[str, str, int], float] = defaultdict(float)
+GOVERNANCE_DECISIONS_TOTAL: dict[tuple[str, str, str], int] = defaultdict(int)
 
 
 class HealthStatus(BaseModel):
@@ -101,55 +121,6 @@ class BackendLatencyStatus(BaseModel):
     latency_ms: int
     measured_endpoint: str
     error: str | None = None
-
-
-class TopologySignal(BaseModel):
-    name: str
-    value: int | float | str
-    unit: str
-    description: str
-
-
-class TopologyNode(BaseModel):
-    id: str
-    label: str
-    kind: Literal[
-        "api",
-        "inference-backend",
-        "ui",
-        "observability",
-        "gitops",
-        "cluster",
-        "package",
-        "forecasting",
-        "security",
-    ]
-    health: Literal["healthy", "degraded", "unknown"]
-    signals: list[TopologySignal] = Field(default_factory=list)
-
-
-class TopologyEdge(BaseModel):
-    source: str
-    target: str
-    relationship: Literal[
-        "probes",
-        "serves",
-        "scrapes",
-        "visualizes",
-        "collects",
-        "deploys",
-        "packages",
-        "forecasts",
-        "enforces",
-        "runs-on",
-    ]
-
-
-class TopologyStatus(BaseModel):
-    updated_at: str
-    graph_version: str
-    nodes: list[TopologyNode]
-    edges: list[TopologyEdge]
 
 
 app = FastAPI(
@@ -552,6 +523,105 @@ def get_platform_topology() -> TopologyStatus:
     )
 
 
+def get_fleet_topology() -> TopologyStatus:
+    fleet = build_fleet_clusters()
+    capacity_status = get_capacity_status(get_model_inventory())
+    cost_status = get_cost_status(get_model_inventory())
+
+    nodes: list[TopologyNode] = [
+        TopologyNode(
+            id="control-api",
+            label="Control Plane",
+            kind="api",
+            health="healthy" if capacity_status.healthy_models else "degraded",
+            signals=[
+                TopologySignal(
+                    name="fleet_clusters",
+                    value=fleet.summary.cluster_count,
+                    unit="count",
+                    description="Clusters registered in the fleet registry.",
+                ),
+                TopologySignal(
+                    name="healthy_clusters",
+                    value=fleet.summary.healthy_clusters,
+                    unit="count",
+                    description="Clusters with healthy inference backends.",
+                ),
+                TopologySignal(
+                    name="capacity",
+                    value=capacity_status.total_capacity_tokens_per_second,
+                    unit="tokens_per_second",
+                    description="Aggregate serving capacity on the primary cluster.",
+                ),
+                TopologySignal(
+                    name="estimated_cost",
+                    value=cost_status.estimated_hourly_cost,
+                    unit="USD_per_hour",
+                    description="Estimated hourly model serving cost.",
+                ),
+            ],
+        )
+    ]
+    edges: list[TopologyEdge] = []
+
+    for cluster in fleet.clusters:
+        node_id = f"cluster-{cluster.id}"
+        nodes.append(
+            TopologyNode(
+                id=node_id,
+                label=cluster.label,
+                kind="cluster",
+                health=cluster.health,
+                signals=[
+                    TopologySignal(
+                        name="cloud",
+                        value=cluster.cloud,
+                        unit="provider",
+                        description="Cloud or site label for placement policy.",
+                    ),
+                    TopologySignal(
+                        name="region",
+                        value=cluster.region,
+                        unit="region",
+                        description="Geographic or logical region.",
+                    ),
+                    TopologySignal(
+                        name="environment",
+                        value=cluster.environment,
+                        unit="environment",
+                        description="Mapped policy pack environment.",
+                    ),
+                    TopologySignal(
+                        name="node_count",
+                        value=cluster.node_count,
+                        unit="nodes",
+                        description="Worker nodes in the cluster.",
+                    ),
+                    TopologySignal(
+                        name="healthy_models",
+                        value=cluster.healthy_models,
+                        unit="count",
+                        description="Healthy models reported for the cluster.",
+                    ),
+                ],
+            )
+        )
+        edges.append(
+            TopologyEdge(
+                source="control-api",
+                target=node_id,
+                relationship="runs-on" if cluster.primary else "probes",
+            )
+        )
+
+    return TopologyStatus(
+        updated_at=fleet.summary.updated_at,
+        graph_version="v2-fleet",
+        nodes=nodes,
+        edges=edges,
+    )
+
+
 @app.middleware("http")
 async def record_http_metrics(request: Request, call_next):
     started_at = perf_counter()
@@ -600,6 +670,16 @@ def topology() -> TopologyStatus:
     return get_platform_topology()
 
 
+@app.get("/fleet/clusters", response_model=FleetClustersResponse)
+def fleet_clusters() -> FleetClustersResponse:
+    return build_fleet_clusters()
+
+
+@app.get("/fleet/topology", response_model=TopologyStatus)
+def fleet_topology() -> TopologyStatus:
+    return get_fleet_topology()
+
+
 @app.get("/drift", response_model=DriftStatus)
 def drift() -> DriftStatus:
     return get_inventory_drift()
@@ -608,8 +688,51 @@ def drift() -> DriftStatus:
 @app.post("/governance/evaluate", response_model=GovernanceEvaluateResponse)
 def governance_evaluate(
     payload: GovernanceEvaluateRequest,
+    request: Request,
 ) -> GovernanceEvaluateResponse:
-    return evaluate_governance_request(payload)
+    identity = resolve_workload_identity(dict(request.headers), payload)
+    merged = apply_identity(payload, identity)
+    result = evaluate_governance_request(merged)
+    request_id = request.headers.get("x-request-id") or str(uuid4())
+    AUDIT_STORE.record_governance_evaluate(
+        identity=identity,
+        request=merged,
+        response=result,
+        request_id=request_id,
+    )
+    GOVERNANCE_DECISIONS_TOTAL[
+        (result.final_verdict, merged.team, merged.environment)
+    ] += 1
+    return result
+
+
+@app.get("/audit/events", response_model=list[AuditEvent])
+def audit_events(
+    limit: int = Query(default=50, ge=1, le=500),
+    team: str | None = None,
+    subject: str | None = None,
+    verdict: str | None = None,
+) -> list[AuditEvent]:
+    return AUDIT_STORE.list_events(
+        limit=limit,
+        team=team,
+        subject=subject,
+        verdict=verdict,
+    )
+
+
+@app.get("/secrets/status", response_model=SecretsStatusResponse)
+def secrets_status() -> SecretsStatusResponse:
+    return build_secrets_status()
+
+
+@app.get("/finops/recommendations", response_model=FinOpsRecommendationsResponse)
+def finops_recommendations(
+    team: str | None = None,
+    severity: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> FinOpsRecommendationsResponse:
+    return build_finops_recommendations(team=team, severity=severity, limit=limit)
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
@@ -624,6 +747,8 @@ def metrics() -> str:
     vllm_models = extract_vllm_models(vllm_payload) if vllm_error is None else []
     vllm_up = 1 if vllm_error is None else 0
     drift_status = get_inventory_drift()
+    secrets_status = build_secrets_status()
+    finops_status = build_finops_recommendations(limit=100)
 
     lines = [
         "# HELP ai_control_http_requests_total Total HTTP requests.",
@@ -638,6 +763,24 @@ def metrics() -> str:
                 method=method,
                 path=path,
                 status=status,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_governance_decisions_total "
+            "Governance verdicts from evaluate.",
+            "# TYPE ai_control_governance_decisions_total counter",
+        ]
+    )
+    for (verdict, team, environment), count in sorted(GOVERNANCE_DECISIONS_TOTAL.items()):
+        lines.append(
+            metric_line(
+                "ai_control_governance_decisions_total",
+                count,
+                verdict=verdict,
+                team=team,
+                environment=environment,
             )
         )
 
@@ -755,6 +898,59 @@ def metrics() -> str:
                 "ai_control_inventory_drift",
                 0 if backend.in_sync else 1,
                 backend=backend.backend,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_secret_configured Secret reference availability.",
+            "# TYPE ai_control_secret_configured gauge",
+        ]
+    )
+    for item in secrets_status.items:
+        lines.append(
+            metric_line(
+                "ai_control_secret_configured",
+                1 if item.status == "configured" else 0,
+                secret=item.name,
+                component=item.component,
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_fleet_cluster_up Fleet cluster reachability.",
+            "# TYPE ai_control_fleet_cluster_up gauge",
+        ]
+    )
+    for item in fleet_cluster_metrics():
+        lines.append(
+            metric_line(
+                "ai_control_fleet_cluster_up",
+                item["up"],
+                cluster=item["cluster"],
+                cloud=item["cloud"],
+                region=item["region"],
+            )
+        )
+
+    lines.extend(
+        [
+            "# HELP ai_control_finops_recommendations_total FinOps recommendations.",
+            "# TYPE ai_control_finops_recommendations_total gauge",
+        ]
+    )
+    category_counts: dict[tuple[str, str], int] = {}
+    for item in finops_status.recommendations:
+        key = (item.category, item.severity)
+        category_counts[key] = category_counts.get(key, 0) + 1
+    for (category, severity), count in sorted(category_counts.items()):
+        lines.append(
+            metric_line(
+                "ai_control_finops_recommendations_total",
+                count,
+                category=category,
+                severity=severity,
             )
         )
 

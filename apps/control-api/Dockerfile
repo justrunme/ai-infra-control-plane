@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY apps/control-api/app ./app
 COPY governance ./governance
+COPY fleet ./fleet
+COPY finops ./finops
+COPY experiments/finops-recommendations ./experiments/finops-recommendations
 
 # Run as a non-root user (GID 0 for OpenShift compatibility) to match the
 # runAsNonRoot security context enforced by the Helm chart.

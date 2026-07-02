@@ -43,6 +43,10 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       VLLM_BASE_URL: http://127.0.0.1:8000
       MODEL_INVENTORY_PATH: /etc/ai-control-plane/model_inventory.json
+      EXTERNAL_SECRETS_ENABLED: ${EXTERNAL_SECRETS_ENABLED:-false}
+    env_file:
+      - path: secrets.env
+        required: false
     volumes:
       - ./model_inventory.json:/etc/ai-control-plane/model_inventory.json:ro
     ports:
@@ -80,6 +84,9 @@ services:
       TENANT_ATTRIBUTION_ENABLED: "true"
       GOVERNANCE_DEFAULT_TEAM: platform
       GOVERNANCE_DEFAULT_NAMESPACE: ai-dev
+    env_file:
+      - path: secrets.env
+        required: false
     ports:
       - "8090:8080"
     read_only: true

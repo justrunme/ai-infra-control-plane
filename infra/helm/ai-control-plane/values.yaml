@@ -64,7 +64,6 @@ modelInventory:
       capacity_tokens_per_second: 540
       estimated_hourly_cost_usd: 0.42
 
-# Governance policy overlays (registry + tenant quota)
 governance:
   enabled: true
   registryModels: |
@@ -117,6 +116,28 @@ governance:
         tokens_per_day: 500000
         max_monthly_budget_usd: 800
         sensitive_data_allowed: false
+
+# Sync provider and gateway credentials from Vault via External Secrets Operator.
+secrets:
+  externalSecrets:
+    enabled: false
+    refreshInterval: 1h
+    secretStoreRef:
+      name: vault-ai-platform
+      kind: ClusterSecretStore
+    data:
+      - secretKey: OPENAI_API_KEY
+        remoteRef:
+          key: secret/data/ai-platform/providers
+          property: openai_api_key
+      - secretKey: GATEWAY_API_KEYS
+        remoteRef:
+          key: secret/data/ai-platform/gateway
+          property: api_keys
+      - secretKey: AUDIT_SIGNING_KEY
+        remoteRef:
+          key: secret/data/ai-platform/control-plane
+          property: audit_signing_key
 
 service:
   type: ClusterIP

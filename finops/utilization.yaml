@@ -1,0 +1,24 @@
+models:
+  gemma-3-12b:
+    gpu_utilization: 0.08
+    requests_per_day: 12
+    replicas: 2
+    backend: vllm
+  gpt-4.1-mini:
+    gpu_utilization: 0.71
+    requests_per_day: 840
+    replicas: 3
+    backend: external
+  claude-3.7-sonnet:
+    gpu_utilization: 0.55
+    requests_per_day: 420
+    replicas: 2
+    backend: external
+  llama3.1:8b:
+    gpu_utilization: 0.42
+    requests_per_day: 2100
+    replicas: 1
+    backend: ollama
+
+idle_utilization_threshold: 0.15
+idle_requests_per_day_threshold: 50

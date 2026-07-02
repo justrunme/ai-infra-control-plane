@@ -23,10 +23,14 @@ AI Infrastructure OS
 | Module | Location | Maturity | Notes |
 | --- | --- | --- | --- |
 | Execution Plane | `ai-runtime-platform` | 7/10 | Routing, shadow, governance enforcement |
-| Control Plane API | `apps/control-api` | 8/10 | Dashboard, drift, topology |
-| Policy Engine | `governance/` + OPA | 7/10 | Quota → registry → cost → risk → approval |
+| Control Plane API | `apps/control-api` | 8/10 | Dashboard, drift, topology, audit API |
+| Identity & Audit | `apps/control-api/app/identity_service.py` | 6/10 | JWT/header identity, in-memory audit trail |
+| Secrets & ESO | `security/secrets/` + `/secrets/status` | 6/10 | Vault paths, ExternalSecret Helm wiring |
+| Policy Engine | `governance/` + OPA | 7/10 | Policy packs + quota → registry → cost → risk |
 | Cost & Chargeback | cost + quota + tenant metrics | 6/10 | Helm-wired policies, Grafana chargeback |
+| FinOps Recommendations | `finops/` + `/finops/recommendations` | 6/10 | Idle, budget, route-local actions |
 | Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
+| Multi-cluster Fleet | `fleet/` + `/fleet/*` | 6/10 | Cluster registry, federation topology |
 | Capacity Planner | `experiments/inference-autoscaling` + `experiments/capacity-loop` | 6/10 | Forecast → KEDA hints |
 | Model Registry | `governance/registry/` | 6/10 | Risk tier, namespace, PII, budget |
 | Observability & SLO | `observability/slo/` | 6/10 | Prometheus rules + alert catalog |
@@ -69,4 +73,9 @@ These are **not** new repositories — they extend the flagship:
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Workload identity & quotas](workload-identity-quotas.md)
+- [Identity & audit trail](identity-audit.md)
+- [Policy packs](policy-packs.md)
+- [Secrets management](secrets-management.md)
+- [Multi-cluster fleet](multi-cluster-fleet.md)
+- [FinOps recommendations](finops-recommendations.md)
 - [SLO catalog](../observability/slo/README.md)
