@@ -21,6 +21,7 @@ def test_forbidden_model_is_blocked(registry_module: ModuleType) -> None:
     result = registry_module.evaluate_model_policy(
         {
             "model": "unknown-frontier-model",
+            "team": "platform",
             "namespace": "ai-dev",
             "sensitive_data": False,
             "forecast_monthly_cost_usd": 100,
@@ -35,6 +36,7 @@ def test_namespace_violation_blocks(registry_module: ModuleType) -> None:
     result = registry_module.evaluate_model_policy(
         {
             "model": "gpt-4.1-mini",
+            "team": "platform",
             "namespace": "ai-dev",
             "sensitive_data": False,
             "forecast_monthly_cost_usd": 100,
