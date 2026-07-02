@@ -96,6 +96,10 @@ log "finops recommendations — expect actionable savings"
 finops="$(curl -fsS "${CONTROL_PLANE_URL}/finops/recommendations?limit=5")"
 printf '%s\n' "$finops" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["recommendation_count"]>=3, d; assert d["estimated_monthly_savings_usd"]>0, d; print("  recommendations:", d["recommendation_count"], "savings:", d["estimated_monthly_savings_usd"])'
 
+log "incident runbook — expect correlated governance context"
+runbook="$(curl -fsS "${CONTROL_PLANE_URL}/incidents/runbook?alert=GovernanceBlockRateHigh&team=finance")"
+printf '%s\n' "$runbook" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["alert"]["name"]=="GovernanceBlockRateHigh", d; assert d["recommended_actions"], d; assert d["context_markdown"], d; print("  tenants:", d.get("affected_tenants"), "actions:", len(d["recommended_actions"]))'
+
 log "governance metrics — expect control plane decision counter"
 curl -fsS "${CONTROL_PLANE_URL}/metrics" | grep -q 'ai_control_governance_decisions_total' && log "  ai_control_governance_decisions_total present"
 
