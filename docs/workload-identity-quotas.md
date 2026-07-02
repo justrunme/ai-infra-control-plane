@@ -53,7 +53,7 @@ When `TENANT_ATTRIBUTION_ENABLED=true`, the gateway:
 - tracks rolling per-team RPM and daily token estimates in memory
 - passes `requests_last_minute` and `tokens_today` to the control plane
 
-This is an in-memory prototype suitable for demos; production would use Redis or a billing service.
+This is an in-memory reference implementation suitable for demos; production uses Redis (`QUOTA_REDIS_URL` on the control plane, `REDIS_URL` on the gateway) or a billing service.
 
 ## Model risk registry
 

@@ -22,6 +22,7 @@
 - Keep PRs focused and reviewable; one engineering task per PR.
 - Open draft PRs by default until CI is green.
 - PR descriptions should include what changed, why it changed, and how it was validated.
+- For a consistent `main` history on GitHub, prefer **Squash and merge** from the `justrunme` account. Local commits should use the same `user.name` / `user.email` as the GitHub identity that owns the repository (or the GitHub noreply address) so squash metadata does not alternate between personal and org identities.
 
 ## Validation
 
