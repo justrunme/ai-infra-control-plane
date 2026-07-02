@@ -8,7 +8,7 @@ End-to-end enterprise identity: **Keycloak → JWT → gateway JWKS verify → c
 make platform-demo-oidc
 ```
 
-This overlays [docker-compose.oidc.yaml](docker-compose.oidc.yaml) on the base platform demo and starts Keycloak on port **8180**.
+This overlays [docker-compose.oidc.yaml](../demo/platform/docker-compose.oidc.yaml) on the base platform demo and starts Keycloak on port **8180**.
 
 | Service | URL |
 | --- | --- |
@@ -57,5 +57,5 @@ Environment variables (set by the OIDC compose overlay):
 
 ## Related
 
-- [Identity and audit trail](../../docs/identity-audit.md)
-- [Platform demo](README.md)
+- [Identity and audit trail](identity-audit.md)
+- [Platform demo](../demo/platform/README.md)

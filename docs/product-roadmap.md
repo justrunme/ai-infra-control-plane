@@ -24,19 +24,20 @@ AI Infrastructure OS
 
 | Module | Location | Maturity | Notes |
 | --- | --- | --- | --- |
-| Execution Plane | `ai-runtime-platform` | 7/10 | Routing, shadow, governance enforcement |
-| Control Plane API | `apps/control-api` | 8/10 | Dashboard, drift, topology, audit API |
-| Identity & Audit | `apps/control-api/app/identity_service.py` | 6/10 | JWT/header identity, audit trail |
-| Policy Engine | `governance/` + OPA | 7/10 | Policy packs → prompt → quota → registry → cost → risk |
+| Execution Plane | `ai-runtime-platform` | 8/10 | Routing, shadow, governance enforcement, MCP, intent proxy |
+| Control Plane API | `apps/control-api` | 8/10 | Dashboard, drift, topology, audit API, intent API |
+| Identity & Audit | `apps/control-api/app/identity_service.py` | 7/10 | Header/JWT identity, JWKS verify, JSONL/Loki audit |
+| Policy Engine | `governance/` + OPA | 8/10 | Policy packs → prompt → quota → registry → cost → risk |
 | Model Registry | `governance/registry/` | 7/10 | Digest, attestation, SBOM ref, model cards |
 | Tool Registry | `governance/tools/` | 5/10 | MCP tool catalog, action allowlists |
-| MCP Gateway | `ai-runtime-platform` `/mcp/*` | 5/10 | Governed tool calls via evaluate-tool |
+| MCP Gateway | `ai-runtime-platform` `/mcp/*` | 6/10 | Governed tool calls via evaluate-tool |
 | Prompt Governance | `governance/prompt-security/` | 5/10 | PII, secrets, injection heuristics |
 | Agent Registry | `governance/agents/` | 5/10 | Agent → model + tools + policy binding |
 | Intent Engine | `governance/intent/` | 5/10 | NL → agent/model/tools/region plan |
-| Cost & Chargeback | cost + quota + tenant metrics | 6/10 | Helm-wired policies, Grafana chargeback |
+| Cost & Chargeback | cost + quota + tenant metrics | 7/10 | Redis quota state, tenant metrics, Grafana chargeback |
 | Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
-| Platform Demo | `demo/platform/` | 8/10 | `make platform-demo-enterprise` reference stack |
+| Live Governance Inputs | `apps/control-api/app/prometheus_service.py` | 7/10 | Prometheus telemetry plus Redis quota backfill |
+| Platform Demo | `demo/platform/` | 9/10 | Enterprise reference stack with Redis, Prometheus, Keycloak |
 
 ## Decision vs execution
 

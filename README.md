@@ -226,16 +226,14 @@ flowchart LR
 
 ## Scope
 
-- Expose a control API for private AI backend health, latency, capacity, and cost signals.
-- Monitor local and Kubernetes-hosted inference backends such as Ollama and vLLM.
-- Package the API with Docker and Helm.
-- Provision a small VM baseline with Terraform.
-- Add GitOps deployment examples through Argo CD.
-- Add security and quality gates through GitHub Actions.
-- Add observability with Prometheus, Grafana, and future log signals.
-- Explore experimental forecasting for latency, load, capacity, and cost signals.
-- Evaluate AI governance decisions through cost controls, risk scoring, and approval gates.
-- Grow through weekly issues and pull requests instead of empty commits.
+- Expose a control API for private AI backend health, latency, capacity, cost, identity, audit, and governance signals.
+- Operate model, tool, agent, and intent metadata through registries and policy packs.
+- Evaluate governance decisions across prompt security, tenant quota, model registry, cost, risk, approval, sovereign AI, and response evaluation stages.
+- Feed live governance inputs from Redis-backed tenant quota state and Prometheus telemetry.
+- Run a full reference stack with Control Plane, Execution Plane, Ollama, Redis, Prometheus, and Keycloak OIDC.
+- Package the API with Docker and Helm, including production defaults and External Secrets / JWKS wiring.
+- Provide GitOps, security, SLO, FinOps, fleet topology, capacity, and GPU placement reference modules.
+- Keep experimental modules clearly isolated from the production deployment path.
 
 ## Repository Layout
 
@@ -255,10 +253,17 @@ forecasting/
 experiments/
   inference-autoscaling/ Forecast-driven inference scaling recommendations
 governance/
+  agents/             Agent-to-model/tool/policy bindings
   cost/               AI cost governance policy engine
+  intent/             Natural-language intent to governed execution plan
+  policy-packs/       Environment and team-specific policy overlays
+  prompt-security/    PII, secret, and prompt-injection checks
+  quota/              Tenant quota policy checks
+  registry/           Signed model registry and attestation metadata
   risk/               AI request risk scoring engine
   approval/           Human approval workflow reference implementation
   pipeline/           End-to-end AI governance decision pipeline
+  tools/              MCP tool registry and action allowlists
 security/
   trivy/              Container and IaC scan configuration
   opa/                Kubernetes policy gates for rendered manifests
@@ -308,6 +313,10 @@ The control API exposes operator-facing signals for private AI infrastructure:
 - `GET /capacity` - aggregate model serving capacity.
 - `GET /cost` - estimated hourly, daily, and monthly cost.
 - `GET /summary` - compact status for dashboards and demos.
+- `GET /governance/inputs/status` - Redis quota and Prometheus input status.
+- `POST /intent/resolve` - intent-to-agent/model/tool/region execution planning.
+- `POST /governance/evaluate-tool` - governed MCP tool call decision.
+- `POST /governance/evaluate-response` - post-response quality, latency, and cost evaluation.
 
 ### Model Inventory
 
@@ -372,7 +381,7 @@ Core metrics:
 
 `GET /drift` compares configured model inventory against live Ollama and vLLM probes and reports missing or unexpected models per backend.
 
-`POST /governance/evaluate` runs a single AI request through the cost, risk, and approval pipeline and returns the final verdict for the operator dashboard playground.
+`POST /governance/evaluate` runs a single AI request through workload identity, policy packs, prompt security, tenant quota, model registry, cost, risk, approval, sovereign AI, and live telemetry checks, then returns the final verdict for the operator dashboard playground and runtime enforcement path.
 
 ### AI Cost Governance
 
@@ -423,4 +432,4 @@ The chart ships production defaults: non-root execution, read-only root filesyst
 
 ## Remaining Backlog
 
-See `docs/backlog.md` for the full roadmap. Next items: OpenWebUI health checks, gateway enforcement for governance verdicts, and live Prometheus integration for policy inputs.
+See `docs/product-roadmap.md` for the current roadmap and maturity map. The next portfolio step is packaging evidence: record the enterprise demo GIF from `docs/portfolio/demo-gif-script.md` and add it to this README.
