@@ -56,6 +56,21 @@ def registry_module() -> ModuleType:
 
 
 @pytest.fixture(scope="session")
+def tools_module() -> ModuleType:
+    return load_module("tool_registry", "governance/tools/evaluate.py")
+
+
+@pytest.fixture(scope="session")
+def agents_module() -> ModuleType:
+    return load_module("agent_registry", "governance/agents/evaluate.py")
+
+
+@pytest.fixture(scope="session")
+def prompt_security_module() -> ModuleType:
+    return load_module("prompt_security", "governance/prompt-security/evaluate.py")
+
+
+@pytest.fixture(scope="session")
 def quota_module() -> ModuleType:
     return load_module("quota_governance", "governance/quota/evaluate.py")
 

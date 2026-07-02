@@ -1,0 +1,70 @@
+tools:
+  jira-read:
+    owner: platform-team
+    risk_tier: low
+    mcp_server: jira
+    allowed_actions:
+      - read
+      - list
+    allowed_teams:
+      - platform
+      - support
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    forbidden: false
+  confluence-read:
+    owner: platform-team
+    risk_tier: low
+    mcp_server: confluence
+    allowed_actions:
+      - read
+      - list
+    allowed_teams:
+      - platform
+      - support
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    forbidden: false
+  kubernetes-admin:
+    owner: platform-team
+    risk_tier: high
+    mcp_server: kubernetes
+    allowed_actions:
+      - read
+      - list
+    forbidden_actions:
+      - delete
+      - patch
+      - apply
+    allowed_teams:
+      - platform
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    forbidden: false
+  github-write:
+    owner: security-team
+    risk_tier: critical
+    mcp_server: github
+    allowed_actions:
+      - read
+    forbidden_actions:
+      - write
+      - delete
+    allowed_teams:
+      - platform
+    forbidden: true
+  vault-read:
+    owner: security-team
+    risk_tier: medium
+    mcp_server: vault
+    allowed_actions:
+      - read
+    allowed_teams:
+      - platform
+      - finance
+    allowed_namespaces:
+      - ai-prod
+    forbidden: false

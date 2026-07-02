@@ -15,6 +15,7 @@ class ModelRegistryEntry(BaseModel):
     name: str
     revision: str | None = None
     artifact_digest: str | None = None
+    sbom_ref: str | None = None
     license: str | None = None
     risk_tier: str | None = None
     allowed_namespaces: list[str] = Field(default_factory=list)
@@ -79,6 +80,7 @@ def build_model_registry() -> ModelRegistryResponse:
                 name=name,
                 revision=entry.get("revision"),
                 artifact_digest=entry.get("artifact_digest"),
+                sbom_ref=entry.get("sbom_ref"),
                 license=entry.get("license"),
                 risk_tier=entry.get("risk_tier"),
                 allowed_namespaces=list(entry.get("allowed_namespaces", [])),

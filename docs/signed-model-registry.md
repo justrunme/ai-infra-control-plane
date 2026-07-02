@@ -10,6 +10,7 @@ Each model in `governance/registry/models.yaml` can declare:
 | --- | --- |
 | `revision` | Immutable model revision label |
 | `artifact_digest` | SHA256 digest of the model artifact (`sha256:…`) |
+| `sbom_ref` | SPDX or CycloneDX SBOM reference for supply chain audit |
 | `license` | SPDX or commercial license identifier |
 | `attestation_signature` | HMAC-SHA256 over canonical metadata |
 | `allowed_teams` | Tenant teams permitted to invoke the model |

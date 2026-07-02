@@ -177,6 +177,7 @@ def evaluate_model_policy(
         "external_provider": entry.get("external_provider", False),
         "revision": entry.get("revision"),
         "artifact_digest": entry.get("artifact_digest"),
+        "sbom_ref": entry.get("sbom_ref"),
         "license": entry.get("license"),
         "attestation_verified": attestation.get("attestation_verified"),
     }

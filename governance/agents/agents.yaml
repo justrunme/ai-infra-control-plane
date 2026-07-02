@@ -1,0 +1,52 @@
+agents:
+  platform-copilot:
+    owner: platform-team
+    model: llama3.1:8b
+    policy_pack: development
+    tools:
+      - jira-read
+      - confluence-read
+    memory_ttl_days: 30
+    allowed_teams:
+      - platform
+    allowed_namespaces:
+      - ai-dev
+      - ai-prod
+    forbidden: false
+  finance-copilot:
+    owner: finance-team
+    model: llama3.1:8b
+    policy_pack: production
+    tools:
+      - jira-read
+      - vault-read
+    memory_ttl_days: 7
+    allowed_teams:
+      - finance
+      - platform
+    allowed_namespaces:
+      - ai-prod
+    forbidden: false
+  support-agent:
+    owner: support-team
+    model: qwen2.5-7b
+    policy_pack: development
+    tools:
+      - jira-read
+      - confluence-read
+    memory_ttl_days: 14
+    allowed_teams:
+      - support
+    allowed_namespaces:
+      - ai-dev
+    forbidden: false
+  rogue-agent:
+    owner: unknown
+    model: unknown-frontier-model
+    policy_pack: research
+    tools:
+      - github-write
+      - kubernetes-admin
+    memory_ttl_days: 0
+    allowed_teams: []
+    forbidden: true

@@ -38,6 +38,8 @@ class GovernanceEvaluateRequest(BaseModel):
     tokens_today: int = Field(default=0, ge=0)
     model_revision: str = ""
     model_artifact_digest: str = ""
+    prompt_text: str = ""
+    agent: str = ""
 
 
 class GovernanceStageResult(BaseModel):
@@ -105,6 +107,8 @@ def build_approval_request(
 def final_verdict(
     pack_pre_result: dict[str, Any],
     pack_post_result: dict[str, Any],
+    prompt_result: dict[str, Any],
+    agent_result: dict[str, Any],
     quota_result: dict[str, Any],
     registry_result: dict[str, Any],
     cost_result: dict[str, Any],
@@ -113,6 +117,10 @@ def final_verdict(
 ) -> tuple[str, list[str]]:
     if pack_pre_result["decision"] == "block":
         return "block", pack_pre_result["reasons"]
+    if prompt_result["decision"] == "block":
+        return "block", prompt_result["reasons"]
+    if agent_result.get("forbidden"):
+        return "block", agent_result["reasons"]
     if quota_result["decision"] == "block":
         return "block", quota_result["reasons"]
     if registry_result["forbidden"]:
@@ -158,6 +166,8 @@ def to_pipeline_row(payload: GovernanceEvaluateRequest) -> dict[str, Any]:
         "tokens_today": payload.tokens_today,
         "model_revision": payload.model_revision,
         "model_artifact_digest": payload.model_artifact_digest,
+        "prompt_text": payload.prompt_text,
+        "agent": payload.agent,
     }
 
 
@@ -177,10 +187,17 @@ def evaluate_governance_request(
     approval_module = load_module(
         "approval_governance", root / "approval" / "evaluate.py"
     )
+    prompt_module = load_module(
+        "prompt_security", root / "prompt-security" / "evaluate.py"
+    )
+    agent_module = load_module("agent_registry", root / "agents" / "evaluate.py")
+    tools_module = load_module("tool_registry_bind", root / "tools" / "evaluate.py")
 
     quota_policies = quota_module.parse_policies(root / "quota" / "policies.yaml")
     pack_config = pack_module.parse_packs(root / "policy-packs" / "packs.yaml")
     registry = registry_module.parse_registry(root / "registry" / "models.yaml")
+    agent_registry = agent_module.parse_registry(root / "agents" / "agents.yaml")
+    tools_registry = tools_module.parse_registry(root / "tools" / "tools.yaml")
     policies = cost_module.parse_policy_file(root / "cost" / "policies.yaml")
     rules = risk_module.parse_rules(root / "risk" / "rules.yaml")
     row = to_pipeline_row(payload)
@@ -193,6 +210,16 @@ def evaluate_governance_request(
     )
     if pack_pre["decision"] == "block":
         pack_post = pack_pre
+        prompt_result = {
+            "decision": "allow",
+            "reasons": ["skipped after policy pack block"],
+            "findings": [],
+        }
+        agent_result = {
+            "forbidden": False,
+            "reasons": [],
+            "known_agent": None,
+        }
         quota_result = {
             "decision": "allow",
             "reasons": ["skipped after policy pack block"],
@@ -207,6 +234,12 @@ def evaluate_governance_request(
         risk_result = {"score": 0, "level": "low", "factors": []}
         approval_result = {"decision": "allow", "reasons": []}
     else:
+        prompt_result = prompt_module.evaluate_prompt_security(row)
+        agent_result = agent_module.evaluate_agent_policy(
+            row,
+            agent_registry,
+            tool_registry=tools_registry,
+        )
         row["_pack_quota_multiplier"] = pack_pre["quota_multiplier"]
         quota_result = quota_module.evaluate_request(row, quota_policies)
         registry_result = registry_module.evaluate_model_policy(row, registry)
@@ -226,6 +259,8 @@ def evaluate_governance_request(
     verdict, reasons = final_verdict(
         pack_pre,
         pack_post,
+        prompt_result,
+        agent_result,
         quota_result,
         registry_result,
         cost_result,
@@ -251,6 +286,8 @@ def evaluate_governance_request(
             "request",
             "live_inputs",
             "policy_pack",
+            "prompt_security",
+            "agent_registry",
             "tenant_quota",
             "model_registry",
             "cost_decision",
@@ -265,6 +302,15 @@ def evaluate_governance_request(
                 decision=pack_stage_decision,
                 reasons=pack_stage_reasons,
                 pack=str(pack_pre["pack"]),
+            ),
+            "prompt_security": GovernanceStageResult(
+                decision=prompt_result["decision"],
+                reasons=prompt_result["reasons"],
+            ),
+            "agent": GovernanceStageResult(
+                decision="block" if agent_result.get("forbidden") else "allow",
+                reasons=list(agent_result.get("reasons", [])),
+                known_model=agent_result.get("known_agent"),
             ),
             "quota": GovernanceStageResult(
                 decision=quota_result["decision"],
