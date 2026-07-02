@@ -20,6 +20,7 @@ class ModelRegistryEntry(BaseModel):
     risk_tier: str | None = None
     allowed_namespaces: list[str] = Field(default_factory=list)
     allowed_teams: list[str] = Field(default_factory=list)
+    allowed_regions: list[str] = Field(default_factory=list)
     forbidden: bool = False
     external_provider: bool = False
     has_attestation_signature: bool = False
@@ -85,6 +86,7 @@ def build_model_registry() -> ModelRegistryResponse:
                 risk_tier=entry.get("risk_tier"),
                 allowed_namespaces=list(entry.get("allowed_namespaces", [])),
                 allowed_teams=list(entry.get("allowed_teams", [])),
+                allowed_regions=list(entry.get("allowed_regions", [])),
                 forbidden=bool(entry.get("forbidden", False)),
                 external_provider=bool(entry.get("external_provider", False)),
                 has_attestation_signature=bool(attestation["has_attestation_signature"]),

@@ -39,7 +39,7 @@ def parse_registry(path: Path) -> dict[str, dict[str, Any]]:
     section: str | None = None
     current_model: str | None = None
     current_list_key: str | None = None
-    list_keys = {"allowed_namespaces", "allowed_teams"}
+    list_keys = {"allowed_namespaces", "allowed_teams", "allowed_regions"}
 
     for raw_line in path.read_text().splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):

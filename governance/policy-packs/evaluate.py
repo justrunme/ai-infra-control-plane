@@ -146,6 +146,13 @@ def evaluate_pack(
     if pack.get("block_sensitive_data") and request.get("sensitive_data"):
         reasons.append(f"policy pack {pack_name} blocks sensitive data workloads")
 
+    required_region = pack.get("require_region")
+    request_region = str(request.get("region") or "").strip()
+    if required_region and request_region != required_region:
+        reasons.append(
+            f"policy pack {pack_name} requires region {required_region}"
+        )
+
     min_risk = str(pack.get("min_risk_for_approval", "high"))
     approval_required = bool(
         risk_level is not None and _risk_at_least(str(risk_level), min_risk)

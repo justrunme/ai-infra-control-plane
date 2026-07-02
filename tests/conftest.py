@@ -71,6 +71,16 @@ def prompt_security_module() -> ModuleType:
 
 
 @pytest.fixture(scope="session")
+def sovereign_module() -> ModuleType:
+    return load_module("sovereign_ai", "governance/sovereign/evaluate.py")
+
+
+@pytest.fixture(scope="session")
+def evaluations_module() -> ModuleType:
+    return load_module("response_evaluation", "governance/evaluations/evaluate.py")
+
+
+@pytest.fixture(scope="session")
 def quota_module() -> ModuleType:
     return load_module("quota_governance", "governance/quota/evaluate.py")
 

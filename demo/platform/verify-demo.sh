@@ -144,6 +144,34 @@ if [[ "$mcp_status" != "403" ]]; then
 fi
 log "  mcp gateway returned 403 as expected"
 
+log "sovereign AI — expect block external model in eu-central"
+sovereign_block="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate" \
+  -H 'x-ai-region: eu-central' \
+  -H 'content-type: application/json' \
+  -d '{
+    "team": "platform",
+    "namespace": "ai-prod",
+    "environment": "production",
+    "model": "gpt-4.1-mini",
+    "provider": "openai",
+    "region": "eu-central"
+  }')"
+printf '%s\n' "$sovereign_block" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["final_verdict"]=="block", d; print("  stage:", d["stages"]["sovereign"]["decision"])'
+
+log "response evaluation — expect pass verdict"
+eval_result="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate-response" \
+  -H 'content-type: application/json' \
+  -d '{
+    "team": "platform",
+    "model": "'"${MODEL}"'",
+    "request_id": "demo-eval-1",
+    "prompt_text": "Say hello",
+    "response_text": "Hello there!",
+    "latency_ms": 120,
+    "cost_usd": 0.001
+  }')"
+printf '%s\n' "$eval_result" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["decision"]=="pass", d; print("  groundedness:", d["scores"].get("groundedness"))'
+
 log "governance metrics — expect control plane decision counter"
 curl -fsS "${CONTROL_PLANE_URL}/metrics" | grep -q 'ai_control_governance_decisions_total' && log "  ai_control_governance_decisions_total present"
 
