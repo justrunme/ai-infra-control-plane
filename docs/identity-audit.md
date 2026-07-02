@@ -13,7 +13,30 @@ Priority:
 3. **JSON body** — playground and direct API clients
 4. **Defaults** — `platform` / `anonymous`
 
-JWT decoding is **unsigned** in this prototype (payload inspection only). Production should validate signatures against your IdP JWKS (Keycloak, Entra ID, etc.).
+JWT handling supports two modes:
+
+| Mode | Env | Behavior |
+| --- | --- | --- |
+| Prototype (default) | `OIDC_JWT_VERIFY` unset / `false` | Unsigned payload decode for demos |
+| Production | `OIDC_JWT_VERIFY=true` | RS256/ES* signature verify via JWKS |
+
+### JWKS verification (Keycloak, Entra ID)
+
+```yaml
+env:
+  - name: OIDC_JWT_VERIFY
+    value: "true"
+  - name: OIDC_JWKS_URL
+    value: https://keycloak.example.com/realms/ai-platform/protocol/openid-connect/certs
+  - name: OIDC_JWT_AUDIENCE
+    value: ai-control-plane
+  - name: OIDC_JWT_ISSUER
+    value: https://keycloak.example.com/realms/ai-platform
+```
+
+Keycloak JWKS URL pattern: `{realm-url}/protocol/openid-connect/certs`.
+
+Invalid or tampered tokens are rejected; identity falls back to headers/body defaults.
 
 ### Header reference
 
@@ -54,7 +77,7 @@ Every governance evaluation appends an `AuditEvent`:
 curl -sS 'http://127.0.0.1:8091/audit/events?team=finance&verdict=block&limit=10'
 ```
 
-Events are stored in an in-memory ring buffer (`AUDIT_MAX_EVENTS`, default `1000`). Production should persist to object storage, Loki, or an audit database with WORM retention.
+Events are stored in an in-memory ring buffer (`AUDIT_MAX_EVENTS`, default `1000`). For durable retention, enable JSONL and/or Loki — see [Persistent audit trail](persistent-audit.md).
 
 ### Metrics
 

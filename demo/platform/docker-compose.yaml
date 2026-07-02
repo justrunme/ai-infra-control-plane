@@ -44,11 +44,14 @@ services:
       VLLM_BASE_URL: http://127.0.0.1:8000
       MODEL_INVENTORY_PATH: /etc/ai-control-plane/model_inventory.json
       EXTERNAL_SECRETS_ENABLED: ${EXTERNAL_SECRETS_ENABLED:-false}
+      AUDIT_JSONL_PATH: /var/log/ai-control-plane/audit.jsonl
     env_file:
       - path: secrets.env
         required: false
     volumes:
       - ./model_inventory.json:/etc/ai-control-plane/model_inventory.json:ro
+    tmpfs:
+      - /var/log/ai-control-plane
     ports:
       - "8091:8080"
     healthcheck:
