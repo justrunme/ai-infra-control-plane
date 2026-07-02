@@ -55,6 +55,11 @@ from app.incident_runbook_service import (
     get_alert_definition,
     list_supported_alerts,
 )
+from app.intent_service import (
+    IntentResolveRequest,
+    IntentResolveResponse,
+    resolve_intent_plan,
+)
 from app.model_registry_service import (
     ModelRegistryEntry,
     ModelRegistryResponse,
@@ -849,6 +854,40 @@ def evaluations_recent(
         evaluation_count=len(evaluations),
         evaluations=evaluations,
     )
+
+
+@app.post("/intent/resolve", response_model=IntentResolveResponse)
+def intent_resolve(
+    payload: IntentResolveRequest,
+    request: Request,
+) -> IntentResolveResponse:
+    header_map = dict(request.headers)
+    identity = resolve_workload_identity(
+        header_map,
+        GovernanceEvaluateRequest(
+            team=payload.team,
+            owner=payload.owner,
+            subject=payload.subject,
+            groups=payload.groups,
+            policy_pack=payload.policy_pack,
+            environment=payload.environment,
+            namespace=payload.namespace,
+        ),
+    )
+    region = header_map.get("x-ai-region", "").strip() or payload.region
+    merged = payload.model_copy(
+        update={
+            "subject": identity.subject,
+            "team": identity.team,
+            "owner": identity.owner,
+            "groups": identity.groups,
+            "policy_pack": identity.policy_pack or payload.policy_pack,
+            "environment": identity.environment,
+            "namespace": identity.namespace,
+            "region": region,
+        }
+    )
+    return resolve_intent_plan(merged)
 
 
 @app.get("/audit/events", response_model=list[AuditEvent])

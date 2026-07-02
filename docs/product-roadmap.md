@@ -33,6 +33,7 @@ AI Infrastructure OS
 | MCP Gateway | `ai-runtime-platform` `/mcp/*` | 5/10 | Governed tool calls via evaluate-tool |
 | Prompt Governance | `governance/prompt-security/` | 5/10 | PII, secrets, injection heuristics |
 | Agent Registry | `governance/agents/` | 5/10 | Agent → model + tools + policy binding |
+| Intent Engine | `governance/intent/` | 5/10 | NL → agent/model/tools/region plan |
 | Cost & Chargeback | cost + quota + tenant metrics | 6/10 | Helm-wired policies, Grafana chargeback |
 | Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
 | Platform Demo | `demo/platform/` | 7/10 | One-command Control + Execution planes |
@@ -61,7 +62,7 @@ flowchart LR
 | Model Supply Chain (SBOM) | P3 | `governance/registry/` | Done |
 | AI Evaluations (post-response) | P4 | control-api | Done |
 | Sovereign AI (region routing) | P5 | policy packs + sovereign | Done |
-| Intent Engine | P6 | orchestration layer | Deferred |
+| Intent Engine | P6 | `governance/intent/` | Done |
 
 ## Public narrative
 
@@ -75,6 +76,9 @@ flowchart LR
 - [Agent Registry](agent-registry.md)
 - [Sovereign AI](sovereign-ai.md)
 - [AI Evaluations](ai-evaluations.md)
+- [Intent Engine](intent-engine.md)
+- [Portfolio blog outline](portfolio/blog-outline-enterprise-ai-os.md)
+- [Demo GIF script](portfolio/demo-gif-script.md)
 - [Signed model registry](signed-model-registry.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)

@@ -1,0 +1,45 @@
+default_intent: general_assistant
+
+intents:
+  finance_report:
+    description: Financial reporting, revenue analysis, and budget questions
+    keywords:
+      - report
+      - revenue
+      - budget
+      - forecast
+      - quarterly
+      - finance
+    agent: finance-copilot
+    preferred_region: eu-central
+    preferred_runtime: ollama
+  support_ticket:
+    description: Customer support and incident triage
+    keywords:
+      - ticket
+      - jira
+      - customer
+      - support
+      - incident
+    agent: support-agent
+    preferred_region: local
+    preferred_runtime: ollama
+  platform_ops:
+    description: Platform engineering and infrastructure operations
+    keywords:
+      - deploy
+      - kubernetes
+      - cluster
+      - infra
+      - pipeline
+      - rollout
+    agent: platform-copilot
+    preferred_region: eu-central
+    preferred_runtime: ollama
+  general_assistant:
+    description: Default governed assistant for unmatched requests
+    keywords: []
+    agent: platform-copilot
+    preferred_region: local
+    preferred_runtime: ollama
+    default: true
