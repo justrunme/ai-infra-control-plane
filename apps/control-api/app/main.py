@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, ValidationError
 
 from app.audit_service import AUDIT_STORE, AuditEvent
+from app.audit_sink import AUDIT_SINK, AuditSinkStatus
 from app.drift_service import DriftStatus, build_drift_status
 from app.finops_service import (
     FinOpsRecommendationsResponse,
@@ -719,6 +720,11 @@ def audit_events(
         subject=subject,
         verdict=verdict,
     )
+
+
+@app.get("/audit/status", response_model=AuditSinkStatus)
+def audit_status() -> AuditSinkStatus:
+    return AUDIT_SINK.status()
 
 
 @app.get("/secrets/status", response_model=SecretsStatusResponse)

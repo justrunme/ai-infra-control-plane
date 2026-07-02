@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from typing import Any
 
+import jwt
 from pydantic import BaseModel, Field
 
 from app.governance_service import GovernanceEvaluateRequest
+from app.jwt_verify import (
+    decode_unsigned_payload,
+    is_jwt_verify_enabled,
+    verify_bearer_token,
+)
 
 KNOWN_TEAMS = frozenset({"platform", "finance", "search"})
 
@@ -24,18 +29,6 @@ class WorkloadIdentity(BaseModel):
     source: str = "default"
 
 
-def _decode_jwt_payload(token: str) -> dict[str, Any]:
-    parts = token.split(".")
-    if len(parts) != 3:
-        raise ValueError("JWT must have three segments")
-    padding = "=" * (-len(parts[1]) % 4)
-    payload = base64.urlsafe_b64decode(parts[1] + padding)
-    decoded = json.loads(payload)
-    if not isinstance(decoded, dict):
-        raise ValueError("JWT payload must be a JSON object")
-    return decoded
-
-
 def extract_bearer_claims(headers: dict[str, str]) -> dict[str, Any]:
     authorization = headers.get("authorization", "")
     if not authorization.lower().startswith("bearer "):
@@ -44,8 +37,10 @@ def extract_bearer_claims(headers: dict[str, str]) -> dict[str, Any]:
     if not token:
         return {}
     try:
-        return _decode_jwt_payload(token)
-    except (ValueError, json.JSONDecodeError):
+        if is_jwt_verify_enabled():
+            return verify_bearer_token(token)
+        return decode_unsigned_payload(token)
+    except (ValueError, json.JSONDecodeError, jwt.PyJWTError):
         return {}
 
 

@@ -95,6 +95,9 @@ class AuditStore:
         )
         with self._lock:
             self._events.append(event)
+        from app.audit_sink import AUDIT_SINK
+
+        AUDIT_SINK.persist(event)
         return event
 
     def list_events(

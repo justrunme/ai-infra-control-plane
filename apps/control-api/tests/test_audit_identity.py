@@ -118,6 +118,16 @@ def test_audit_events_endpoint_filters_by_verdict() -> None:
     assert all(event["final_verdict"] == "allow" for event in payload)
 
 
+def test_audit_status_endpoint_reports_sinks() -> None:
+    response = client.get("/audit/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "sinks" in payload
+    assert "jsonl_enabled" in payload
+    assert "loki_enabled" in payload
+
+
 def test_metrics_include_governance_decisions() -> None:
     client.post(
         "/governance/evaluate",

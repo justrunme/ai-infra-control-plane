@@ -1,0 +1,11 @@
+{{- if .Values.fleet.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-control-plane.fullname" . }}-fleet
+  labels:
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
+data:
+  clusters.yaml: |
+{{ .Values.fleet.clustersYaml | nindent 4 }}
+{{- end }}

@@ -42,6 +42,30 @@ spec:
             - name: EXTERNAL_SECRETS_ENABLED
               value: "true"
             {{- end }}
+            {{- if .Values.audit.jsonlEnabled }}
+            - name: AUDIT_JSONL_PATH
+              value: {{ .Values.audit.jsonlPath | quote }}
+            {{- end }}
+            {{- if .Values.audit.lokiEnabled }}
+            - name: AUDIT_LOKI_ENABLED
+              value: "true"
+            - name: AUDIT_LOKI_URL
+              value: {{ .Values.audit.lokiUrl | quote }}
+            {{- end }}
+            {{- if .Values.oidc.jwtVerify }}
+            - name: OIDC_JWT_VERIFY
+              value: "true"
+            - name: OIDC_JWKS_URL
+              value: {{ .Values.oidc.jwksUrl | quote }}
+            {{- if .Values.oidc.jwtAudience }}
+            - name: OIDC_JWT_AUDIENCE
+              value: {{ .Values.oidc.jwtAudience | quote }}
+            {{- end }}
+            {{- if .Values.oidc.jwtIssuer }}
+            - name: OIDC_JWT_ISSUER
+              value: {{ .Values.oidc.jwtIssuer | quote }}
+            {{- end }}
+            {{- end }}
           {{- if .Values.secrets.externalSecrets.enabled }}
           envFrom:
             - secretRef:
@@ -58,7 +82,7 @@ spec:
             httpGet:
               path: /healthz
               port: http
-          {{- if or .Values.modelInventory.enabled .Values.governance.enabled }}
+          {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled }}
           volumeMounts:
             {{- if .Values.modelInventory.enabled }}
             - name: model-inventory
@@ -75,10 +99,20 @@ spec:
               subPath: policies.yaml
               readOnly: true
             {{- end }}
+            {{- if .Values.fleet.enabled }}
+            - name: fleet-config
+              mountPath: /app/fleet/clusters.yaml
+              subPath: clusters.yaml
+              readOnly: true
+            {{- end }}
+            {{- if .Values.audit.jsonlEnabled }}
+            - name: audit-logs
+              mountPath: {{ .Values.audit.logMountPath }}
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if or .Values.modelInventory.enabled .Values.governance.enabled }}
+      {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled }}
       volumes:
         {{- if .Values.modelInventory.enabled }}
         - name: model-inventory
@@ -89,5 +123,14 @@ spec:
         - name: governance-config
           configMap:
             name: {{ include "ai-control-plane.fullname" . }}-governance
+        {{- end }}
+        {{- if .Values.fleet.enabled }}
+        - name: fleet-config
+          configMap:
+            name: {{ include "ai-control-plane.fullname" . }}-fleet
+        {{- end }}
+        {{- if .Values.audit.jsonlEnabled }}
+        - name: audit-logs
+          emptyDir: {}
         {{- end }}
       {{- end }}

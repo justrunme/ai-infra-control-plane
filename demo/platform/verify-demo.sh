@@ -63,6 +63,10 @@ log "audit trail — expect finance block recorded"
 audit_events="$(curl -fsS "${CONTROL_PLANE_URL}/audit/events?team=finance&verdict=block&limit=5")"
 printf '%s\n' "$audit_events" | python3 -c 'import json,sys; events=json.load(sys.stdin); assert events, events; e=events[0]; assert e["final_verdict"]=="block", e; print("  subject:", e.get("subject"), "stage:", e.get("blocking_stage"))'
 
+log "audit sink — expect JSONL persistence enabled"
+audit_status="$(curl -fsS "${CONTROL_PLANE_URL}/audit/status")"
+printf '%s\n' "$audit_status" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["jsonl_enabled"], d; assert d["jsonl_written"]>=1, d; print("  sinks:", d["sinks"], "written:", d["jsonl_written"])'
+
 log "policy pack production — expect block on unregistered model"
 pack_block="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/governance/evaluate" \
   -H 'x-ai-policy-pack: production' \
