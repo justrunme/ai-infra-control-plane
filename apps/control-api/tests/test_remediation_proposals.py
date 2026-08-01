@@ -117,6 +117,9 @@ def test_remediation_happy_path_allow_to_verified(store: DecisionStore) -> None:
         store=store,
     )
     assert verified.status == "verified"
+    assert (verified.verification_snapshot or {}).get("schema_version") == (
+        "runtime-verification/2.3"
+    )
 
 
 def test_remediation_verify_failed_when_still_drifting(

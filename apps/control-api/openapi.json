@@ -3980,7 +3980,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "2.2.0"
+    "version": "2.3.0"
   },
   "openapi": "3.1.0",
   "paths": {
