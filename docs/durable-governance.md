@@ -36,7 +36,16 @@ evaluate → approval_required + approval_id
   → allow (approval status becomes consumed)
 ```
 
-An approved `approval_id` **does not** authorize a different model, environment, action, tenant, or policy digest. Replay after first successful use fails closed to the normal evaluate path.
+An approved `approval_id` **does not** authorize a different model, environment, action, tenant, cost/token envelope, or policy digest. Replay after first successful use fails closed to the normal evaluate path.
+
+### Approver authentication
+
+| Mode | `POST /approvals/{id}/approve\|reject` |
+| --- | --- |
+| Demo (`OIDC_JWT_VERIFY` off) | JSON `reviewer` accepted |
+| Production (`OIDC_JWT_VERIFY=true`) | Valid Bearer JWT required (`401`); reviewer from `preferred_username`/`sub`; must be in `OIDC_APPROVER_GROUPS` (`ai-approvers,secops` by default) or `403` |
+
+Body `reviewer` is ignored when OIDC verify is enabled.
 
 Endpoints:
 

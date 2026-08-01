@@ -1,5 +1,5 @@
 # Production HA profile: PostgreSQL authoritative store + multi-replica API.
-# Override persistence.databaseUrl and oidc.* for your environment before install.
+# Provide DATABASE_URL via Secret (persistence.existingSecret). Override oidc.* for your IdP.
 # For single-node SQLite demos use values-single-node.yaml instead.
 
 autoscaling:
@@ -16,7 +16,10 @@ persistence:
   # Shared durable state lives in Postgres — no RWO SQLite PVC.
   size: ""
   existingClaim: ""
-  databaseUrl: postgresql://ai_control:CHANGE_ME@postgres.databases.svc:5432/ai_control
+  # Do not put production DB credentials in values; mount from a Secret.
+  existingSecret: ai-control-plane-database
+  databaseUrlKey: DATABASE_URL
+  databaseUrl: ""
   approvalTtlSeconds: 3600
   probeCacheTtlSeconds: 10
   httpTrustEnv: false
@@ -26,6 +29,7 @@ oidc:
   jwksUrl: https://keycloak.example.com/realms/ai-platform/protocol/openid-connect/certs
   jwtAudience: ai-control-plane
   jwtIssuer: https://keycloak.example.com/realms/ai-platform
+  approverGroups: "ai-approvers,secops"
 
 audit:
   jsonlEnabled: true

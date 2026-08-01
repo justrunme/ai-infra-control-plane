@@ -65,10 +65,22 @@ spec:
             - name: OIDC_JWT_ISSUER
               value: {{ .Values.oidc.jwtIssuer | quote }}
             {{- end }}
+            {{- if .Values.oidc.approverGroups }}
+            - name: OIDC_APPROVER_GROUPS
+              value: {{ .Values.oidc.approverGroups | quote }}
+            {{- end }}
             {{- end }}
             {{- if .Values.persistence.enabled }}
+            {{- if .Values.persistence.existingSecret }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.persistence.existingSecret | quote }}
+                  key: {{ .Values.persistence.databaseUrlKey | default "DATABASE_URL" | quote }}
+            {{- else }}
             - name: DATABASE_URL
               value: {{ .Values.persistence.databaseUrl | quote }}
+            {{- end }}
             - name: APPROVAL_TTL_SECONDS
               value: {{ .Values.persistence.approvalTtlSeconds | quote }}
             - name: PROBE_CACHE_TTL_SECONDS

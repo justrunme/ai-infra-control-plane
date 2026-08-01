@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 import jwt
@@ -16,6 +17,7 @@ from app.jwt_verify import (
 )
 
 KNOWN_TEAMS = frozenset({"platform", "finance", "search"})
+DEFAULT_APPROVER_GROUPS = ("ai-approvers", "secops")
 
 
 class WorkloadIdentity(BaseModel):
@@ -27,6 +29,14 @@ class WorkloadIdentity(BaseModel):
     environment: str = "development"
     namespace: str = "ai-dev"
     source: str = "default"
+
+
+class AuthenticationError(Exception):
+    """Missing or invalid credentials."""
+
+
+class AuthorizationError(Exception):
+    """Authenticated principal lacks required role."""
 
 
 def extract_bearer_claims(headers: dict[str, str]) -> dict[str, Any]:
@@ -42,6 +52,67 @@ def extract_bearer_claims(headers: dict[str, str]) -> dict[str, Any]:
         return decode_unsigned_payload(token)
     except (ValueError, json.JSONDecodeError, jwt.PyJWTError):
         return {}
+
+
+def require_bearer_claims(headers: dict[str, str]) -> dict[str, Any]:
+    """Fail closed: require a valid Bearer JWT when OIDC verify is enabled."""
+    authorization = headers.get("authorization", "")
+    if not authorization.lower().startswith("bearer "):
+        raise AuthenticationError("missing bearer token")
+    token = authorization[7:].strip()
+    if not token:
+        raise AuthenticationError("missing bearer token")
+    try:
+        return verify_bearer_token(token)
+    except (ValueError, json.JSONDecodeError, jwt.PyJWTError) as exc:
+        raise AuthenticationError("invalid bearer token") from exc
+
+
+def get_approver_groups() -> frozenset[str]:
+    raw = os.getenv("OIDC_APPROVER_GROUPS", "").strip()
+    if not raw:
+        return frozenset(DEFAULT_APPROVER_GROUPS)
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+
+def claim_roles(claims: dict[str, Any]) -> list[str]:
+    """Collect group/role claims used for authorization decisions."""
+    roles = normalize_groups(claims.get("groups"))
+    roles.extend(normalize_groups(claims.get("roles")))
+    realm_access = claims.get("realm_access")
+    if isinstance(realm_access, dict):
+        roles.extend(normalize_groups(realm_access.get("roles")))
+    return roles
+
+
+def resolve_approver_identity(
+    headers: dict[str, str],
+    *,
+    body_reviewer: str = "",
+) -> str:
+    """Return the reviewer identity for approve/reject endpoints.
+
+    When ``OIDC_JWT_VERIFY`` is enabled the reviewer is taken from the JWT and
+    must belong to an approver group. In demo mode the JSON body reviewer is
+    accepted.
+    """
+    if is_jwt_verify_enabled():
+        claims = require_bearer_claims(headers)
+        reviewer = (
+            str(claims.get("preferred_username") or claims.get("sub") or "").strip()
+        )
+        if not reviewer:
+            raise AuthenticationError("token missing subject")
+        roles = claim_roles(claims)
+        allowed = get_approver_groups()
+        if not any(role in allowed for role in roles):
+            raise AuthorizationError("approver role required")
+        return reviewer
+
+    reviewer = body_reviewer.strip()
+    if not reviewer:
+        raise AuthenticationError("reviewer required")
+    return reviewer
 
 
 def parse_groups_header(headers: dict[str, str]) -> list[str]:

@@ -9,8 +9,9 @@ from typing import Any
 
 from app.governance_service import GovernanceEvaluateRequest
 
-# Fields that define what an approval authorizes. Cost counters and live
-# telemetry are intentionally excluded so quota enrichment cannot break binding.
+# Fields that define what an approval authorizes.
+# Live telemetry (requests_last_minute / tokens_today) is excluded so Redis
+# enrichment cannot invalidate a bound approval.
 _BINDING_FIELDS: tuple[str, ...] = (
     "subject",
     "groups",
@@ -22,6 +23,12 @@ _BINDING_FIELDS: tuple[str, ...] = (
     "action",
     "model",
     "provider",
+    "input_tokens",
+    "output_tokens",
+    "cost_per_request_usd",
+    "cost_per_hour_usd",
+    "month_to_date_cost_usd",
+    "forecast_monthly_cost_usd",
     "sensitive_data",
     "tool_access",
     "write_permission",

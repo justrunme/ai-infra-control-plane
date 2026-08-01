@@ -20,6 +20,9 @@ persistence:
   enabled: true
   mountPath: /var/lib/ai-control-plane
   databaseUrl: sqlite:////var/lib/ai-control-plane/control-plane.db
+  # Prefer existingSecret in production instead of plaintext databaseUrl.
+  existingSecret: ""
+  databaseUrlKey: DATABASE_URL
   # emptyDir when size/existingClaim unset; set size to create a PVC.
   existingClaim: ""
   size: ""
@@ -180,6 +183,8 @@ oidc:
   jwksUrl: https://keycloak.example.com/realms/ai-platform/protocol/openid-connect/certs
   jwtAudience: ai-control-plane
   jwtIssuer: https://keycloak.example.com/realms/ai-platform
+  # Comma-separated groups/roles allowed to approve/reject when jwtVerify=true.
+  approverGroups: "ai-approvers,secops"
 
 # Sync provider and gateway credentials from Vault via External Secrets Operator.
 secrets:

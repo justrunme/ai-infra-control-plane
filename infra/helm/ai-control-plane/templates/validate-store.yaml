@@ -3,7 +3,8 @@ Fail fast when SQLite is paired with more than one replica.
 SQLite + RWO PVC is a single-node contract only.
 */ -}}
 {{- $dbUrl := .Values.persistence.databaseUrl | default "" | lower -}}
-{{- $isSqlite := or (hasPrefix "sqlite:" $dbUrl) (eq $dbUrl "") -}}
+{{- $hasSecret := and .Values.persistence.existingSecret (ne .Values.persistence.existingSecret "") -}}
+{{- $isSqlite := and (not $hasSecret) (or (hasPrefix "sqlite:" $dbUrl) (eq $dbUrl "")) -}}
 {{- $minReplicas := int .Values.replicaCount -}}
 {{- if .Values.autoscaling.enabled -}}
 {{- $minReplicas = int .Values.autoscaling.minReplicas -}}
@@ -14,4 +15,7 @@ SQLite + RWO PVC is a single-node contract only.
 {{- end -}}
 {{- if and $isSqlite (gt $minReplicas 1) -}}
 {{- fail "SQLite persistence cannot be used with replicaCount/autoscaling.minReplicas > 1. Use PostgreSQL (values-production.yaml) or values-single-node.yaml (SQLite, 1 replica)." -}}
+{{- end -}}
+{{- if and .Values.persistence.enabled (not $hasSecret) (eq $dbUrl "") -}}
+{{- fail "persistence.databaseUrl is empty and persistence.existingSecret is not set." -}}
 {{- end -}}

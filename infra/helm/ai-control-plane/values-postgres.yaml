@@ -1,11 +1,13 @@
 # Postgres profile for durable governance decisions.
-# Requires a reachable Postgres URL (in-cluster or managed).
+# Prefer persistence.existingSecret in real environments; databaseUrl is for local demos only.
 
 persistence:
   enabled: true
   # No local SQLite volume required when using Postgres.
   size: ""
   existingClaim: ""
+  existingSecret: ""
+  databaseUrlKey: DATABASE_URL
   databaseUrl: postgresql://ai_control:CHANGE_ME@postgres.databases.svc:5432/ai_control
   approvalTtlSeconds: 7200
   probeCacheTtlSeconds: 10

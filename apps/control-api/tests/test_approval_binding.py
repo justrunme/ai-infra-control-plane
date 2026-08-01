@@ -47,12 +47,35 @@ def _approve(payload: dict) -> str:
     return approval_id
 
 
-def test_request_digest_stable_for_binding_fields() -> None:
+def test_request_digest_ignores_live_telemetry_only() -> None:
     left = GovernanceEvaluateRequest(**_approval_required_payload())
     right = GovernanceEvaluateRequest(
         **_approval_required_payload(requests_last_minute=99, tokens_today=12345)
     )
     assert compute_request_digest(left) == compute_request_digest(right)
+
+
+def test_request_digest_includes_cost_fields() -> None:
+    left = GovernanceEvaluateRequest(**_approval_required_payload(cost_per_hour_usd=0.18))
+    right = GovernanceEvaluateRequest(
+        **_approval_required_payload(cost_per_hour_usd=100.0)
+    )
+    assert compute_request_digest(left) != compute_request_digest(right)
+
+
+def test_cost_mismatch_cannot_reuse_approval() -> None:
+    payload = _approval_required_payload(cost_per_hour_usd=0.18)
+    approval_id = _approve(payload)
+
+    mismatched = dict(payload)
+    mismatched["cost_per_hour_usd"] = 100.0
+    reused = client.post(
+        "/governance/evaluate",
+        headers={"x-ai-approval-id": approval_id},
+        json=mismatched,
+    )
+    assert reused.status_code == 200
+    assert "durable approval grants allow" not in reused.json().get("reasons", [])
 
 
 def test_mismatched_model_cannot_reuse_approval() -> None:

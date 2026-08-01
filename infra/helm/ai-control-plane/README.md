@@ -17,6 +17,14 @@ The chart defaults to non-root containers, a read-only root filesystem, dropped 
 
 The chart **fails** when SQLite is paired with more than one replica (`validate-store.yaml`).
 
+For production, set `persistence.existingSecret` so `DATABASE_URL` is injected via `secretKeyRef` instead of plaintext values:
+
+```yaml
+persistence:
+  existingSecret: ai-control-plane-database
+  databaseUrlKey: DATABASE_URL
+```
+
 ## Autoscaling
 
 Autoscaling is **disabled** by default because the default store is SQLite:
