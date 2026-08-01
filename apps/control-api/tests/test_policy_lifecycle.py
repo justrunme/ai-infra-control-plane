@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from app.decision_store import DecisionStore, reset_decision_store
 from app.governance_service import get_governance_root
 from app.policy_bundle import clear_policy_bundle, get_policy_bundle
-from app.policy_lifecycle import get_policy_lifecycle, reset_policy_lifecycle
+from app.policy_lifecycle import reset_policy_lifecycle
 from app.settings import clear_settings_cache
 
 

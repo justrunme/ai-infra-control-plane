@@ -1,6 +1,8 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint validate docker-build helm-template e2e-kind e2e-compose demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down platform-demo-production platform-demo-production-verify platform-demo-production-down platform-demo-enterprise platform-demo-enterprise-verify platform-demo-enterprise-downvenv:
+.PHONY: venv test lint validate docker-build helm-template e2e-kind e2e-compose demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down platform-demo-production platform-demo-production-verify platform-demo-production-down platform-demo-enterprise platform-demo-enterprise-verify platform-demo-enterprise-down
+
+venv:
 	$(PYTHON) -m venv .venv
 	. .venv/bin/activate && pip install -r requirements-dev.txt
 
