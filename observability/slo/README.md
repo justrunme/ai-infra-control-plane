@@ -13,6 +13,8 @@ Declarative service level objectives for the private AI platform spanning runtim
 | Governance block rate | `rate(gateway_governance_decisions_total{verdict="block"}[5m]) / rate(gateway_governance_decisions_total[5m])` | ≤ 10% | Control plane |
 | Inventory drift detection time | `time() - ai_control_inventory_drift_detected_timestamp` | ≤ 15 min | Control plane |
 | Model availability | `avg_over_time(ai_control_model_available[5m])` | ≥ 99% | Control plane |
+| Governance evaluate latency p95 | `slo:control_plane_governance_evaluate_latency_ms:p95` | ≤ 250 ms | Control plane |
+| Governance evaluate availability | `slo:control_plane_governance_evaluate_availability:ratio` | ≥ 99.9% | Control plane |
 
 ## Prometheus rules
 
@@ -22,6 +24,7 @@ Apply `prometheus-rules.yaml` in your monitoring stack or reference the expressi
 
 - **Runtime gateway dashboard** (`ai-runtime-platform/deploy/observability/gateway-dashboard.yaml`): add panels for TTFT proxy via `gateway_chat_duration_seconds` and fallback ratio.
 - **Control plane dashboard** (`observability/grafana/`): add governance verdict and drift panels using `gateway_governance_decisions_total` (remote write or federation) and `ai_control_inventory_in_sync`.
+- **Governance SLO dashboard** (`observability/grafana/dashboards/governance-slo.json`): p95 evaluate latency and error ratio from control-plane histogram metrics.
 - **Chargeback dashboard** (`observability/grafana/dashboards/chargeback-attribution.json`): tenant request/token rates, governance block ratio, and backend cost rate.
 - **Error budget policy**: burn > 2x for 1 h → page; burn > 5x for 15 min → block canary promotion.
 

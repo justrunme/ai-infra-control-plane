@@ -1,10 +1,12 @@
 """Governance evaluate, inputs, evaluations, and intent endpoints."""
 
+from time import perf_counter
 from uuid import uuid4
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.audit_service import AUDIT_STORE
+from app.decision_store import StoreUnavailableError
 from app.durable_governance import approval_grants_allow, persist_evaluation
 from app.evaluation_service import (
     EVALUATION_STORE,
@@ -30,7 +32,11 @@ from app.intent_service import (
     IntentResolveResponse,
     resolve_intent_plan,
 )
-from app.metrics_util import GOVERNANCE_DECISIONS_TOTAL
+from app.metrics_util import (
+    GOVERNANCE_DECISIONS_TOTAL,
+    inc_governance_eval_errors,
+    observe_governance_latency_ms,
+)
 from app.tool_governance_service import (
     ToolEvaluateRequest,
     ToolEvaluateResponse,
@@ -38,6 +44,8 @@ from app.tool_governance_service import (
 )
 
 router = APIRouter(tags=["governance"])
+
+_STORE_UNAVAILABLE_DETAIL = {"error": "authoritative store unavailable"}
 
 
 def apply_supply_chain_headers(
@@ -57,37 +65,65 @@ def apply_supply_chain_headers(
     return payload.model_copy(update=updates) if updates else payload
 
 
+def _raise_store_unavailable() -> None:
+    inc_governance_eval_errors("store_unavailable")
+    raise HTTPException(status_code=503, detail=_STORE_UNAVAILABLE_DETAIL)
+
+
 @router.post("/governance/evaluate", response_model=GovernanceEvaluateResponse)
 def governance_evaluate(
     payload: GovernanceEvaluateRequest,
     request: Request,
 ) -> GovernanceEvaluateResponse:
-    header_map = dict(request.headers)
-    payload = apply_supply_chain_headers(payload, header_map)
-    identity = resolve_workload_identity(header_map, payload)
-    merged = apply_identity(payload, identity)
-    request_id = request.headers.get("x-request-id") or str(uuid4())
-    prior_approval = header_map.get("x-ai-approval-id", "").strip()
-    if prior_approval and approval_grants_allow(prior_approval):
-        from app.policy_bundle import get_policy_bundle
+    started_at = perf_counter()
+    try:
+        header_map = dict(request.headers)
+        payload = apply_supply_chain_headers(payload, header_map)
+        identity = resolve_workload_identity(header_map, payload)
+        merged = apply_identity(payload, identity)
+        request_id = request.headers.get("x-request-id") or str(uuid4())
+        prior_approval = header_map.get("x-ai-approval-id", "").strip()
+        try:
+            if prior_approval and approval_grants_allow(prior_approval):
+                from app.policy_bundle import get_policy_bundle
 
-        bundle = get_policy_bundle()
-        result = GovernanceEvaluateResponse(
-            final_verdict="allow",
-            policy_pack=merged.policy_pack or "default",
-            reasons=["durable approval grants allow"],
-            flow=["request", "durable_approval", "final_verdict"],
-            stages={},
-            approval_id=prior_approval,
-            policy_bundle_id=bundle.bundle_id,
-            policy_digest=bundle.content_digest,
-        )
-        result = persist_evaluation(
-            result=result, request=merged, request_id=request_id
-        )
+                bundle = get_policy_bundle()
+                result = GovernanceEvaluateResponse(
+                    final_verdict="allow",
+                    policy_pack=merged.policy_pack or "default",
+                    reasons=["durable approval grants allow"],
+                    flow=["request", "durable_approval", "final_verdict"],
+                    stages={},
+                    approval_id=prior_approval,
+                    policy_bundle_id=bundle.bundle_id,
+                    policy_digest=bundle.content_digest,
+                )
+                result = persist_evaluation(
+                    result=result, request=merged, request_id=request_id
+                )
+                AUDIT_STORE.record_governance_evaluate(
+                    identity=identity,
+                    request=merged,
+                    response=result,
+                    request_id=request_id,
+                )
+                GOVERNANCE_DECISIONS_TOTAL[
+                    (result.final_verdict, merged.team, merged.environment)
+                ] += 1
+                return result
+
+            enriched, quota_snapshot, signals = enrich_governance_request(merged)
+            telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
+            result = evaluate_governance_request(enriched, telemetry=telemetry)
+            result = persist_evaluation(
+                result=result, request=enriched, request_id=request_id
+            )
+        except StoreUnavailableError:
+            _raise_store_unavailable()
+
         AUDIT_STORE.record_governance_evaluate(
             identity=identity,
-            request=merged,
+            request=enriched,
             response=result,
             request_id=request_id,
         )
@@ -95,23 +131,8 @@ def governance_evaluate(
             (result.final_verdict, merged.team, merged.environment)
         ] += 1
         return result
-
-    enriched, quota_snapshot, signals = enrich_governance_request(merged)
-    telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
-    result = evaluate_governance_request(enriched, telemetry=telemetry)
-    result = persist_evaluation(
-        result=result, request=enriched, request_id=request_id
-    )
-    AUDIT_STORE.record_governance_evaluate(
-        identity=identity,
-        request=enriched,
-        response=result,
-        request_id=request_id,
-    )
-    GOVERNANCE_DECISIONS_TOTAL[
-        (result.final_verdict, merged.team, merged.environment)
-    ] += 1
-    return result
+    finally:
+        observe_governance_latency_ms((perf_counter() - started_at) * 1000)
 
 
 @router.get(
