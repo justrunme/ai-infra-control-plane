@@ -48,8 +48,8 @@ flowchart TD
 | v0.7.0 | Frozen OpenAPI, unified errors, pagination, compatibility CI | Done (rolled into v1.0) |
 | v1.0.0 | Stable contract + maturity boundary + upgrade guide | Done |
 | v1.0.1 | Correct migration ledger + concurrent schema apply | Done |
-| v1.1.0 | Transactional Unit of Work, indexes, pagination metadata | This release |
-| v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | Next |
+| v1.1.0 | Transactional Unit of Work, indexes, pagination metadata | Done |
+| v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | This release |
 
 ## Related docs
 
@@ -59,6 +59,7 @@ flowchart TD
 - [API compatibility](api-compatibility.md)
 - [Maturity boundary](maturity-boundary.md)
 - [Upgrade v0.5 → v1.0](upgrade-v0.5-to-v1.0.md)
+- [Release verification](release-verification.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

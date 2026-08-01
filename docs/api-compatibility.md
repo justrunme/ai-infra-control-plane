@@ -4,14 +4,22 @@
 
 The frozen OpenAPI document is `apps/control-api/openapi.json`.
 
-CI runs `scripts/check_openapi_freeze.py` and fails on drift. To intentionally
-change the contract:
+CI enforces two checks:
+
+1. **Freeze sync** — `scripts/check_openapi_freeze.py`  
+   `live OpenAPI == committed openapi.json`
+2. **Backward compatibility** — `scripts/check_openapi_breaking.sh`  
+   `oasdiff breaking` against `OPENAPI_BASELINE_TAG` (default `v1.0.0`)
+
+To intentionally change the contract:
 
 ```sh
 PYTHONPATH=apps/control-api python scripts/export_openapi.py
 ```
 
 Commit the updated `openapi.json` in the same PR and document the change here.
+Breaking changes require a **major** release; set `ALLOW_OPENAPI_BREAKING=1` only
+for that controlled major bump, then move the baseline tag policy forward.
 
 ## Stability rules (v1.0+)
 
