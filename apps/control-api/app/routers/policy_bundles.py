@@ -7,10 +7,9 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from app.identity_service import AuthenticationError, AuthorizationError
+from app.authz import require_roles
 from app.policy_lifecycle import get_policy_lifecycle
 from app.policy_source import PolicySource
-from app.rbac import require_any_role
 
 router = APIRouter(prefix="/governance/policy-bundles", tags=["policy-bundles"])
 
@@ -63,21 +62,9 @@ def _info(bundle, *, role: str) -> PolicyBundleInfo:
     )
 
 
-def _require_platform_admin(request: Request) -> None:
-    try:
-        require_any_role(dict(request.headers), "platform-admin")
-    except AuthenticationError as exc:
-        raise HTTPException(
-            status_code=401, detail={"error": str(exc)}
-        ) from exc
-    except AuthorizationError as exc:
-        raise HTTPException(
-            status_code=403, detail={"error": str(exc)}
-        ) from exc
-
-
 @router.get("", response_model=list[PolicyBundleInfo])
-def list_bundles() -> list[PolicyBundleInfo]:
+def list_bundles(request: Request) -> list[PolicyBundleInfo]:
+    require_roles(request, "platform-admin", "auditor", "viewer")
     life = get_policy_lifecycle()
     items = [_info(life.active(), role="active")]
     previous = life.previous()
@@ -91,7 +78,10 @@ def list_bundles() -> list[PolicyBundleInfo]:
 
 
 @router.post("/validate", response_model=ValidateResponse)
-def validate_bundle(payload: PolicySourceRequest) -> ValidateResponse:
+def validate_bundle(
+    request: Request, payload: PolicySourceRequest
+) -> ValidateResponse:
+    require_roles(request, "platform-admin")
     life = get_policy_lifecycle()
     source = PolicySource(
         type=payload.type,
@@ -121,8 +111,10 @@ def validate_bundle(payload: PolicySourceRequest) -> ValidateResponse:
 @router.post("/{bundle_id}/simulate", response_model=ImpactResponse)
 def simulate_bundle(
     bundle_id: str,
+    request: Request,
     limit: int = Query(default=200, ge=1, le=5000),
 ) -> ImpactResponse:
+    require_roles(request, "platform-admin")
     life = get_policy_lifecycle()
     try:
         impact = life.simulate(bundle_id, limit=limit)
@@ -134,7 +126,8 @@ def simulate_bundle(
 
 
 @router.get("/{bundle_id}/impact", response_model=ImpactResponse)
-def get_impact(bundle_id: str) -> ImpactResponse:
+def get_impact(bundle_id: str, request: Request) -> ImpactResponse:
+    require_roles(request, "platform-admin", "auditor", "viewer")
     life = get_policy_lifecycle()
     impact = life.impact(bundle_id)
     if impact is None:
@@ -147,7 +140,7 @@ def get_impact(bundle_id: str) -> ImpactResponse:
 
 @router.post("/{bundle_id}/activate", response_model=PolicyBundleInfo)
 def activate_bundle(bundle_id: str, request: Request) -> PolicyBundleInfo:
-    _require_platform_admin(request)
+    require_roles(request, "platform-admin")
     life = get_policy_lifecycle()
     try:
         bundle = life.activate(bundle_id)
@@ -158,7 +151,7 @@ def activate_bundle(bundle_id: str, request: Request) -> PolicyBundleInfo:
 
 @router.post("/rollback", response_model=PolicyBundleInfo)
 def rollback_bundle(request: Request) -> PolicyBundleInfo:
-    _require_platform_admin(request)
+    require_roles(request, "platform-admin")
     life = get_policy_lifecycle()
     try:
         bundle = life.rollback()

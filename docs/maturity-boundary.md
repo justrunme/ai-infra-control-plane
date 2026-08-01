@@ -1,19 +1,19 @@
-# Maturity Boundary (v2.0)
+# Maturity Boundary (v2.0.1)
 
 | Tier | Meaning | Examples |
 | --- | --- | --- |
-| **Supported** | Production path, covered by CI e2e/SLO, semver-stable | `/governance/evaluate`, durable approvals/decisions, PolicyBundle lifecycle, RemediationProposal closed-loop, capability contracts, tenant isolation + JWT-only tenant, RBAC role gates, quota `onUnavailable`, Postgres HA / SQLite single-node, `/livez`/`/readyz`, signed OCI Helm |
-| **Reference** | Integrated demos and portfolio surfaces | Platform demo overlays, Grafana dashboards, fleet topology, live Redis/Prometheus inputs, CRD samples |
+| **Supported** | Production path, covered by CI e2e/SLO, semver-stable | `/governance/evaluate`, durable approvals/decisions, Postgres HA / SQLite single-node, tenant isolation + JWT-only tenant, RBAC role gates on sensitive APIs, quota `onUnavailable`, capability contracts registry, `/livez`/`/readyz` (policy fail-closed), signed OCI Helm |
+| **Reference** | Integrated but not fully HA / adapter-complete | PolicyBundle lifecycle (process-local candidates/active), remediation PR **drafts** + inventory-probe verify, CRDs as desired-state schemas (no in-tree controller), live Redis/Prometheus inputs, demos |
 | **Experimental** | Prototype / sample-driven | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
-## Golden path (Supported)
+## Golden path
 
 ```text
 Detect → Decide → Approve → Apply through GitOps → Verify in Runtime
 ```
 
-Supported APIs follow [api-compatibility.md](api-compatibility.md). Experimental
-modules may change without a major version bump.
+Today the Supported core is durable governance + tenancy + registry contracts.
+GitOps apply/verify adapters and HA-durable PolicyBundle generations remain
+Reference until v2.1+.
 
-CRDs under `ai.justrunme.dev/v1` are Supported desired-state contracts; controllers
-that apply them are Reference until published as Supported operators.
+Supported APIs follow [api-compatibility.md](api-compatibility.md).

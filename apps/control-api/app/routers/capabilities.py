@@ -7,14 +7,13 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.authz import require_roles, tenant_for_request
 from app.capability_service import (
     contract_to_dict,
     get_active_capabilities,
     sync_from_filesystem,
 )
 from app.decision_store import StoreUnavailableError, get_decision_store
-from app.identity_service import AuthenticationError, AuthorizationError
-from app.rbac import require_any_role
 
 router = APIRouter(tags=["capabilities"])
 
@@ -60,19 +59,6 @@ class SyncCapabilitiesResponse(BaseModel):
     contracts: list[CapabilityContractResponse]
 
 
-def _require_platform_admin(request: Request) -> None:
-    try:
-        require_any_role(dict(request.headers), "platform-admin")
-    except AuthenticationError as exc:
-        raise HTTPException(
-            status_code=401, detail={"error": str(exc)}
-        ) from exc
-    except AuthorizationError as exc:
-        raise HTTPException(
-            status_code=403, detail={"error": str(exc)}
-        ) from exc
-
-
 def _to_response(payload: dict[str, Any]) -> CapabilityContractResponse:
     return CapabilityContractResponse.model_validate(payload)
 
@@ -85,7 +71,7 @@ def sync_capabilities(
     request: Request,
     payload: SyncCapabilitiesRequest | None = None,
 ) -> SyncCapabilitiesResponse:
-    _require_platform_admin(request)
+    require_roles(request, "platform-admin")
     body = payload or SyncCapabilitiesRequest()
     try:
         records = sync_from_filesystem(
@@ -106,6 +92,7 @@ def sync_capabilities(
     response_model=CapabilityListResponse,
 )
 def list_capabilities(
+    request: Request,
     kind: Literal["agent", "tool"] | None = Query(default=None),
     status: str | None = Query(default=None),
     name: str | None = Query(default=None),
@@ -113,12 +100,16 @@ def list_capabilities(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> CapabilityListResponse:
+    require_roles(
+        request, "platform-admin", "tenant-admin", "auditor", "viewer"
+    )
+    scoped_tenant = tenant_for_request(request, query_tenant=tenant_id)
     try:
         page = get_decision_store().list_capability_contracts(
             kind=kind,
             status=status,
             name=name,
-            tenant_id=tenant_id,
+            tenant_id=scoped_tenant,
             limit=limit,
             offset=offset,
         )
@@ -149,10 +140,15 @@ def list_capabilities(
 )
 def list_active_capabilities(
     kind: Literal["agent", "tool"],
+    request: Request,
     tenant_id: str | None = Query(default=None),
 ) -> list[CapabilityContractResponse]:
+    require_roles(
+        request, "platform-admin", "tenant-admin", "auditor", "viewer"
+    )
+    scoped_tenant = tenant_for_request(request, query_tenant=tenant_id)
     try:
-        records = get_active_capabilities(kind, tenant_id=tenant_id)
+        records = get_active_capabilities(kind, tenant_id=scoped_tenant)
     except StoreUnavailableError as exc:
         raise HTTPException(
             status_code=503,
@@ -165,9 +161,17 @@ def list_active_capabilities(
     "/registry/capabilities/{contract_id}",
     response_model=CapabilityContractResponse,
 )
-def get_capability(contract_id: str) -> CapabilityContractResponse:
+def get_capability(
+    contract_id: str, request: Request
+) -> CapabilityContractResponse:
+    require_roles(
+        request, "platform-admin", "tenant-admin", "auditor", "viewer"
+    )
+    scoped_tenant = tenant_for_request(request)
     try:
-        record = get_decision_store().get_capability_contract(contract_id)
+        record = get_decision_store().get_capability_contract(
+            contract_id, tenant_id=scoped_tenant
+        )
     except StoreUnavailableError as exc:
         raise HTTPException(
             status_code=503,
@@ -187,7 +191,7 @@ def get_capability(contract_id: str) -> CapabilityContractResponse:
 def activate_capability(
     contract_id: str, request: Request
 ) -> CapabilityContractResponse:
-    _require_platform_admin(request)
+    require_roles(request, "platform-admin")
     try:
         record = get_decision_store().set_capability_contract_status(
             contract_id, "active"
@@ -211,7 +215,7 @@ def activate_capability(
 def retire_capability(
     contract_id: str, request: Request
 ) -> CapabilityContractResponse:
-    _require_platform_admin(request)
+    require_roles(request, "platform-admin")
     try:
         record = get_decision_store().set_capability_contract_status(
             contract_id, "retired"

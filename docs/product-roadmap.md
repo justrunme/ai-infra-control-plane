@@ -56,7 +56,9 @@ flowchart TD
 | v1.6.0 | RemediationProposal closed-loop (detect→approve→PR→verify) | Done |
 | v1.7.0 | RBAC + JWT-only tenant + quota failure policy | Done |
 | v1.8.0 | Durable agent/tool capability contract | Done |
-| v2.0.0 | Stabilize CRD/API + upgrade boundary | This release |
+| v2.0.0 | Stabilize CRD/API + upgrade boundary | Done |
+| v2.0.1 | Security/correctness: RBAC, policy fail-closed, OCI tooling | This release |
+| v2.1.0 | Durable HA PolicyBundle lifecycle | Next |
 
 ## Related docs
 

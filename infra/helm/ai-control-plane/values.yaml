@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "2.0.0"
+  tag: "2.0.1"
   pullPolicy: IfNotPresent
 
 # Durable governance decisions / approvals (SQLite by default).
@@ -102,6 +102,12 @@ policySource:
   reference: ""
   digest: ""
   verifySignature: false
+  # fail_closed | last_known_good — production should use fail_closed.
+  failureMode: last_known_good
+  # When type=oci, prefer initContainer materialization (API reads filesystem).
+  initContainer:
+    enabled: true
+    mountPath: /policy
 
 governance:
   enabled: true

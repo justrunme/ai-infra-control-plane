@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.authz import require_roles, tenant_for_request
 from app.decision_store import StoreUnavailableError, get_decision_store
 from app.identity_service import (
     AuthenticationError,
@@ -149,8 +150,14 @@ def create_proposal(
     request: Request,
     payload: CreateRemediationRequest | None = None,
 ) -> RemediationProposalResponse:
+    require_roles(request, "tenant-admin", "platform-admin")
     body = payload or CreateRemediationRequest()
-    tenant = _tenant_scope(request, body.tenant_id) or body.tenant_id or "platform"
+    tenant = (
+        tenant_for_request(request, body_tenant=body.tenant_id)
+        or _tenant_scope(request, body.tenant_id)
+        or body.tenant_id
+        or "platform"
+    )
     try:
         record = create_from_drift(
             tenant_id=tenant,
@@ -177,7 +184,15 @@ def list_proposals(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> RemediationListResponse:
-    tenant = _tenant_scope(request)
+    require_roles(
+        request,
+        "tenant-admin",
+        "platform-admin",
+        "auditor",
+        "viewer",
+        "approver",
+    )
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         page = get_decision_store().list_remediation_proposals(
             status=status,
@@ -211,7 +226,15 @@ def get_proposal(
     proposal_id: str,
     request: Request,
 ) -> RemediationProposalResponse:
-    tenant = _tenant_scope(request)
+    require_roles(
+        request,
+        "tenant-admin",
+        "platform-admin",
+        "auditor",
+        "viewer",
+        "approver",
+    )
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         record = get_decision_store().get_remediation_proposal(
             proposal_id, tenant_id=tenant
@@ -234,7 +257,8 @@ def evaluate_proposal_policy(
     request: Request,
     environment: str = Query(default="production"),
 ) -> RemediationProposalResponse:
-    tenant = _tenant_scope(request)
+    require_roles(request, "tenant-admin", "platform-admin")
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         record = evaluate_policy(
             proposal_id,
@@ -342,8 +366,9 @@ def prepare_proposal_pr(
     request: Request,
     payload: PreparePrRequest | None = None,
 ) -> RemediationProposalResponse:
+    require_roles(request, "tenant-admin", "platform-admin")
     body = payload or PreparePrRequest()
-    tenant = _tenant_scope(request)
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         record = prepare_pr_draft(
             proposal_id,
@@ -372,8 +397,9 @@ def mark_proposal_applied(
     request: Request,
     payload: MarkAppliedRequest | None = None,
 ) -> RemediationProposalResponse:
+    require_roles(request, "runtime-service", "platform-admin")
     body = payload or MarkAppliedRequest()
-    tenant = _tenant_scope(request)
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         record = mark_applied(
             proposal_id,
@@ -401,7 +427,8 @@ def verify_proposal(
     proposal_id: str,
     request: Request,
 ) -> RemediationProposalResponse:
-    tenant = _tenant_scope(request)
+    require_roles(request, "runtime-service", "platform-admin")
+    tenant = tenant_for_request(request) or _tenant_scope(request)
     try:
         record = verify_runtime(proposal_id, tenant_id=tenant)
     except KeyError as exc:
