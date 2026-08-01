@@ -12,4 +12,7 @@ build/
 *.egg-info/
 docs/videos/frames/
 demo/platform/secrets.env
+data/
+apps/control-api/tests/.testdata/
+*.db
 

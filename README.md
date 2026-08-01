@@ -9,46 +9,34 @@
 ![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **AI Infrastructure OS** — open-source operating layer for private AI platforms: policy, cost, capacity, observability, and fleet operations on Kubernetes.
+> **Kubernetes-native reference control plane for governed private AI inference.**  
+> Part of the [AI Infrastructure OS](docs/product-roadmap.md) architecture with the [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform) execution plane.
 
 [![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
 
-This repository is the **Control Plane** of the AI Infrastructure OS. The reference **Execution Plane** is [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform).
+**What works today (production path):** versioned policy evaluation, durable decisions/approvals (SQLite), runtime enforcement via gateway, Redis/Prometheus live inputs, Helm packaging, signed images.
 
-Read the [product roadmap](docs/product-roadmap.md) and [portfolio overview](docs/portfolio-overview.md) for the full platform map.
+**Honest boundary:** forecasting, FinOps heuristics, multi-cluster federation, and some agentic modules remain prototype/reference. See [maturity map](docs/product-roadmap.md).
 
-### One-command platform demo
-
-Bring up **Control Plane + Execution Plane + Ollama** and verify governance enforcement:
+### Run in 2 minutes
 
 ```sh
-make platform-demo              # laptop demo
-make platform-demo-verify
-
-make platform-demo-production   # + Redis quota + Prometheus inputs
-make platform-demo-production-verify
-
-make platform-demo-enterprise   # + Keycloak OIDC (reference architecture)
-make platform-demo-enterprise-verify
+make platform-demo && make platform-demo-verify
+# production overlay: Redis + Prometheus
+make platform-demo-production && make platform-demo-production-verify
+# enterprise overlay: + Keycloak OIDC
+make platform-demo-enterprise && make platform-demo-enterprise-verify
 ```
 
-See [demo/platform/README.md](demo/platform/README.md) for URLs and manual curls.
-
-This project is intentionally scoped as an AI infrastructure platform, not an agent framework.
-
-The core workflow is:
+Golden path:
 
 ```text
-AI request
-  -> tenant quota
-  -> model risk registry
-  -> cost decision
-  -> risk score
-  -> approval decision
-  -> final verdict
+request → versioned PolicyBundle evaluate → decision_id
+       → allow | block | approval_required (+ approval_id)
+       → human approve/reject → retry with x-ai-approval-id → allow
 ```
 
-Read the portfolio overview in `docs/portfolio-overview.md`, the [product roadmap](docs/product-roadmap.md), and the technical system design in `docs/platform-architecture.md`.
+Docs: [durable governance](docs/durable-governance.md) · [roadmap](docs/product-roadmap.md) · [architecture](docs/platform-architecture.md) · [demo](demo/platform/README.md)
 
 ## Operator Dashboard
 
@@ -66,7 +54,8 @@ drift detection**, refreshed every few seconds.
 
 Submit an AI platform request through the live governance pipeline without leaving the browser:
 
-- `POST /governance/evaluate` — quota → registry → cost → risk → approval → final verdict
+- `POST /governance/evaluate` — returns `decision_id`, `policy_bundle_id`, and `approval_id` when needed
+- `GET/POST /approvals/*` — durable human approval lifecycle
 - Presets on `/` for low-risk dev, production external, and budget-exceeded scenarios
 
 ### Inventory Drift Detection
@@ -101,139 +90,20 @@ The Execution Plane runs workloads. The Control Plane evaluates policy and the r
 
 [![Animated preview of forecast-driven scaling](docs/videos/previews/forecast-driven-scaling.gif)](docs/videos/forecast-driven-scaling.mp4)
 
-## Visual Overview
+## Architecture (short)
 
-### Platform Overview
+Control Plane decides; Execution Plane enforces. Detailed diagrams live in [`docs/platform-architecture.md`](docs/platform-architecture.md).
 
-```mermaid
-flowchart TB
-    User["AI Consumer"]
-    API["Control API<br/>FastAPI"]
-
-    subgraph ControlPlane["AI Infrastructure Control Plane"]
-        Capacity["Capacity Planner"]
-        Cost["Cost Governance"]
-        Risk["Risk Scoring"]
-        Approval["Approval Engine"]
-        Twin["Digital Twin"]
-    end
-
-    subgraph AI["AI Workloads"]
-        Ollama["Ollama"]
-        VLLM["vLLM"]
-        Models["Foundation Models"]
-    end
-
-    subgraph Observability["Observability"]
-        OTel["OpenTelemetry"]
-        Prom["Prometheus"]
-        Graf["Grafana"]
-        Loki["Loki"]
-    end
-
-    User --> API
-    API --> Capacity
-    API --> Cost
-    API --> Risk
-    API --> Approval
-    API --> Twin
-    Capacity --> Ollama
-    Capacity --> VLLM
-    Ollama --> Models
-    VLLM --> Models
-    Ollama --> OTel
-    VLLM --> OTel
-    OTel --> Prom
-    OTel --> Loki
-    Prom --> Graf
-    Loki --> Graf
-    Twin --> Graf
-```
-
-### Governance Flow
-
-```mermaid
-flowchart LR
-    Request["AI Request"]
-    Cost["Cost Analysis"]
-    Risk["Risk Analysis"]
-    Capacity["Capacity Check"]
-    Decision{"Policy Engine"}
-    Allow["ALLOW"]
-    Warn["WARN"]
-    Block["BLOCK"]
-
-    Request --> Cost
-    Request --> Risk
-    Request --> Capacity
-    Cost --> Decision
-    Risk --> Decision
-    Capacity --> Decision
-    Decision --> Allow
-    Decision --> Warn
-    Decision --> Block
-```
-
-### Digital Twin
-
-```mermaid
-flowchart LR
-    Real["Real AI Cluster"]
-    Metrics["Telemetry"]
-    Twin["Digital Twin Model"]
-    Simulate["Scenario Simulation"]
-    Decision["Capacity Decision"]
-
-    Real --> Metrics
-    Metrics --> Twin
-    Twin --> Simulate
-    Simulate --> Decision
-```
-
-### Forecast-driven Scaling
-
-```mermaid
-flowchart TB
-    Metrics["Historical Metrics"]
-    TimesFM["TimesFM Forecasting"]
-    Forecast["Demand Forecast"]
-    ScaleUp["Scale Up"]
-    ScaleDown["Scale Down"]
-
-    Metrics --> TimesFM
-    TimesFM --> Forecast
-    Forecast --> ScaleUp
-    Forecast --> ScaleDown
-```
-
-### GitOps Delivery
-
-```mermaid
-flowchart LR
-    Dev["Developer"]
-    Git["Git Repository"]
-    Actions["GitHub Actions"]
-    Registry["Container Registry"]
-    Argo["Argo CD"]
-    Cluster["Kubernetes Cluster"]
-
-    Dev --> Git
-    Git --> Actions
-    Actions --> Registry
-    Registry --> Argo
-    Argo --> Cluster
+```text
+Client → Runtime gateway → POST /governance/evaluate → verdict
+                              ↑ PolicyBundle + durable decision store
 ```
 
 ## Scope
 
-- Expose a control API for private AI backend health, latency, capacity, cost, identity, audit, and governance signals.
-- Operate model, tool, agent, and intent metadata through registries and policy packs.
-- Evaluate governance decisions across prompt security, tenant quota, model registry, cost, risk, approval, sovereign AI, and response evaluation stages.
-- Feed live governance inputs from Redis-backed tenant quota state and Prometheus telemetry.
-- Run a full reference stack with Control Plane, Execution Plane, Ollama, Redis, Prometheus, and Keycloak OIDC.
-- Package the API with Docker and Helm, including production defaults and External Secrets / JWKS wiring.
-- Provide GitOps, security, SLO, FinOps, fleet topology, capacity, and GPU placement reference modules.
-- Keep experimental modules clearly isolated from the production deployment path.
+- **Production path:** governed evaluate with `decision_id` / `policy_bundle_id`, durable approvals, probes, drift, Helm, CI supply chain.
+- **Integrated demo:** Redis quota, Prometheus inputs, Keycloak OIDC, gateway enforcement.
+- **Prototype / reference:** TimesFM forecasting, FinOps CSV heuristics, static multi-cluster fleet, OTel sample emitter.
 
 ## Repository Layout
 
@@ -413,7 +283,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.2.0`) to publish semver tags.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.2.0`) to publish semver tags. Current release line: **v0.2.0**.
 
 ## Kubernetes Deployment
 
@@ -432,4 +302,4 @@ The chart ships production defaults: non-root execution, read-only root filesyst
 
 ## Remaining Backlog
 
-See `docs/product-roadmap.md` for the current roadmap and maturity map. The next portfolio step is packaging evidence: record the enterprise demo GIF from `docs/portfolio/demo-gif-script.md` and add it to this README.
+See [`docs/product-roadmap.md`](docs/product-roadmap.md) and [`docs/durable-governance.md`](docs/durable-governance.md). Next focus: kind/k3d e2e job, Postgres profile, and deeper `main.py` router split — not more surface-area modules.

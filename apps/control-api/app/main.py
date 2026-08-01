@@ -1,17 +1,18 @@
 import json
 import os
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Literal
 from uuid import uuid4
 
-import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, ValidationError
 
+from app import http_client
 from app.agent_registry_service import (
     AgentRegistryEntry,
     AgentRegistryResponse,
@@ -21,6 +22,7 @@ from app.agent_registry_service import (
 from app.audit_service import AUDIT_STORE, AuditEvent
 from app.audit_sink import AUDIT_SINK, AuditSinkStatus
 from app.drift_service import DriftStatus, build_drift_status
+from app.durable_governance import approval_grants_allow, persist_evaluation
 from app.evaluation_service import (
     EVALUATION_STORE,
     EvaluationListResponse,
@@ -66,7 +68,10 @@ from app.model_registry_service import (
     build_model_registry,
     get_model_registry_entry,
 )
+from app.probe_cache import get_or_set
+from app.routers.approvals import router as approvals_router
 from app.secrets_service import SecretsStatusResponse, build_secrets_status
+from app.settings import get_settings
 from app.tool_governance_service import (
     ToolEvaluateRequest,
     ToolEvaluateResponse,
@@ -171,11 +176,21 @@ class BackendLatencyStatus(BaseModel):
     error: str | None = None
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    get_settings()
+    http_client.get_http_client()
+    yield
+    http_client.close_http_client()
+
+
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="0.1.0",
+    version="0.2.0",
     description="Control API for private AI inference infrastructure.",
+    lifespan=lifespan,
 )
+app.include_router(approvals_router)
 
 
 BUILTIN_MODEL_INVENTORY: list[ModelStatus] = [
@@ -241,20 +256,24 @@ def get_ollama_base_url() -> str:
 
 
 def fetch_ollama_tags() -> tuple[dict, int, str | None]:
-    base_url = get_ollama_base_url()
-    started_at = perf_counter()
+    ttl = get_settings().probe_cache_ttl_seconds
 
-    try:
-        response = httpx.get(
-            f"{base_url}/api/tags",
-            timeout=OLLAMA_TIMEOUT_SECONDS,
-        )
-        latency_ms = round((perf_counter() - started_at) * 1000)
-        response.raise_for_status()
-        return response.json(), latency_ms, None
-    except httpx.HTTPError as exc:
-        latency_ms = round((perf_counter() - started_at) * 1000)
-        return {}, latency_ms, str(exc)
+    def _fetch() -> tuple[dict, int, str | None]:
+        base_url = get_ollama_base_url()
+        started_at = perf_counter()
+        try:
+            response = http_client.get(
+                f"{base_url}/api/tags",
+                timeout=OLLAMA_TIMEOUT_SECONDS,
+            )
+            latency_ms = round((perf_counter() - started_at) * 1000)
+            response.raise_for_status()
+            return response.json(), latency_ms, None
+        except Exception as exc:  # noqa: BLE001 - probe failures become degraded signals
+            latency_ms = round((perf_counter() - started_at) * 1000)
+            return {}, latency_ms, str(exc)
+
+    return get_or_set("ollama_tags", ttl, _fetch)
 
 
 def extract_ollama_models(payload: dict) -> list[OllamaModel]:
@@ -274,20 +293,24 @@ def get_vllm_base_url() -> str:
 
 
 def fetch_vllm_models() -> tuple[dict, int, str | None]:
-    base_url = get_vllm_base_url()
-    started_at = perf_counter()
+    ttl = get_settings().probe_cache_ttl_seconds
 
-    try:
-        response = httpx.get(
-            f"{base_url}/v1/models",
-            timeout=VLLM_TIMEOUT_SECONDS,
-        )
-        latency_ms = round((perf_counter() - started_at) * 1000)
-        response.raise_for_status()
-        return response.json(), latency_ms, None
-    except httpx.HTTPError as exc:
-        latency_ms = round((perf_counter() - started_at) * 1000)
-        return {}, latency_ms, str(exc)
+    def _fetch() -> tuple[dict, int, str | None]:
+        base_url = get_vllm_base_url()
+        started_at = perf_counter()
+        try:
+            response = http_client.get(
+                f"{base_url}/v1/models",
+                timeout=VLLM_TIMEOUT_SECONDS,
+            )
+            latency_ms = round((perf_counter() - started_at) * 1000)
+            response.raise_for_status()
+            return response.json(), latency_ms, None
+        except Exception as exc:  # noqa: BLE001 - probe failures become degraded signals
+            latency_ms = round((perf_counter() - started_at) * 1000)
+            return {}, latency_ms, str(exc)
+
+    return get_or_set("vllm_models", ttl, _fetch)
 
 
 def extract_vllm_models(payload: dict) -> list[VllmModel]:
@@ -759,10 +782,42 @@ def governance_evaluate(
     payload = apply_supply_chain_headers(payload, header_map)
     identity = resolve_workload_identity(header_map, payload)
     merged = apply_identity(payload, identity)
+    request_id = request.headers.get("x-request-id") or str(uuid4())
+    prior_approval = header_map.get("x-ai-approval-id", "").strip()
+    if prior_approval and approval_grants_allow(prior_approval):
+        from app.policy_bundle import get_policy_bundle
+
+        bundle = get_policy_bundle()
+        result = GovernanceEvaluateResponse(
+            final_verdict="allow",
+            policy_pack=merged.policy_pack or "default",
+            reasons=["durable approval grants allow"],
+            flow=["request", "durable_approval", "final_verdict"],
+            stages={},
+            approval_id=prior_approval,
+            policy_bundle_id=bundle.bundle_id,
+            policy_digest=bundle.content_digest,
+        )
+        result = persist_evaluation(
+            result=result, request=merged, request_id=request_id
+        )
+        AUDIT_STORE.record_governance_evaluate(
+            identity=identity,
+            request=merged,
+            response=result,
+            request_id=request_id,
+        )
+        GOVERNANCE_DECISIONS_TOTAL[
+            (result.final_verdict, merged.team, merged.environment)
+        ] += 1
+        return result
+
     enriched, quota_snapshot, signals = enrich_governance_request(merged)
     telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
     result = evaluate_governance_request(enriched, telemetry=telemetry)
-    request_id = request.headers.get("x-request-id") or str(uuid4())
+    result = persist_evaluation(
+        result=result, request=enriched, request_id=request_id
+    )
     AUDIT_STORE.record_governance_evaluate(
         identity=identity,
         request=enriched,

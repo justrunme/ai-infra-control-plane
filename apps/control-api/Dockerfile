@@ -17,8 +17,11 @@ COPY experiments/finops-recommendations ./experiments/finops-recommendations
 # Run as a non-root user (GID 0 for OpenShift compatibility) to match the
 # runAsNonRoot security context enforced by the Helm chart.
 RUN useradd --uid 10001 --gid 0 --no-create-home --shell /usr/sbin/nologin app \
-    && chown -R 10001:0 /app
+    && mkdir -p /var/lib/ai-control-plane \
+    && chown -R 10001:0 /app /var/lib/ai-control-plane
 USER 10001
+
+ENV DATABASE_URL=sqlite:////var/lib/ai-control-plane/control-plane.db
 
 EXPOSE 8080
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

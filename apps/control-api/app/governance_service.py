@@ -61,6 +61,10 @@ class GovernanceEvaluateResponse(BaseModel):
     flow: list[str]
     stages: dict[str, GovernanceStageResult]
     telemetry: GovernanceTelemetryStage | None = None
+    decision_id: str | None = None
+    policy_bundle_id: str | None = None
+    policy_digest: str | None = None
+    approval_id: str | None = None
 
 
 def get_governance_root() -> Path:
@@ -181,32 +185,37 @@ def evaluate_governance_request(
     *,
     telemetry: GovernanceTelemetryStage | None = None,
 ) -> GovernanceEvaluateResponse:
-    root = get_governance_root()
-    pack_module = load_module(
-        "policy_packs", root / "policy-packs" / "evaluate.py"
-    )
-    quota_module = load_module("quota_governance", root / "quota" / "evaluate.py")
-    registry_module = load_module("model_registry", root / "registry" / "evaluate.py")
-    cost_module = load_module("cost_governance", root / "cost" / "evaluate.py")
-    risk_module = load_module("risk_governance", root / "risk" / "evaluate.py")
-    approval_module = load_module(
-        "approval_governance", root / "approval" / "evaluate.py"
-    )
-    prompt_module = load_module(
-        "prompt_security", root / "prompt-security" / "evaluate.py"
-    )
-    agent_module = load_module("agent_registry", root / "agents" / "evaluate.py")
-    tools_module = load_module("tool_registry_bind", root / "tools" / "evaluate.py")
-    sovereign_module = load_module("sovereign_ai", root / "sovereign" / "evaluate.py")
+    # Import lazily to avoid an import cycle at module load time.
+    from app.policy_bundle import get_policy_bundle
 
-    quota_policies = quota_module.parse_policies(root / "quota" / "policies.yaml")
-    pack_config = pack_module.parse_packs(root / "policy-packs" / "packs.yaml")
-    registry = registry_module.parse_registry(root / "registry" / "models.yaml")
-    residency = sovereign_module.parse_residency(root / "sovereign" / "residency.yaml")
-    agent_registry = agent_module.parse_registry(root / "agents" / "agents.yaml")
-    tools_registry = tools_module.parse_registry(root / "tools" / "tools.yaml")
-    policies = cost_module.parse_policy_file(root / "cost" / "policies.yaml")
-    rules = risk_module.parse_rules(root / "risk" / "rules.yaml")
+    bundle = get_policy_bundle()
+    if bundle.validation_status != "ok" or bundle.pack_module is None:
+        raise RuntimeError(
+            f"policy bundle is not valid: {bundle.error or 'unknown error'}"
+        )
+
+    pack_module = bundle.pack_module
+    quota_module = bundle.quota_module
+    registry_module = bundle.registry_module
+    cost_module = bundle.cost_module
+    risk_module = bundle.risk_module
+    approval_module = bundle.approval_module
+    prompt_module = bundle.prompt_module
+    agent_module = bundle.agent_module
+    tools_module = bundle.tools_module
+    sovereign_module = bundle.sovereign_module
+    assert quota_module and registry_module and cost_module and risk_module
+    assert approval_module and prompt_module and agent_module and tools_module
+    assert sovereign_module
+
+    quota_policies = bundle.quota_policies
+    pack_config = bundle.packs
+    registry = bundle.registry
+    residency = bundle.residency
+    agent_registry = bundle.agents
+    tools_registry = bundle.tools
+    policies = bundle.cost_policies
+    rules = bundle.risk_rules
     row = to_pipeline_row(payload)
     registry_models = set(registry.keys())
 
@@ -317,6 +326,8 @@ def evaluate_governance_request(
             "final_verdict",
         ],
         telemetry=telemetry,
+        policy_bundle_id=bundle.bundle_id,
+        policy_digest=bundle.content_digest,
         stages={
             "policy_pack": GovernanceStageResult(
                 decision=pack_stage_decision,

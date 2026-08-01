@@ -50,6 +50,7 @@ services:
         required: false
     volumes:
       - ./model_inventory.json:/etc/ai-control-plane/model_inventory.json:ro
+      - control-api-data:/var/lib/ai-control-plane
     tmpfs:
       - /var/log/ai-control-plane
     ports:
@@ -111,3 +112,4 @@ services:
 
 volumes:
   ollama-models:
+  control-api-data:

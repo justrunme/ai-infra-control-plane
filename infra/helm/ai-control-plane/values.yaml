@@ -10,8 +10,19 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "0.1.0"
+  tag: "0.2.0"
   pullPolicy: IfNotPresent
+
+# Durable governance decisions / approvals (SQLite by default).
+persistence:
+  enabled: true
+  mountPath: /var/lib/ai-control-plane
+  databaseUrl: sqlite:////var/lib/ai-control-plane/control-plane.db
+  # Use emptyDir for demos; set existingClaim for production PVC.
+  existingClaim: ""
+  approvalTtlSeconds: 3600
+  probeCacheTtlSeconds: 5
+  httpTrustEnv: false
 
 serviceAccount:
   create: true

@@ -52,7 +52,7 @@ def test_loki_sink_pushes_structured_stream(monkeypatch) -> None:
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
 
-    with patch("app.audit_sink.httpx.post", return_value=mock_response) as mock_post:
+    with patch("app.http_client.post", return_value=mock_response) as mock_post:
         sink.persist(_sample_event())
 
     mock_post.assert_called_once()
@@ -73,7 +73,7 @@ def test_loki_sink_counts_transport_errors(monkeypatch) -> None:
     monkeypatch.setenv("AUDIT_LOKI_URL", "http://loki.test")
     sink = AuditSink()
 
-    with patch("app.audit_sink.httpx.post", side_effect=OSError("connection refused")):
+    with patch("app.http_client.post", side_effect=OSError("connection refused")):
         sink.persist(_sample_event())
 
     status = sink.status()
