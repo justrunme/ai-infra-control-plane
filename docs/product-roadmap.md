@@ -46,7 +46,10 @@ flowchart TD
 | v0.5.0 | Trust boundary, HA Postgres production profile, readiness | Done |
 | v0.6.0 | Connection pool, schema migrations, DB metrics, multi-replica Postgres e2e | Done (rolled into v1.0) |
 | v0.7.0 | Frozen OpenAPI, unified errors, pagination, compatibility CI | Done (rolled into v1.0) |
-| v1.0.0 | Stable contract + maturity boundary + upgrade guide | This release |
+| v1.0.0 | Stable contract + maturity boundary + upgrade guide | Done |
+| v1.0.1 | Correct migration ledger + concurrent schema apply | This release |
+| v1.1.0 | Transactional Unit of Work, indexes, pagination metadata | Next |
+| v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | Planned |
 
 ## Related docs
 

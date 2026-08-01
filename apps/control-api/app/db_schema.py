@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Stable advisory-lock key for concurrent DecisionStore startups (Postgres).
+SCHEMA_ADVISORY_LOCK_KEY = 0x41494350  # "AICP"
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS decisions (
   decision_id TEXT PRIMARY KEY,
@@ -47,14 +50,29 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 """
 
+
+def _migration(
+    version: str, *, postgres: tuple[str, ...], sqlite: tuple[str, ...]
+) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
+    return (version, postgres, sqlite)
+
+
 # Incremental migrations for databases created before schema_migrations existed.
-MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (
+# Postgres uses IF NOT EXISTS so fresh CREATE TABLE columns do not abort the ledger.
+# SQLite (pre-3.35) lacks ADD COLUMN IF NOT EXISTS; duplicate-column is handled in code.
+MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
+    _migration(
         "002_request_digest",
-        ("ALTER TABLE decisions ADD COLUMN request_digest TEXT",),
+        postgres=("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS request_digest TEXT",),
+        sqlite=("ALTER TABLE decisions ADD COLUMN request_digest TEXT",),
     ),
-    (
+    _migration(
         "003_approval_used_at",
-        ("ALTER TABLE approvals ADD COLUMN used_at TEXT",),
+        postgres=("ALTER TABLE approvals ADD COLUMN IF NOT EXISTS used_at TEXT",),
+        sqlite=("ALTER TABLE approvals ADD COLUMN used_at TEXT",),
     ),
+)
+
+EXPECTED_MIGRATION_VERSIONS: frozenset[str] = frozenset(
+    version for version, _postgres, _sqlite in MIGRATIONS
 )
