@@ -24,7 +24,7 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 | **Reference** | PolicyBundle lifecycle (process-local until durable HA), remediation PR drafts + probe verify, CRD desired-state samples, live Redis/Prometheus inputs, demos |
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
-Current release line: **v2.1.0**. Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
+Current release line: **v2.2.0**. Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
 
 ### Run in 2 minutes
 
@@ -293,7 +293,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v2.1.0**.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v2.2.0**.
 
 ## Kubernetes Deployment
 
@@ -302,9 +302,9 @@ From the published OCI chart (preferred):
 ```sh
 helm upgrade --install ai-control-plane \
   oci://ghcr.io/justrunme/charts/ai-control-plane \
-  --version 2.1.0 \
+  --version 2.2.0 \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=2.1.0
+  --set image.tag=2.2.0
 ```
 
 Or from a git checkout:
@@ -312,7 +312,7 @@ Or from a git checkout:
 ```sh
 helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=2.1.0
+  --set image.tag=2.2.0
 ```
 
 The chart ships production defaults: non-root execution, read-only root filesystem, model inventory ConfigMap, HPA, PodDisruptionBudget, and optional ServiceMonitor, Ingress, and NetworkPolicy. See `infra/helm/ai-control-plane/README.md`.

@@ -21,8 +21,9 @@ Introduce durable `RemediationProposal` records with explicit lifecycle:
 
 - Policy evaluation reuses the existing governance pipeline and optional durable
   approvals.
-- `pr_created` persists a GitOps PR **draft** (title/body) and optional external
-  `pr_url`. The control plane does not call the GitHub API.
+- `pr_created` persists a GitOps PR **draft** (title/body) and optional
+  `pr_url`. From v2.2 an optional `GitOpsProvider` may open a **draft** GitHub
+  PR when configured; default remains noop (no network).
 - `mark-applied` is an operator/automation signal that Argo (or equivalent)
   reconciled the change.
 - `verify` re-probes inventory drift and marks `verified` / `failed`.
@@ -30,6 +31,8 @@ Introduce durable `RemediationProposal` records with explicit lifecycle:
 ## Consequences
 
 - Closed-loop remediation is auditable and tenant-scoped.
-- Apply remains outside the control plane (GitOps).
-- Future releases may attach a GitHub adapter behind a feature flag without
-  changing the lifecycle contract.
+- Apply remains outside the control plane (GitOps); the adapter never mutates
+  cluster inventory or backends.
+- GitHub draft-PR creation is opt-in via env (`GITHUB_TOKEN` +
+  `GITHUB_REPOSITORY` or `GITOPS_PROVIDER=github`) without changing the
+  lifecycle contract.

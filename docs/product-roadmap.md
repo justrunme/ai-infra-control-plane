@@ -58,9 +58,9 @@ flowchart TD
 | v1.8.0 | Durable agent/tool capability contract | Done |
 | v2.0.0 | Stabilize CRD/API + upgrade boundary | Done |
 | v2.0.1 | Security/correctness: RBAC, policy fail-closed, OCI tooling | Done |
-| v2.1.0 | Durable HA PolicyBundle lifecycle | This release |
-| v2.2.0 | GitOpsProvider + GitHub PR adapter | Next |
-| v2.3.0 | Runtime verification contract | Planned |
+| v2.1.0 | Durable HA PolicyBundle lifecycle | Done |
+| v2.2.0 | GitOpsProvider + GitHub PR adapter | This release |
+| v2.3.0 | Runtime verification contract | Next |
 | v2.4.0 | Capability-bound execution digests | Planned |
 
 ## Related docs

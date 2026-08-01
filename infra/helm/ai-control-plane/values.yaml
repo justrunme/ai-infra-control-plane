@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "2.1.0"
+  tag: "2.2.0"
   pullPolicy: IfNotPresent
 
 # Durable governance decisions / approvals (SQLite by default).
@@ -94,6 +94,15 @@ modelInventory:
       latency_ms: 55
       capacity_tokens_per_second: 540
       estimated_hourly_cost_usd: 0.42
+
+# Optional GitOps draft-PR adapter for remediation (noop unless configured).
+# Requires GITHUB_TOKEN via ExternalSecret (or other secret injection).
+gitops:
+  provider: "" # auto | noop | github
+  repository: "" # owner/repo
+  apiUrl: https://api.github.com
+  baseBranch: main
+  draft: true
 
 # Policy bundle source for GitOps / OCI delivery (see docs/policy-bundles-gitops.md).
 policySource:

@@ -79,6 +79,13 @@ SECRET_CATALOG: tuple[SecretRefSpec, ...] = (
         description="Short-lived Vault token when not using Kubernetes auth.",
         optional=True,
     ),
+    SecretRefSpec(
+        name="github_token",
+        env_var="GITHUB_TOKEN",
+        component="control-plane",
+        description="Optional token for GitOps draft pull requests (v2.2+).",
+        optional=True,
+    ),
 )
 
 

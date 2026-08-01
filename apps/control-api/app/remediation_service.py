@@ -235,6 +235,12 @@ def prepare_pr_draft(
     pr_url: str | None = None,
     store: DecisionStore | None = None,
 ) -> RemediationProposalRecord:
+    from app.gitops_provider import (
+        GitOpsProviderError,
+        GitOpsPullRequestRequest,
+        get_gitops_provider,
+    )
+
     decision_store = store or get_decision_store()
     record = decision_store.get_remediation_proposal(
         proposal_id, tenant_id=tenant_id
@@ -264,12 +270,27 @@ def prepare_pr_draft(
             f"- [ ] Remediation proposal `{proposal_id}` reaches `verified`\n"
         )
     )
+    resolved_url = (pr_url or "").strip()
+    if not resolved_url:
+        try:
+            result = get_gitops_provider().create_draft_pull_request(
+                GitOpsPullRequestRequest(
+                    proposal_id=proposal_id,
+                    title=title,
+                    body=body,
+                    tenant_id=record.tenant_id,
+                    remediation_kind=record.remediation_kind,
+                )
+            )
+        except GitOpsProviderError as exc:
+            raise RemediationError(str(exc)) from exc
+        resolved_url = (result.pr_url or "").strip()
     return decision_store.update_remediation_proposal(
         proposal_id,
         status="pr_created",
         pr_title=title,
         pr_body=body,
-        pr_url=pr_url or "",
+        pr_url=resolved_url,
     )
 
 
