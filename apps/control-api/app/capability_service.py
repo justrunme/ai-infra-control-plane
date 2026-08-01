@@ -126,3 +126,57 @@ def active_capability_map(
             kind, tenant_id=tenant_id, store=store
         )
     }
+
+
+def resolve_execution_capability_digests(
+    *,
+    agent: str = "",
+    tenant_id: str = "",
+    store: DecisionStore | None = None,
+) -> tuple[str, str]:
+    """Return (agent_digest, tools_digest) for active contracts.
+
+    Empty strings mean no active pin (legacy / unbound). ``tools_digest`` is a
+    canonical digest of ``{tool_name: content_digest}`` for tools listed on the
+    active agent contract (or all active tools when the agent has no tool list).
+    """
+    decision_store = store or get_decision_store()
+    agent_name = (agent or "").strip()
+    tenant = (tenant_id or "").strip()
+    agent_digest = ""
+    tool_names: list[str] = []
+    if agent_name:
+        page = decision_store.list_capability_contracts(
+            kind="agent",
+            status="active",
+            name=agent_name,
+            tenant_id=tenant or None,
+            limit=1,
+        )
+        if page.items:
+            agent_digest = page.items[0].content_digest or ""
+            caps = page.items[0].capabilities or {}
+            raw_tools = caps.get("tools") or caps.get("allowed_tools") or []
+            if isinstance(raw_tools, list):
+                tool_names = [str(item) for item in raw_tools if item]
+
+    tool_records = get_active_capabilities(
+        "tool", tenant_id=tenant or None, store=decision_store
+    )
+    tool_digest_map = {
+        item.name: item.content_digest
+        for item in tool_records
+        if item.content_digest
+    }
+    if tool_names:
+        selected = {
+            name: tool_digest_map[name]
+            for name in sorted(tool_names)
+            if name in tool_digest_map
+        }
+    else:
+        selected = {name: tool_digest_map[name] for name in sorted(tool_digest_map)}
+    if not selected:
+        return agent_digest, ""
+    tools_digest = _canonical_digest(selected)
+    return agent_digest, tools_digest

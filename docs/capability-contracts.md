@@ -16,6 +16,13 @@ calls; it should pin against an active contract digest rather than ad-hoc YAML.
 Content is content-addressed (`sha256:…`). Re-syncing the same payload is
 idempotent.
 
+## Execution digests (v2.4+)
+
+`/governance/evaluate` persists optional `agent_capability_digest` and
+`tools_capability_digest` on the decision. Durable approval reuse fail-closes
+when the active contract digests change (same pattern as `policy_digest`).
+Legacy decisions without digests remain consumable (empty = unbound).
+
 ## API
 
 | Method | Path |
