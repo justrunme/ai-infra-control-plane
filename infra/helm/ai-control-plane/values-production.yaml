@@ -8,7 +8,7 @@ autoscaling:
   maxReplicas: 6
 
 image:
-  tag: "1.0.1"
+  tag: "1.1.0"
   pullPolicy: IfNotPresent
 
 persistence:

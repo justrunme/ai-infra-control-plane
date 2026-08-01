@@ -27,6 +27,7 @@ from app.settings import get_settings
 
 _store: DecisionStore | None = None
 _lock = threading.Lock()
+_sqlite_schema_lock = threading.Lock()
 
 
 class StoreUnavailableError(RuntimeError):
@@ -100,6 +101,18 @@ class ApprovalRecord:
     used_at: str | None = None
 
 
+@dataclass(frozen=True)
+class ApprovalPage:
+    items: list[ApprovalRecord]
+    total: int
+    limit: int
+    offset: int
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+
 class DecisionStore:
     """Durable decision / approval store (SQLite or pooled Postgres)."""
 
@@ -140,10 +153,11 @@ class DecisionStore:
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._conn.execute("PRAGMA busy_timeout=15000")
         self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._apply_schema(self._conn, postgres=False)
-        self.assert_migrations_current()
+        with _sqlite_schema_lock:
+            self._apply_schema(self._conn, postgres=False)
+            self.assert_migrations_current()
         set_pool_stats(backend="sqlite", size=1, available=1)
 
     @classmethod
@@ -202,6 +216,20 @@ class DecisionStore:
         assert self._conn is not None
         with self._op_lock:
             yield self._conn
+
+    @contextmanager
+    def transaction(self) -> Iterator[Any]:
+        """Unit of Work: commit on success, rollback on error."""
+        with self._session() as conn:
+            try:
+                yield conn
+                self._commit(conn)
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:  # noqa: BLE001
+                    pass
+                raise
 
     def _apply_schema(self, conn: Any, *, postgres: bool) -> None:
         if postgres:
@@ -352,97 +380,108 @@ class DecisionStore:
         request: dict[str, Any] | None = None,
         request_digest: str = "",
         decision_id: str | None = None,
+        conn: Any | None = None,
     ) -> str:
         decision_id = decision_id or str(uuid.uuid4())
         created_at = _isoformat(_utcnow())
+        params = (
+            decision_id,
+            request_id,
+            final_verdict,
+            policy_bundle_id,
+            policy_digest,
+            team,
+            environment,
+            model,
+            subject,
+            json.dumps(reasons or []),
+            json.dumps(stages or {}),
+            json.dumps(request or {}),
+            request_digest,
+            created_at,
+        )
+        sql = """
+            INSERT INTO decisions (
+              decision_id, request_id, final_verdict, policy_bundle_id,
+              policy_digest, team, environment, model, subject,
+              reasons_json, stages_json, request_json, request_digest,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
         try:
             with observe_db_operation("create_decision"):
-                with self._session() as conn:
-                    self._execute(
-                        conn,
-                        """
-                        INSERT INTO decisions (
-                          decision_id, request_id, final_verdict, policy_bundle_id,
-                          policy_digest, team, environment, model, subject,
-                          reasons_json, stages_json, request_json, request_digest,
-                          created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            decision_id,
-                            request_id,
-                            final_verdict,
-                            policy_bundle_id,
-                            policy_digest,
-                            team,
-                            environment,
-                            model,
-                            subject,
-                            json.dumps(reasons or []),
-                            json.dumps(stages or {}),
-                            json.dumps(request or {}),
-                            request_digest,
-                            created_at,
-                        ),
-                    )
-                    self._commit(conn)
+                if conn is not None:
+                    self._execute(conn, sql, params)
+                else:
+                    with self._session() as session:
+                        self._execute(session, sql, params)
+                        self._commit(session)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
         return decision_id
 
-    def create_approval(self, decision_id: str, ttl_seconds: int) -> str:
+    def create_approval(
+        self,
+        decision_id: str,
+        ttl_seconds: int,
+        *,
+        conn: Any | None = None,
+    ) -> str:
         approval_id = str(uuid.uuid4())
         now = _utcnow()
         expires_at = now + timedelta(seconds=max(ttl_seconds, 0))
+        params = (
+            approval_id,
+            decision_id,
+            "pending",
+            None,
+            None,
+            _isoformat(now),
+            _isoformat(expires_at),
+            None,
+            None,
+        )
+        sql = """
+            INSERT INTO approvals (
+              approval_id, decision_id, status, reviewer, review_comment,
+              created_at, expires_at, resolved_at, used_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
         try:
             with observe_db_operation("create_approval"):
-                with self._session() as conn:
-                    self._execute(
-                        conn,
-                        """
-                        INSERT INTO approvals (
-                          approval_id, decision_id, status, reviewer, review_comment,
-                          created_at, expires_at, resolved_at, used_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            approval_id,
-                            decision_id,
-                            "pending",
-                            None,
-                            None,
-                            _isoformat(now),
-                            _isoformat(expires_at),
-                            None,
-                            None,
-                        ),
-                    )
-                    self._commit(conn)
+                if conn is not None:
+                    self._execute(conn, sql, params)
+                else:
+                    with self._session() as session:
+                        self._execute(session, sql, params)
+                        self._commit(session)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
         return approval_id
 
-    def consume_approval(self, approval_id: str) -> bool:
+    def consume_approval(
+        self, approval_id: str, *, conn: Any | None = None
+    ) -> bool:
         now = _isoformat(_utcnow())
+        sql = """
+            UPDATE approvals
+            SET status = 'consumed', used_at = ?
+            WHERE approval_id = ?
+              AND status = 'approved'
+              AND (used_at IS NULL OR used_at = '')
+            """
         try:
             with observe_db_operation("consume_approval"):
-                with self._session() as conn:
-                    cur = self._execute(
-                        conn,
-                        """
-                        UPDATE approvals
-                        SET status = 'consumed', used_at = ?
-                        WHERE approval_id = ?
-                          AND status = 'approved'
-                          AND (used_at IS NULL OR used_at = '')
-                        """,
-                        (now, approval_id),
-                    )
-                    self._commit(conn)
+                if conn is not None:
+                    cur = self._execute(conn, sql, (now, approval_id))
+                    return int(cur.rowcount or 0) == 1
+                with self._session() as session:
+                    cur = self._execute(session, sql, (now, approval_id))
+                    self._commit(session)
                     return int(cur.rowcount or 0) == 1
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
@@ -492,13 +531,20 @@ class DecisionStore:
         *,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[ApprovalRecord]:
+    ) -> ApprovalPage:
         limit = max(1, min(limit, 500))
         offset = max(0, offset)
         try:
             with observe_db_operation("list_approvals"):
                 with self._session() as conn:
                     self._expire_stale(conn)
+                    count_cur = self._execute(
+                        conn,
+                        "SELECT COUNT(*) AS total FROM approvals WHERE status = ?",
+                        (status,),
+                    )
+                    count_row = count_cur.fetchone()
+                    total = int(self._as_mapping(count_row).get("total") or 0)
                     cur = self._execute(
                         conn,
                         """
@@ -514,7 +560,12 @@ class DecisionStore:
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
-        return [self._approval_from_row(row) for row in rows]
+        return ApprovalPage(
+            items=[self._approval_from_row(row) for row in rows],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
 
     def resolve_approval(
         self,
@@ -589,29 +640,31 @@ class DecisionStore:
         actor: str = "",
         payload: dict[str, Any] | None = None,
         event_id: str | None = None,
+        conn: Any | None = None,
     ) -> str:
         event_id = event_id or str(uuid.uuid4())
+        params = (
+            event_id,
+            decision_id,
+            event_type,
+            actor,
+            json.dumps(payload or {}),
+            _isoformat(_utcnow()),
+        )
+        sql = """
+            INSERT INTO audit_meta (
+              event_id, decision_id, event_type, actor,
+              payload_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """
         try:
             with observe_db_operation("append_audit_meta"):
-                with self._session() as conn:
-                    self._execute(
-                        conn,
-                        """
-                        INSERT INTO audit_meta (
-                          event_id, decision_id, event_type, actor,
-                          payload_json, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            event_id,
-                            decision_id,
-                            event_type,
-                            actor,
-                            json.dumps(payload or {}),
-                            _isoformat(_utcnow()),
-                        ),
-                    )
-                    self._commit(conn)
+                if conn is not None:
+                    self._execute(conn, sql, params)
+                else:
+                    with self._session() as session:
+                        self._execute(session, sql, params)
+                        self._commit(session)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc

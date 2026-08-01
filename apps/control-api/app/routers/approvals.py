@@ -30,9 +30,21 @@ class ApprovalResponse(BaseModel):
     used_at: str | None = None
 
 
+class ApprovalPageMeta(BaseModel):
+    limit: int
+    offset: int
+    returned: int
+    total: int
+    has_more: bool
+
+
 class ApprovalListResponse(BaseModel):
     approvals: list[ApprovalResponse]
+    # Page size for the current response (kept for v1 compatibility).
     count: int
+    total: int | None = None
+    has_more: bool | None = None
+    page: ApprovalPageMeta | None = None
 
 
 class ResolveApprovalRequest(BaseModel):
@@ -94,13 +106,23 @@ def list_approvals(
 ) -> ApprovalListResponse:
     try:
         store = get_decision_store()
-        items = [
-            _to_response(item)
-            for item in store.list_approvals(status=status, limit=limit, offset=offset)
-        ]
+        page = store.list_approvals(status=status, limit=limit, offset=offset)
+        items = [_to_response(item) for item in page.items]
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
-    return ApprovalListResponse(approvals=items, count=len(items))
+    return ApprovalListResponse(
+        approvals=items,
+        count=len(items),
+        total=page.total,
+        has_more=page.has_more,
+        page=ApprovalPageMeta(
+            limit=page.limit,
+            offset=page.offset,
+            returned=len(items),
+            total=page.total,
+            has_more=page.has_more,
+        ),
+    )
 
 
 @router.get("/approvals/{approval_id}", response_model=ApprovalResponse)

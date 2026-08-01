@@ -20,52 +20,60 @@ def persist_evaluation(
     request_id: str,
     store: DecisionStore | None = None,
 ) -> GovernanceEvaluateResponse:
-    """Attach decision_id / approval_id and write durable records."""
+    """Attach decision_id / approval_id and write durable records atomically."""
     decision_store = store or get_decision_store()
     stages_payload = {
         name: stage.model_dump() for name, stage in result.stages.items()
     }
     request_digest = compute_request_digest(request)
-    decision_id = decision_store.create_decision(
-        final_verdict=result.final_verdict,
-        request_id=request_id,
-        policy_bundle_id=result.policy_bundle_id or "",
-        policy_digest=result.policy_digest or "",
-        team=request.team,
-        environment=request.environment,
-        model=request.model,
-        subject=request.subject or request.owner,
-        reasons=list(result.reasons),
-        stages=stages_payload,
-        request=request.model_dump(),
-        request_digest=request_digest,
-    )
+    actor = request.owner or request.subject or "system"
     approval_id = result.approval_id
-    if result.final_verdict == "approval_required" and not approval_id:
-        approval_id = decision_store.create_approval(
-            decision_id,
-            ttl_seconds=get_settings().approval_ttl_seconds,
+
+    with decision_store.transaction() as conn:
+        decision_id = decision_store.create_decision(
+            final_verdict=result.final_verdict,
+            request_id=request_id,
+            policy_bundle_id=result.policy_bundle_id or "",
+            policy_digest=result.policy_digest or "",
+            team=request.team,
+            environment=request.environment,
+            model=request.model,
+            subject=request.subject or request.owner,
+            reasons=list(result.reasons),
+            stages=stages_payload,
+            request=request.model_dump(),
+            request_digest=request_digest,
+            conn=conn,
         )
+        if result.final_verdict == "approval_required" and not approval_id:
+            approval_id = decision_store.create_approval(
+                decision_id,
+                ttl_seconds=get_settings().approval_ttl_seconds,
+                conn=conn,
+            )
+            decision_store.append_audit_meta(
+                decision_id=decision_id,
+                event_type="approval_created",
+                actor=actor,
+                payload={
+                    "approval_id": approval_id,
+                    "request_digest": request_digest,
+                },
+                conn=conn,
+            )
         decision_store.append_audit_meta(
             decision_id=decision_id,
-            event_type="approval_created",
-            actor=request.owner or request.subject or "system",
+            event_type="decision_recorded",
+            actor=actor,
             payload={
+                "final_verdict": result.final_verdict,
+                "request_id": request_id,
                 "approval_id": approval_id,
                 "request_digest": request_digest,
             },
+            conn=conn,
         )
-    decision_store.append_audit_meta(
-        decision_id=decision_id,
-        event_type="decision_recorded",
-        actor=request.owner or request.subject or "system",
-        payload={
-            "final_verdict": result.final_verdict,
-            "request_id": request_id,
-            "approval_id": approval_id,
-            "request_digest": request_digest,
-        },
-    )
+
     return result.model_copy(
         update={"decision_id": decision_id, "approval_id": approval_id}
     )
@@ -85,6 +93,8 @@ def approval_grants_allow(
     - approval has not been consumed (one-time use)
     - current request digest matches the approved decision request digest
     - current policy digest matches the approved decision policy digest
+
+    Consume + audit are committed in one transaction.
     """
     decision_store = store or get_decision_store()
     approval = decision_store.get_approval(approval_id)
@@ -111,17 +121,19 @@ def approval_grants_allow(
     ):
         return False
 
-    if not decision_store.consume_approval(approval_id):
-        return False
-    decision_store.append_audit_meta(
-        decision_id=decision.decision_id,
-        event_type="approval_consumed",
-        actor=request.owner or request.subject or "system",
-        payload={
-            "approval_id": approval_id,
-            "request_digest": current_digest,
-        },
-    )
+    with decision_store.transaction() as conn:
+        if not decision_store.consume_approval(approval_id, conn=conn):
+            return False
+        decision_store.append_audit_meta(
+            decision_id=decision.decision_id,
+            event_type="approval_consumed",
+            actor=request.owner or request.subject or "system",
+            payload={
+                "approval_id": approval_id,
+                "request_digest": current_digest,
+            },
+            conn=conn,
+        )
     return True
 
 
