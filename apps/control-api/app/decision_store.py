@@ -136,7 +136,9 @@ class DecisionStore:
                 ) from exc
             self._backend = "postgres"
             self._pg = True
-            self._conn = psycopg.connect(database_url)
+            from psycopg.rows import dict_row
+
+            self._conn = psycopg.connect(database_url, row_factory=dict_row)
             self._init_schema_postgres()
             return
 
@@ -161,8 +163,10 @@ class DecisionStore:
 
     def _init_schema_postgres(self) -> None:  # pragma: no cover - optional path
         # Same logical schema; TEXT maps cleanly for this workload.
+        statements = [part.strip() for part in _SCHEMA.split(";") if part.strip()]
         with self._conn.cursor() as cur:
-            cur.execute(_SCHEMA)
+            for statement in statements:
+                cur.execute(statement)
         self._conn.commit()
 
     def _execute(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
@@ -356,11 +360,12 @@ class DecisionStore:
         row = cur.fetchone()
         if row is None:
             return
-        status = row["status"] if not self._pg else row[0]
-        expires_at = row["expires_at"] if not self._pg else row[1]
-        if status != "pending":
+        mapping = self._as_mapping(row)
+        status = mapping.get("status")
+        expires_at = mapping.get("expires_at")
+        if status != "pending" or not expires_at:
             return
-        if _parse_iso(expires_at) > _utcnow():
+        if _parse_iso(str(expires_at)) > _utcnow():
             return
         now = _isoformat(_utcnow())
         self._execute(
@@ -374,36 +379,56 @@ class DecisionStore:
         self._conn.commit()
 
     @staticmethod
-    def _decision_from_row(row: Any) -> DecisionRecord:
-        mapping = dict(row)
+    def _as_mapping(row: Any) -> dict[str, Any]:
+        if isinstance(row, dict):
+            return row
+        try:
+            return dict(row)
+        except (TypeError, ValueError):
+            # Fallback for plain tuples (should not happen with dict_row/sqlite3.Row).
+            keys = (
+                "approval_id",
+                "decision_id",
+                "status",
+                "reviewer",
+                "review_comment",
+                "created_at",
+                "expires_at",
+                "resolved_at",
+            )
+            return {keys[i]: row[i] for i in range(min(len(keys), len(row)))}
+
+    @classmethod
+    def _decision_from_row(cls, row: Any) -> DecisionRecord:
+        mapping = cls._as_mapping(row)
         return DecisionRecord(
             decision_id=mapping["decision_id"],
-            request_id=mapping["request_id"] or "",
-            final_verdict=mapping["final_verdict"] or "",
-            policy_bundle_id=mapping["policy_bundle_id"] or "",
-            policy_digest=mapping["policy_digest"] or "",
-            team=mapping["team"] or "",
-            environment=mapping["environment"] or "",
-            model=mapping["model"] or "",
-            subject=mapping["subject"] or "",
-            reasons=json.loads(mapping["reasons_json"] or "[]"),
-            stages=json.loads(mapping["stages_json"] or "{}"),
-            request=json.loads(mapping["request_json"] or "{}"),
-            created_at=mapping["created_at"] or "",
+            request_id=mapping.get("request_id") or "",
+            final_verdict=mapping.get("final_verdict") or "",
+            policy_bundle_id=mapping.get("policy_bundle_id") or "",
+            policy_digest=mapping.get("policy_digest") or "",
+            team=mapping.get("team") or "",
+            environment=mapping.get("environment") or "",
+            model=mapping.get("model") or "",
+            subject=mapping.get("subject") or "",
+            reasons=json.loads(mapping.get("reasons_json") or "[]"),
+            stages=json.loads(mapping.get("stages_json") or "{}"),
+            request=json.loads(mapping.get("request_json") or "{}"),
+            created_at=mapping.get("created_at") or "",
         )
 
-    @staticmethod
-    def _approval_from_row(row: Any) -> ApprovalRecord:
-        mapping = dict(row)
+    @classmethod
+    def _approval_from_row(cls, row: Any) -> ApprovalRecord:
+        mapping = cls._as_mapping(row)
         return ApprovalRecord(
             approval_id=mapping["approval_id"],
-            decision_id=mapping["decision_id"] or "",
-            status=mapping["status"] or "",
-            reviewer=mapping["reviewer"],
-            review_comment=mapping["review_comment"],
-            created_at=mapping["created_at"] or "",
-            expires_at=mapping["expires_at"] or "",
-            resolved_at=mapping["resolved_at"],
+            decision_id=mapping.get("decision_id") or "",
+            status=mapping.get("status") or "",
+            reviewer=mapping.get("reviewer"),
+            review_comment=mapping.get("review_comment"),
+            created_at=mapping.get("created_at") or "",
+            expires_at=mapping.get("expires_at") or "",
+            resolved_at=mapping.get("resolved_at"),
         )
 
 

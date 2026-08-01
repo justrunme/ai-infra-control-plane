@@ -1,8 +1,6 @@
 PYTHON ?= python3.12
 
-.PHONY: venv test lint validate docker-build helm-template demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down platform-demo-production platform-demo-production-verify platform-demo-production-down platform-demo-enterprise platform-demo-enterprise-verify platform-demo-enterprise-down
-
-venv:
+.PHONY: venv test lint validate docker-build helm-template e2e-kind e2e-compose demo platform-demo platform-demo-verify platform-demo-down platform-demo-oidc platform-demo-oidc-verify platform-demo-oidc-down platform-demo-production platform-demo-production-verify platform-demo-production-down platform-demo-enterprise platform-demo-enterprise-verify platform-demo-enterprise-downvenv:
 	$(PYTHON) -m venv .venv
 	. .venv/bin/activate && pip install -r requirements-dev.txt
 
@@ -20,6 +18,16 @@ docker-build:
 
 helm-template:
 	helm template ai-control-plane infra/helm/ai-control-plane
+	helm template ai-control-plane infra/helm/ai-control-plane \
+		-f infra/helm/ai-control-plane/values-production.yaml >/dev/null
+	helm template ai-control-plane infra/helm/ai-control-plane \
+		-f infra/helm/ai-control-plane/values-postgres.yaml >/dev/null
+
+e2e-compose:
+	bash demo/e2e/compose-e2e.sh
+
+e2e-kind:
+	bash demo/e2e/kind-e2e.sh
 
 policy-check:
 	helm template ai-control-plane infra/helm/ai-control-plane \

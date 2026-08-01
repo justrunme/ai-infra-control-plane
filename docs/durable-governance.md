@@ -63,4 +63,11 @@ Helm: `persistence.*` in `infra/helm/ai-control-plane/values.yaml`.
 | Prototype | Sample-driven / offline module |
 | Design only | Documented intent |
 
-Durable decisions and approvals are **Production path** (SQLite). Postgres is optional when `psycopg` is installed.
+Durable decisions and approvals are **Production path** (SQLite by default, Postgres supported).
+
+Helm profiles:
+
+- `values-production.yaml` — PVC + JWKS verify fail-closed
+- `values-postgres.yaml` — `DATABASE_URL=postgresql://...`
+
+Kind proof: `bash demo/e2e/kind-e2e.sh` (also runs in CI job `e2e-kind`).

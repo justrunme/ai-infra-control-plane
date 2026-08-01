@@ -283,7 +283,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.2.0`) to publish semver tags. Current release line: **v0.2.0**.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.3.0`) to publish semver tags. Current release line: **v0.3.0**.
 
 ## Kubernetes Deployment
 
@@ -302,4 +302,8 @@ The chart ships production defaults: non-root execution, read-only root filesyst
 
 ## Remaining Backlog
 
-See [`docs/product-roadmap.md`](docs/product-roadmap.md) and [`docs/durable-governance.md`](docs/durable-governance.md). Next focus: kind/k3d e2e job, Postgres profile, and deeper `main.py` router split — not more surface-area modules.
+See [`docs/product-roadmap.md`](docs/product-roadmap.md) and [`docs/durable-governance.md`](docs/durable-governance.md). Next focus: SLO benchmarks and failure-injection matrix — not more surface-area modules.
+
+```sh
+bash demo/e2e/kind-e2e.sh   # Helm on kind: allow/block/approval + PVC restart
+```

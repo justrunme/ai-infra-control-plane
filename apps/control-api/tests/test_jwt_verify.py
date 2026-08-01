@@ -112,3 +112,11 @@ def test_identity_rejects_invalid_jwt_when_verify_enabled(monkeypatch) -> None:
 
     assert identity.source == "default"
     assert identity.team == "platform"
+
+
+def test_verify_fail_closed_without_jwks_url(monkeypatch) -> None:
+    monkeypatch.setenv("OIDC_JWT_VERIFY", "true")
+    monkeypatch.delenv("OIDC_JWKS_URL", raising=False)
+    token = _unsigned_jwt({"sub": "user-1"})
+    with pytest.raises(ValueError, match="OIDC_JWKS_URL"):
+        verify_bearer_token(token)

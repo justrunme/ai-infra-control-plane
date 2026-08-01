@@ -57,9 +57,9 @@ Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-dura
 | Release | Focus | Status |
 | --- | --- | --- |
 | v0.1.0 | Enterprise demo + agentic surface | Done |
-| v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | This release |
-| v0.3.0 | Postgres profile, richer approval UX, deeper router split | Next |
-| v0.4.0 | kind/k3d e2e, failure injection, SLO proof | Planned |
+| v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | Done |
+| v0.3.0 | Router split, Postgres profile, JWKS fail-closed, kind e2e | This release |
+| v0.4.0 | Failure injection matrix, SLO benchmark dashboard | Planned |
 | v1.0 | Stable API schema + supported/reference/experimental boundary | Planned |
 
 ## Related docs
