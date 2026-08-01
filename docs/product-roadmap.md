@@ -63,6 +63,9 @@ flowchart TD
 | v2.3.0 | Runtime verification contract | Done |
 | v2.4.0 | Capability-bound execution digests | Done — current stable |
 
+**Recommended closed-loop pair:** Control Plane **v2.4.x** + Runtime **v2.3.x**
+([compatibility matrix](https://github.com/justrunme/ai-runtime-platform/blob/main/docs/compatibility-matrix.md)).
+
 ## Related docs
 
 - [Durable governance](durable-governance.md)

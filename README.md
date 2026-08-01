@@ -24,7 +24,10 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 | **Reference** | Argo sync status `not_checked` in verify, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
-Current release line: **v2.4.0**. Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
+Current release line: **v2.4.0**.  
+Recommended pair: **Control Plane v2.4.x + Runtime v2.3.x**  
+([Runtime compatibility matrix](https://github.com/justrunme/ai-runtime-platform/blob/main/docs/compatibility-matrix.md)).  
+Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
 
 ### Run in 2 minutes
 
@@ -325,10 +328,13 @@ The chart ships security-hardened single-node defaults. Use `values-production.y
 ## Project status
 
 The v2.4 control-plane contract is feature-complete for the declared
-Supported scope. Further work is maintenance-oriented: compatibility testing,
-security updates, dependency upgrades and external deployment evidence.
+Supported scope. Pair with [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform)
+**v2.3.x** for the closed loop. Further work is maintenance-oriented:
+compatibility testing, security updates, dependency upgrades and external
+deployment evidence.
 
-Deferred product extensions are documented in [`docs/backlog.md`](docs/backlog.md).
+Honest limitations and deferred items: [`docs/maturity-boundary.md`](docs/maturity-boundary.md),
+[`docs/backlog.md`](docs/backlog.md).
 
 ```sh
 bash demo/e2e/kind-e2e.sh   # Helm on kind: allow/block/approval + PVC restart
