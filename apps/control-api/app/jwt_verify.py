@@ -44,7 +44,8 @@ def verify_bearer_token(token: str) -> dict[str, Any]:
 
     jwks_url = get_jwks_url()
     if not jwks_url:
-        return decode_unsigned_payload(token)
+        # Fail closed: verification enabled without JWKS must not accept tokens.
+        raise ValueError("OIDC_JWT_VERIFY enabled but OIDC_JWKS_URL is not set")
 
     client = get_jwks_client(jwks_url)
     signing_key = client.get_signing_key_from_jwt(token)

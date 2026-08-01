@@ -80,6 +80,14 @@ jobs:
             --set metrics.serviceMonitor.enabled=true \
             --set ingress.enabled=true \
             --set networkPolicy.enabled=true
+      - name: Helm template (production profile)
+        run: |
+          helm template ai-control-plane infra/helm/ai-control-plane \
+            -f infra/helm/ai-control-plane/values-production.yaml
+      - name: Helm template (postgres profile)
+        run: |
+          helm template ai-control-plane infra/helm/ai-control-plane \
+            -f infra/helm/ai-control-plane/values-postgres.yaml
 
   policy:
     runs-on: ubuntu-latest
@@ -123,3 +131,57 @@ jobs:
           trivy-config: security/trivy/trivy.yaml
           format: table
           exit-code: "1"
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: ai_control
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d ai_control"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run Postgres decision-store tests
+        env:
+          TEST_DATABASE_URL: postgresql://test:test@127.0.0.1:5432/ai_control
+        run: |
+          cd apps/control-api
+          PYTHONPATH=. pytest tests/test_decision_store_postgres.py -q
+
+  e2e-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run compose e2e golden path
+        run: bash demo/e2e/compose-e2e.sh
+
+  e2e-kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: ai-cp-e2e
+      - name: Run kind e2e golden path
+        env:
+          SKIP_CLUSTER_CREATE: "1"
+          CLUSTER_NAME: ai-cp-e2e
+          KEEP_CLUSTER: "1"
+        run: bash demo/e2e/kind-e2e.sh

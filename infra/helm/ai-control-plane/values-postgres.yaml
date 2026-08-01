@@ -1,0 +1,12 @@
+# Postgres profile for durable governance decisions.
+# Requires a reachable Postgres URL (in-cluster or managed).
+
+persistence:
+  enabled: true
+  # No local SQLite volume required when using Postgres.
+  size: ""
+  existingClaim: ""
+  databaseUrl: postgresql://ai_control:CHANGE_ME@postgres.databases.svc:5432/ai_control
+  approvalTtlSeconds: 7200
+  probeCacheTtlSeconds: 10
+  httpTrustEnv: false

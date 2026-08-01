@@ -1,0 +1,42 @@
+# Production profile: fail-closed OIDC + durable PVC for decisions/approvals.
+# Override oidc.jwksUrl / jwtIssuer / jwtAudience for your IdP before install.
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+
+image:
+  tag: "0.3.0"
+  pullPolicy: IfNotPresent
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClassName: ""
+  databaseUrl: sqlite:////var/lib/ai-control-plane/control-plane.db
+  approvalTtlSeconds: 3600
+  probeCacheTtlSeconds: 10
+  httpTrustEnv: false
+
+oidc:
+  jwtVerify: true
+  jwksUrl: https://keycloak.example.com/realms/ai-platform/protocol/openid-connect/certs
+  jwtAudience: ai-control-plane
+  jwtIssuer: https://keycloak.example.com/realms/ai-platform
+
+audit:
+  jsonlEnabled: true
+  lokiEnabled: true
+  lokiUrl: http://loki.monitoring.svc:3100
+
+networkPolicy:
+  enabled: true
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

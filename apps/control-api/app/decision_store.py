@@ -161,8 +161,10 @@ class DecisionStore:
 
     def _init_schema_postgres(self) -> None:  # pragma: no cover - optional path
         # Same logical schema; TEXT maps cleanly for this workload.
+        statements = [part.strip() for part in _SCHEMA.split(";") if part.strip()]
         with self._conn.cursor() as cur:
-            cur.execute(_SCHEMA)
+            for statement in statements:
+                cur.execute(statement)
         self._conn.commit()
 
     def _execute(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
