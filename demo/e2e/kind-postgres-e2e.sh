@@ -106,13 +106,42 @@ kubectl -n "${NAMESPACE}" rollout status "deploy/${RELEASE}-ai-control-plane" --
 kubectl -n "${NAMESPACE}" wait --for=condition=ready pod \
   -l "app.kubernetes.io/instance=${RELEASE}" --timeout="${TIMEOUT}"
 
-echo "==> port-forward"
-kubectl -n "${NAMESPACE}" port-forward "svc/${RELEASE}-ai-control-plane" 18081:80 >/tmp/ai-cp-pg-pf.log 2>&1 &
-PF_PID=$!
-sleep 4
 BASE="http://127.0.0.1:18081"
+PF_PID=""
 
-curl -fsS "${BASE}/readyz" >/dev/null
+start_port_forward() {
+  if [[ -n "${PF_PID}" ]]; then
+    kill "${PF_PID}" >/dev/null 2>&1 || true
+    wait "${PF_PID}" >/dev/null 2>&1 || true
+    PF_PID=""
+  fi
+  # Drop stale listeners from a previous forward after endpoint churn.
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -tiTCP:18081 -sTCP:LISTEN 2>/dev/null | xargs kill >/dev/null 2>&1 || true
+  fi
+  kubectl -n "${NAMESPACE}" port-forward "svc/${RELEASE}-ai-control-plane" 18081:80 >/tmp/ai-cp-pg-pf.log 2>&1 &
+  PF_PID=$!
+}
+
+wait_http() {
+  local url="$1"
+  local attempts="${2:-30}"
+  local i
+  for ((i = 1; i <= attempts; i++)); do
+    if curl -fsS "${url}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "timed out waiting for ${url}" >&2
+  cat /tmp/ai-cp-pg-pf.log >&2 || true
+  return 1
+}
+
+echo "==> port-forward"
+start_port_forward
+wait_http "${BASE}/readyz"
+
 ALLOW="$(curl -fsS -X POST "${BASE}/governance/evaluate" \
   -H 'content-type: application/json' \
   -d '{"team":"platform","owner":"alice","environment":"development","namespace":"ai-dev","action":"invoke_model","model":"llama3.1:8b","provider":"ollama"}')"
@@ -123,7 +152,12 @@ echo "==> delete one replica and prove shared postgres state"
 POD="$(kubectl -n "${NAMESPACE}" get pod -l "app.kubernetes.io/instance=${RELEASE}" -o jsonpath='{.items[0].metadata.name}')"
 kubectl -n "${NAMESPACE}" delete pod "${POD}" --wait=true
 kubectl -n "${NAMESPACE}" rollout status "deploy/${RELEASE}-ai-control-plane" --timeout="${TIMEOUT}"
-sleep 3
+kubectl -n "${NAMESPACE}" wait --for=condition=ready pod \
+  -l "app.kubernetes.io/instance=${RELEASE}" --timeout="${TIMEOUT}"
+
+# Service endpoints changed; restart forward so curl is not stuck on a dead stream.
+start_port_forward
+wait_http "${BASE}/readyz"
 curl -fsS "${BASE}/governance/decisions/${DECISION_ID}" | grep -q '"final_verdict":"allow"'
 curl -fsS "${BASE}/readyz" >/dev/null
 
