@@ -1,4 +1,8 @@
-"""Policy bundle validation, simulation, activation, and rollback."""
+"""Policy bundle validation, simulation, activation, and rollback.
+
+Active selection is durable (monotonic ``generation`` in the decision store).
+Replicas catch up via ``sync_active_from_store``.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.decision_store import DecisionStore, get_decision_store
+from app.decision_store import DecisionStore, PolicyBundleRecord, get_decision_store
 from app.governance_service import (
     GovernanceEvaluateRequest,
     evaluate_governance_request,
@@ -56,12 +60,34 @@ class BundleImpact:
         }
 
 
-class PolicyLifecycle:
-    """Process-local candidate registry with last-known-good rollback."""
+def _source_to_json(source: PolicySource) -> dict[str, Any]:
+    return {
+        "type": source.type,
+        "path": source.path,
+        "reference": source.reference,
+        "digest": source.digest,
+        "verify_signature": source.verify_signature,
+    }
 
-    def __init__(self) -> None:
+
+def _source_from_json(payload: dict[str, Any]) -> PolicySource:
+    return PolicySource(
+        type=str(payload.get("type") or "filesystem"),
+        path=str(payload.get("path") or ""),
+        reference=str(payload.get("reference") or ""),
+        digest=str(payload.get("digest") or ""),
+        verify_signature=bool(payload.get("verify_signature")),
+    )
+
+
+class PolicyLifecycle:
+    """Durable PolicyBundle lifecycle with per-process hot cache."""
+
+    def __init__(self, store: DecisionStore | None = None) -> None:
         self._lock = threading.RLock()
+        self._store = store
         self._candidates: dict[str, PolicyBundle] = {}
+        self._candidate_sources: dict[str, dict[str, Any]] = {}
         self._previous: PolicyBundle | None = None
         self._impacts: dict[str, BundleImpact] = {}
         self._active_source: PolicySource = policy_source_from_env()
@@ -69,17 +95,41 @@ class PolicyLifecycle:
         self._fallback_active: bool = False
         self._expected_digest: str = ""
         self._observed_digest: str = ""
+        self._observed_generation: int = 0
+        self._active_generation: int = 0
+
+    def _decision_store(self) -> DecisionStore:
+        return self._store or get_decision_store()
 
     def active(self) -> PolicyBundle:
+        self.sync_active_from_store()
         return get_policy_bundle()
 
     def previous(self) -> PolicyBundle | None:
         with self._lock:
-            return self._previous
+            if self._previous is not None:
+                return self._previous
+        store = self._decision_store()
+        record = store.get_previous_policy_bundle()
+        if record is None:
+            return None
+        try:
+            return self._load_from_record(record)
+        except Exception:  # noqa: BLE001
+            return None
 
     def list_candidates(self) -> list[PolicyBundle]:
         with self._lock:
-            return list(self._candidates.values())
+            local = list(self._candidates.values())
+        by_id = {bundle.bundle_id: bundle for bundle in local}
+        for record in self._decision_store().list_policy_bundle_candidates():
+            if record.bundle_id in by_id:
+                continue
+            try:
+                by_id[record.bundle_id] = self._load_from_record(record)
+            except Exception:  # noqa: BLE001
+                continue
+        return list(by_id.values())
 
     def get_candidate(self, bundle_id: str) -> PolicyBundle | None:
         with self._lock:
@@ -90,20 +140,51 @@ class PolicyLifecycle:
                 return active
             if self._previous and self._previous.bundle_id == bundle_id:
                 return self._previous
+        record = self._decision_store().get_policy_bundle_record(bundle_id)
+        if record is None:
             return None
+        try:
+            bundle = self._load_from_record(record)
+        except Exception:  # noqa: BLE001
+            return None
+        if bundle.validation_status == "ok":
+            with self._lock:
+                self._candidates[bundle.bundle_id] = bundle
+                self._candidate_sources[bundle.bundle_id] = dict(record.source_json)
+        return bundle
 
-    def validate_from_path(self, root: Path) -> PolicyBundle:
+    def validate_from_path(
+        self,
+        root: Path,
+        *,
+        source: PolicySource | None = None,
+    ) -> PolicyBundle:
         bundle = PolicyBundle.load(root)
         if bundle.validation_status != "ok":
             return bundle
+        source = source or PolicySource(type="filesystem", path=str(root))
+        source_json = _source_to_json(source)
+        if source.type in {"", "filesystem"} and not source_json.get("path"):
+            source_json["path"] = str(root)
         with self._lock:
             self._candidates[bundle.bundle_id] = bundle
+            self._candidate_sources[bundle.bundle_id] = source_json
+        self._decision_store().upsert_policy_bundle_candidate(
+            bundle_id=bundle.bundle_id,
+            content_digest=bundle.content_digest,
+            git_revision=bundle.git_revision,
+            source_type=str(source_json.get("type") or "filesystem"),
+            source_json=source_json,
+            validation_status=bundle.validation_status,
+            error=bundle.error,
+            loaded_at=bundle.loaded_at,
+        )
         return bundle
 
     def validate_from_source(self, source: PolicySource | None = None) -> PolicyBundle:
         source = source or policy_source_from_env()
         root = materialize_policy_root(source, default_root=get_governance_root())
-        bundle = self.validate_from_path(root)
+        bundle = self.validate_from_path(root, source=source)
         with self._lock:
             self._active_source = source
         return bundle
@@ -120,41 +201,101 @@ class PolicyLifecycle:
                 or get_policy_bundle().content_digest,
                 "source_type": self._active_source.type,
                 "failure_mode": get_policy_failure_mode(),
+                "policy_active_generation": self._active_generation,
+                "policy_observed_generation": self._observed_generation,
             }
 
-    def ensure_bootstrapped(self) -> PolicyBundle:
-        """Load active bundle from configured source.
+    def sync_active_from_store(self, *, force: bool = False) -> PolicyBundle | None:
+        """Reload local active bundle when durable generation advances."""
+        store = self._decision_store()
+        try:
+            active_record = store.get_active_policy_bundle()
+        except Exception:  # noqa: BLE001
+            return None
+        if active_record is None:
+            return None
+        generation = int(active_record.generation or 0)
+        with self._lock:
+            if (
+                not force
+                and generation > 0
+                and generation == self._observed_generation
+                and get_policy_bundle().content_digest == active_record.content_digest
+            ):
+                self._active_generation = generation
+                return get_policy_bundle()
+        try:
+            loaded = self._load_from_record(active_record)
+            if loaded.validation_status != "ok":
+                raise RuntimeError(loaded.error or "active policy bundle invalid")
+            if loaded.content_digest != active_record.content_digest:
+                raise RuntimeError(
+                    "active policy digest mismatch after rematerialize: "
+                    f"{loaded.content_digest} != {active_record.content_digest}"
+                )
+            current = get_policy_bundle()
+            with self._lock:
+                if (
+                    current.validation_status == "ok"
+                    and current.content_digest != loaded.content_digest
+                ):
+                    self._previous = current
+                self._set_active(loaded)
+                self._observed_generation = generation
+                self._active_generation = generation
+                self._observed_digest = loaded.content_digest
+                self._bootstrap_error = None
+                self._fallback_active = False
+                if active_record.source_json:
+                    self._active_source = _source_from_json(active_record.source_json)
+            return loaded
+        except Exception as exc:  # noqa: BLE001
+            with self._lock:
+                self._bootstrap_error = str(exc)
+            return None
 
-        ``POLICY_SOURCE_FAILURE_MODE=fail_closed`` (production): bootstrap errors
-        are recorded and re-raised so readiness stays 503.
-        ``last_known_good`` (demo default): keep a previously valid embedded
-        bundle and mark ``fallback_active``.
-        """
+    def ensure_bootstrapped(self) -> PolicyBundle:
+        """Load active bundle: prefer durable store, else env source seed."""
         with self._lock:
             current = get_policy_bundle()
             source = policy_source_from_env()
             self._active_source = source
             self._expected_digest = source.digest or ""
             try:
+                store = self._decision_store()
+                durable = store.get_active_policy_bundle()
+                if durable is not None:
+                    synced = self.sync_active_from_store(force=True)
+                    if synced is None:
+                        raise RuntimeError(
+                            self._bootstrap_error
+                            or "failed to sync durable active policy bundle"
+                        )
+                    return synced
+
                 root = materialize_policy_root(
                     source, default_root=get_governance_root()
                 )
                 loaded = PolicyBundle.load(root)
                 if loaded.validation_status != "ok":
                     raise RuntimeError(loaded.error or "policy bundle invalid")
-                if (
-                    source.digest
-                    and loaded.content_digest
-                    and not loaded.content_digest.endswith(
-                        source.digest.removeprefix("sha256:")
-                    )
-                    and loaded.content_digest != source.digest
-                ):
-                    # Soft check: when OCI digest pin is a content digest match.
-                    if source.type == "oci" and source.digest.startswith("sha256:"):
-                        # Artifact digest may differ from content digest; keep pin
-                        # on OCI pull path. Content digest is still observed.
-                        pass
+                source_json = _source_to_json(source)
+                if source.type in {"", "filesystem"} and not source_json.get("path"):
+                    source_json["path"] = str(root)
+                store.upsert_policy_bundle_candidate(
+                    bundle_id=loaded.bundle_id,
+                    content_digest=loaded.content_digest,
+                    git_revision=loaded.git_revision,
+                    source_type=str(source_json.get("type") or "filesystem"),
+                    source_json=source_json,
+                    validation_status=loaded.validation_status,
+                    error=loaded.error,
+                    loaded_at=loaded.loaded_at,
+                )
+                activated = store.activate_policy_bundle(
+                    loaded.bundle_id,
+                    content_digest=loaded.content_digest,
+                )
                 if current.validation_status == "ok" and current.content_digest != (
                     loaded.content_digest
                 ):
@@ -164,6 +305,8 @@ class PolicyLifecycle:
                 self._bootstrap_error = None
                 self._fallback_active = False
                 self._observed_digest = active.content_digest
+                self._observed_generation = int(activated.generation or 0)
+                self._active_generation = self._observed_generation
                 return active
             except Exception as exc:
                 self._bootstrap_error = str(exc)
@@ -186,7 +329,7 @@ class PolicyLifecycle:
         if candidate is None or candidate.validation_status != "ok":
             raise KeyError(f"validated policy bundle not found: {bundle_id}")
 
-        decision_store = store or get_decision_store()
+        decision_store = store or self._decision_store()
         records = decision_store.list_recent_decisions(limit=limit)
         impact = BundleImpact(
             bundle_id=candidate.bundle_id,
@@ -232,41 +375,137 @@ class PolicyLifecycle:
                 )
         with self._lock:
             self._impacts[bundle_id] = impact
+        decision_store.save_policy_bundle_impact(
+            bundle_id=impact.bundle_id,
+            content_digest=impact.content_digest,
+            evaluated_decisions=impact.evaluated_decisions,
+            unchanged=impact.unchanged,
+            allow_to_block=impact.allow_to_block,
+            allow_to_approval=impact.allow_to_approval,
+            block_to_allow=impact.block_to_allow,
+            approval_to_allow=impact.approval_to_allow,
+            approval_to_block=impact.approval_to_block,
+            other_changes=impact.other_changes,
+            sample_changes=impact.sample_changes,
+            simulate_limit=limit,
+        )
         return impact
 
     def impact(self, bundle_id: str) -> BundleImpact | None:
         with self._lock:
-            return self._impacts.get(bundle_id)
+            cached = self._impacts.get(bundle_id)
+        if cached is not None:
+            return cached
+        record = self._decision_store().get_policy_bundle_impact(bundle_id)
+        if record is None:
+            return None
+        impact = BundleImpact(
+            bundle_id=record.bundle_id,
+            content_digest=record.content_digest,
+            evaluated_decisions=record.evaluated_decisions,
+            unchanged=record.unchanged,
+            allow_to_block=record.allow_to_block,
+            allow_to_approval=record.allow_to_approval,
+            block_to_allow=record.block_to_allow,
+            approval_to_allow=record.approval_to_allow,
+            approval_to_block=record.approval_to_block,
+            other_changes=record.other_changes,
+            sample_changes=list(record.sample_changes),
+        )
+        with self._lock:
+            self._impacts[bundle_id] = impact
+        return impact
 
     def activate(self, bundle_id: str) -> PolicyBundle:
         with self._lock:
             candidate = self._candidates.get(bundle_id)
-            if candidate is None or candidate.validation_status != "ok":
-                raise KeyError(f"validated policy bundle not found: {bundle_id}")
+            source_json = dict(self._candidate_sources.get(bundle_id) or {})
+        if candidate is None or candidate.validation_status != "ok":
+            candidate = self.get_candidate(bundle_id)
+        if candidate is None or candidate.validation_status != "ok":
+            raise KeyError(f"validated policy bundle not found: {bundle_id}")
+        if not source_json:
+            record = self._decision_store().get_policy_bundle_by_digest(
+                bundle_id=candidate.bundle_id,
+                content_digest=candidate.content_digest,
+            )
+            source_json = dict(record.source_json) if record else {}
+        if not source_json:
+            source_json = {
+                "type": "filesystem",
+                "path": str(get_governance_root()),
+                "reference": "",
+                "digest": "",
+                "verify_signature": False,
+            }
+        store = self._decision_store()
+        store.upsert_policy_bundle_candidate(
+            bundle_id=candidate.bundle_id,
+            content_digest=candidate.content_digest,
+            git_revision=candidate.git_revision,
+            source_type=str(source_json.get("type") or "filesystem"),
+            source_json=source_json,
+            validation_status=candidate.validation_status,
+            error=candidate.error,
+            loaded_at=candidate.loaded_at,
+        )
+        activated = store.activate_policy_bundle(
+            candidate.bundle_id,
+            content_digest=candidate.content_digest,
+        )
+        with self._lock:
             current = get_policy_bundle()
             if current.validation_status == "ok":
                 self._previous = current
-            # Replace process-wide active bundle.
-            from app import policy_bundle as pb
-
-            with pb._lock:
-                pb._bundle = candidate
+            self._set_active(candidate)
+            self._observed_generation = int(activated.generation or 0)
+            self._active_generation = self._observed_generation
+            self._observed_digest = candidate.content_digest
+            self._bootstrap_error = None
+            self._fallback_active = False
             return candidate
 
     def rollback(self) -> PolicyBundle:
+        store = self._decision_store()
         with self._lock:
-            if self._previous is None or self._previous.validation_status != "ok":
-                raise RuntimeError("no last-known-good policy bundle to rollback to")
-            current = get_policy_bundle()
-            previous = self._previous
-            self._previous = (
-                current if current.validation_status == "ok" else self._previous
-            )
-            from app import policy_bundle as pb
+            local_previous = self._previous
 
-            with pb._lock:
-                pb._bundle = previous
-            return previous
+        previous_record = store.get_previous_policy_bundle()
+        if previous_record is not None:
+            activated = store.rollback_policy_bundle()
+            synced = self.sync_active_from_store(force=True)
+            if synced is not None:
+                return synced
+            loaded = self._load_from_record(activated)
+            if loaded.validation_status != "ok":
+                raise RuntimeError(loaded.error or "rollback bundle invalid")
+            with self._lock:
+                current = get_policy_bundle()
+                self._previous = (
+                    current if current.validation_status == "ok" else self._previous
+                )
+                self._set_active(loaded)
+                self._observed_generation = int(activated.generation or 0)
+                self._active_generation = self._observed_generation
+                self._observed_digest = loaded.content_digest
+            return loaded
+
+        # Same-digest re-activate leaves no durable previous; use process cache.
+        if local_previous is None or local_previous.validation_status != "ok":
+            raise RuntimeError("no last-known-good policy bundle to rollback to")
+        return self.activate(local_previous.bundle_id)
+
+    def _load_from_record(self, record: PolicyBundleRecord) -> PolicyBundle:
+        source = _source_from_json(record.source_json or {})
+        root = materialize_policy_root(source, default_root=get_governance_root())
+        return PolicyBundle.load(root)
+
+    @staticmethod
+    def _set_active(bundle: PolicyBundle) -> None:
+        from app import policy_bundle as pb
+
+        with pb._lock:
+            pb._bundle = bundle
 
 
 _lifecycle: PolicyLifecycle | None = None

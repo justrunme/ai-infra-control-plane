@@ -192,8 +192,11 @@ def evaluate_governance_request(
 ) -> GovernanceEvaluateResponse:
     # Import lazily to avoid an import cycle at module load time.
     from app.policy_bundle import get_policy_bundle
+    from app.policy_lifecycle import get_policy_lifecycle
 
     if bundle is None:
+        # Catch up to durable active generation before evaluating.
+        get_policy_lifecycle().sync_active_from_store()
         bundle = get_policy_bundle()
     if bundle.validation_status != "ok" or bundle.pack_module is None:
         raise RuntimeError(

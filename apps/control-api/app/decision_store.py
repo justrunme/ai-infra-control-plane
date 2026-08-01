@@ -187,6 +187,43 @@ class CapabilityContractPage:
         return self.offset + len(self.items) < self.total
 
 
+@dataclass
+class PolicyBundleRecord:
+    record_id: str
+    bundle_id: str
+    content_digest: str
+    git_revision: str
+    status: str
+    generation: int | None
+    source_type: str
+    source_json: dict[str, Any]
+    validation_status: str
+    error: str | None
+    loaded_at: str
+    created_at: str
+    updated_at: str
+    activated_at: str | None
+
+
+@dataclass
+class PolicyBundleImpactRecord:
+    impact_id: str
+    bundle_id: str
+    content_digest: str
+    evaluated_decisions: int
+    unchanged: int
+    allow_to_block: int
+    allow_to_approval: int
+    block_to_allow: int
+    approval_to_allow: int
+    approval_to_block: int
+    other_changes: int
+    sample_changes: list[dict[str, Any]]
+    simulate_limit: int
+    created_at: str
+
+
+
 class DecisionStore:
     """Durable decision / approval store (SQLite or pooled Postgres)."""
 
@@ -1415,6 +1452,467 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
+    def upsert_policy_bundle_candidate(
+        self,
+        *,
+        bundle_id: str,
+        content_digest: str,
+        git_revision: str = "",
+        source_type: str = "filesystem",
+        source_json: dict[str, Any] | None = None,
+        validation_status: str = "ok",
+        error: str | None = None,
+        loaded_at: str | None = None,
+        record_id: str | None = None,
+        conn: Any | None = None,
+    ) -> PolicyBundleRecord:
+        existing = self.get_policy_bundle_by_digest(
+            bundle_id=bundle_id,
+            content_digest=content_digest,
+            conn=conn,
+        )
+        now = _isoformat(_utcnow())
+        loaded_at = loaded_at or now
+        source_payload = json.dumps(source_json or {})
+
+        def _run(session: Any) -> PolicyBundleRecord:
+            if existing is not None:
+                self._execute(
+                    session,
+                    """
+                    UPDATE policy_bundles
+                    SET git_revision = ?, source_type = ?, source_json = ?,
+                        validation_status = ?, error = ?, loaded_at = ?,
+                        updated_at = ?,
+                        status = CASE
+                          WHEN status = 'active' THEN 'active'
+                          WHEN status = 'previous' THEN 'previous'
+                          ELSE 'candidate'
+                        END
+                    WHERE record_id = ?
+                    """,
+                    (
+                        git_revision,
+                        source_type,
+                        source_payload,
+                        validation_status,
+                        error,
+                        loaded_at,
+                        now,
+                        existing.record_id,
+                    ),
+                )
+                row = self._execute(
+                    session,
+                    "SELECT * FROM policy_bundles WHERE record_id = ?",
+                    (existing.record_id,),
+                ).fetchone()
+                assert row is not None
+                return self._policy_bundle_from_row(row)
+
+            rid = record_id or str(uuid.uuid4())
+            self._execute(
+                session,
+                """
+                INSERT INTO policy_bundles (
+                  record_id, bundle_id, content_digest, git_revision, status,
+                  generation, source_type, source_json, validation_status, error,
+                  loaded_at, created_at, updated_at, activated_at
+                ) VALUES (?, ?, ?, ?, 'candidate', NULL, ?, ?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (
+                    rid,
+                    bundle_id,
+                    content_digest,
+                    git_revision,
+                    source_type,
+                    source_payload,
+                    validation_status,
+                    error,
+                    loaded_at,
+                    now,
+                    now,
+                ),
+            )
+            row = self._execute(
+                session,
+                "SELECT * FROM policy_bundles WHERE record_id = ?",
+                (rid,),
+            ).fetchone()
+            assert row is not None
+            return self._policy_bundle_from_row(row)
+
+        try:
+            with observe_db_operation("upsert_policy_bundle_candidate"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_policy_bundle_by_digest(
+        self,
+        *,
+        bundle_id: str,
+        content_digest: str,
+        conn: Any | None = None,
+    ) -> PolicyBundleRecord | None:
+        sql = """
+            SELECT * FROM policy_bundles
+            WHERE bundle_id = ? AND content_digest = ?
+            """
+        params = (bundle_id, content_digest)
+        try:
+            with observe_db_operation("get_policy_bundle_by_digest"):
+                if conn is not None:
+                    row = self._execute(conn, sql, params).fetchone()
+                else:
+                    with self._session() as session:
+                        row = self._execute(session, sql, params).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        if row is None:
+            return None
+        return self._policy_bundle_from_row(row)
+
+    def get_policy_bundle_record(
+        self,
+        bundle_id: str,
+        *,
+        conn: Any | None = None,
+    ) -> PolicyBundleRecord | None:
+        sql = """
+            SELECT * FROM policy_bundles
+            WHERE bundle_id = ?
+            ORDER BY
+              CASE status
+                WHEN 'active' THEN 0
+                WHEN 'candidate' THEN 1
+                WHEN 'previous' THEN 2
+                ELSE 3
+              END,
+              updated_at DESC
+            LIMIT 1
+            """
+
+        def _run(session: Any) -> PolicyBundleRecord | None:
+            row = self._execute(session, sql, (bundle_id,)).fetchone()
+            if row is None:
+                return None
+            return self._policy_bundle_from_row(row)
+
+        try:
+            with observe_db_operation("get_policy_bundle_record"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    return _run(session)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_active_policy_bundle(
+        self, *, conn: Any | None = None
+    ) -> PolicyBundleRecord | None:
+        sql = """
+            SELECT * FROM policy_bundles
+            WHERE status = 'active'
+            ORDER BY generation DESC NULLS LAST, updated_at DESC
+            LIMIT 1
+            """
+        # SQLite lacks NULLS LAST; emulate with CASE.
+        sqlite_sql = """
+            SELECT * FROM policy_bundles
+            WHERE status = 'active'
+            ORDER BY CASE WHEN generation IS NULL THEN 0 ELSE generation END DESC,
+                     updated_at DESC
+            LIMIT 1
+            """
+
+        def _run(session: Any) -> PolicyBundleRecord | None:
+            query = sql if self._backend == "postgres" else sqlite_sql
+            row = self._execute(session, query).fetchone()
+            if row is None:
+                return None
+            return self._policy_bundle_from_row(row)
+
+        try:
+            with observe_db_operation("get_active_policy_bundle"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    return _run(session)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_previous_policy_bundle(
+        self, *, conn: Any | None = None
+    ) -> PolicyBundleRecord | None:
+        sqlite_sql = """
+            SELECT * FROM policy_bundles
+            WHERE status = 'previous'
+            ORDER BY CASE WHEN generation IS NULL THEN 0 ELSE generation END DESC,
+                     updated_at DESC
+            LIMIT 1
+            """
+        postgres_sql = """
+            SELECT * FROM policy_bundles
+            WHERE status = 'previous'
+            ORDER BY generation DESC NULLS LAST, updated_at DESC
+            LIMIT 1
+            """
+
+        def _run(session: Any) -> PolicyBundleRecord | None:
+            query = postgres_sql if self._backend == "postgres" else sqlite_sql
+            row = self._execute(session, query).fetchone()
+            if row is None:
+                return None
+            return self._policy_bundle_from_row(row)
+
+        try:
+            with observe_db_operation("get_previous_policy_bundle"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    return _run(session)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_active_policy_generation(self) -> int:
+        active = self.get_active_policy_bundle()
+        if active is None or active.generation is None:
+            return 0
+        return int(active.generation)
+
+    def list_policy_bundle_candidates(
+        self, *, limit: int = 50
+    ) -> list[PolicyBundleRecord]:
+        limit = max(1, min(limit, 200))
+        try:
+            with observe_db_operation("list_policy_bundle_candidates"):
+                with self._session() as conn:
+                    rows = self._execute(
+                        conn,
+                        """
+                        SELECT * FROM policy_bundles
+                        WHERE status = 'candidate'
+                        ORDER BY updated_at DESC
+                        LIMIT ?
+                        """,
+                        (limit,),
+                    ).fetchall()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return [self._policy_bundle_from_row(row) for row in rows]
+
+    def activate_policy_bundle(
+        self,
+        bundle_id: str,
+        *,
+        content_digest: str | None = None,
+        conn: Any | None = None,
+    ) -> PolicyBundleRecord:
+        now = _isoformat(_utcnow())
+
+        def _run(session: Any) -> PolicyBundleRecord:
+            if content_digest:
+                target = self.get_policy_bundle_by_digest(
+                    bundle_id=bundle_id,
+                    content_digest=content_digest,
+                    conn=session,
+                )
+            else:
+                target = self.get_policy_bundle_record(bundle_id, conn=session)
+            if target is None:
+                raise KeyError(f"policy bundle not found: {bundle_id}")
+            if target.validation_status != "ok":
+                raise ValueError(
+                    f"cannot activate invalid policy bundle: {bundle_id}"
+                )
+
+            max_row = self._execute(
+                session,
+                "SELECT COALESCE(MAX(generation), 0) AS max_gen FROM policy_bundles",
+            ).fetchone()
+            max_gen = int(self._as_mapping(max_row).get("max_gen") or 0)
+            next_gen = max_gen + 1
+
+            self._execute(
+                session,
+                """
+                UPDATE policy_bundles
+                SET status = 'previous', updated_at = ?
+                WHERE status = 'active' AND record_id <> ?
+                """,
+                (now, target.record_id),
+            )
+            self._execute(
+                session,
+                """
+                UPDATE policy_bundles
+                SET status = 'active', generation = ?, updated_at = ?,
+                    activated_at = ?
+                WHERE record_id = ?
+                """,
+                (next_gen, now, now, target.record_id),
+            )
+            row = self._execute(
+                session,
+                "SELECT * FROM policy_bundles WHERE record_id = ?",
+                (target.record_id,),
+            ).fetchone()
+            assert row is not None
+            return self._policy_bundle_from_row(row)
+
+        try:
+            with observe_db_operation("activate_policy_bundle"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except (KeyError, ValueError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def rollback_policy_bundle(
+        self, *, conn: Any | None = None
+    ) -> PolicyBundleRecord:
+        def _run(session: Any) -> PolicyBundleRecord:
+            previous = self.get_previous_policy_bundle(conn=session)
+            if previous is None:
+                raise RuntimeError("no last-known-good policy bundle to rollback to")
+            return self.activate_policy_bundle(
+                previous.bundle_id,
+                content_digest=previous.content_digest,
+                conn=session,
+            )
+
+        try:
+            with observe_db_operation("rollback_policy_bundle"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except RuntimeError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def save_policy_bundle_impact(
+        self,
+        *,
+        bundle_id: str,
+        content_digest: str,
+        evaluated_decisions: int,
+        unchanged: int,
+        allow_to_block: int,
+        allow_to_approval: int,
+        block_to_allow: int,
+        approval_to_allow: int,
+        approval_to_block: int,
+        other_changes: int,
+        sample_changes: list[dict[str, Any]] | None = None,
+        simulate_limit: int = 200,
+        impact_id: str | None = None,
+        conn: Any | None = None,
+    ) -> PolicyBundleImpactRecord:
+        impact_id = impact_id or str(uuid.uuid4())
+        now = _isoformat(_utcnow())
+        params = (
+            impact_id,
+            bundle_id,
+            content_digest,
+            evaluated_decisions,
+            unchanged,
+            allow_to_block,
+            allow_to_approval,
+            block_to_allow,
+            approval_to_allow,
+            approval_to_block,
+            other_changes,
+            json.dumps(sample_changes or []),
+            simulate_limit,
+            now,
+        )
+        sql = """
+            INSERT INTO policy_bundle_impacts (
+              impact_id, bundle_id, content_digest, evaluated_decisions,
+              unchanged, allow_to_block, allow_to_approval, block_to_allow,
+              approval_to_allow, approval_to_block, other_changes,
+              sample_changes_json, simulate_limit, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+
+        def _run(session: Any) -> PolicyBundleImpactRecord:
+            self._execute(session, sql, params)
+            row = self._execute(
+                session,
+                "SELECT * FROM policy_bundle_impacts WHERE impact_id = ?",
+                (impact_id,),
+            ).fetchone()
+            assert row is not None
+            return self._policy_impact_from_row(row)
+
+        try:
+            with observe_db_operation("save_policy_bundle_impact"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_policy_bundle_impact(
+        self, bundle_id: str
+    ) -> PolicyBundleImpactRecord | None:
+        try:
+            with observe_db_operation("get_policy_bundle_impact"):
+                with self._session() as conn:
+                    row = self._execute(
+                        conn,
+                        """
+                        SELECT * FROM policy_bundle_impacts
+                        WHERE bundle_id = ?
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                        """,
+                        (bundle_id,),
+                    ).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        if row is None:
+            return None
+        return self._policy_impact_from_row(row)
+
     def append_audit_meta(
         self,
         *,
@@ -1598,6 +2096,57 @@ class DecisionStore:
             created_at=mapping.get("created_at") or "",
             updated_at=mapping.get("updated_at") or "",
             activated_at=mapping.get("activated_at"),
+        )
+
+    @classmethod
+    def _policy_bundle_from_row(cls, row: Any) -> PolicyBundleRecord:
+        mapping = cls._as_mapping(row)
+        generation = mapping.get("generation")
+        source_raw = mapping.get("source_json") or "{}"
+        if isinstance(source_raw, dict):
+            source_json = source_raw
+        else:
+            source_json = json.loads(source_raw)
+        return PolicyBundleRecord(
+            record_id=mapping["record_id"],
+            bundle_id=mapping.get("bundle_id") or "",
+            content_digest=mapping.get("content_digest") or "",
+            git_revision=mapping.get("git_revision") or "",
+            status=mapping.get("status") or "",
+            generation=int(generation) if generation is not None else None,
+            source_type=mapping.get("source_type") or "",
+            source_json=source_json,
+            validation_status=mapping.get("validation_status") or "",
+            error=mapping.get("error"),
+            loaded_at=mapping.get("loaded_at") or "",
+            created_at=mapping.get("created_at") or "",
+            updated_at=mapping.get("updated_at") or "",
+            activated_at=mapping.get("activated_at"),
+        )
+
+    @classmethod
+    def _policy_impact_from_row(cls, row: Any) -> PolicyBundleImpactRecord:
+        mapping = cls._as_mapping(row)
+        samples_raw = mapping.get("sample_changes_json") or "[]"
+        if isinstance(samples_raw, list):
+            samples = samples_raw
+        else:
+            samples = json.loads(samples_raw)
+        return PolicyBundleImpactRecord(
+            impact_id=mapping["impact_id"],
+            bundle_id=mapping.get("bundle_id") or "",
+            content_digest=mapping.get("content_digest") or "",
+            evaluated_decisions=int(mapping.get("evaluated_decisions") or 0),
+            unchanged=int(mapping.get("unchanged") or 0),
+            allow_to_block=int(mapping.get("allow_to_block") or 0),
+            allow_to_approval=int(mapping.get("allow_to_approval") or 0),
+            block_to_allow=int(mapping.get("block_to_allow") or 0),
+            approval_to_allow=int(mapping.get("approval_to_allow") or 0),
+            approval_to_block=int(mapping.get("approval_to_block") or 0),
+            other_changes=int(mapping.get("other_changes") or 0),
+            sample_changes=samples,
+            simulate_limit=int(mapping.get("simulate_limit") or 0),
+            created_at=mapping.get("created_at") or "",
         )
 
 
