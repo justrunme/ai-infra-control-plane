@@ -664,6 +664,44 @@
         "title": "CostStatus",
         "type": "object"
       },
+      "CreateRemediationRequest": {
+        "properties": {
+          "action_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Index"
+          },
+          "action_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Kind"
+          },
+          "environment": {
+            "default": "production",
+            "title": "Environment",
+            "type": "string"
+          },
+          "tenant_id": {
+            "default": "",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "title": "CreateRemediationRequest",
+        "type": "object"
+      },
       "DriftActionsResponse": {
         "properties": {
           "actions": {
@@ -2100,6 +2138,17 @@
         "title": "IntentResolveResponse",
         "type": "object"
       },
+      "MarkAppliedRequest": {
+        "properties": {
+          "pr_url": {
+            "default": "",
+            "title": "Pr Url",
+            "type": "string"
+          }
+        },
+        "title": "MarkAppliedRequest",
+        "type": "object"
+      },
       "ModelRegistryEntry": {
         "properties": {
           "allowed_namespaces": {
@@ -2585,6 +2634,17 @@
         "title": "PolicySourceRequest",
         "type": "object"
       },
+      "PreparePrRequest": {
+        "properties": {
+          "pr_url": {
+            "default": "",
+            "title": "Pr Url",
+            "type": "string"
+          }
+        },
+        "title": "PreparePrRequest",
+        "type": "object"
+      },
       "ReadyStatus": {
         "properties": {
           "checked_at": {
@@ -2671,6 +2731,250 @@
         "title": "RecentGovernanceBlock",
         "type": "object"
       },
+      "RemediationListResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "has_more": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has More"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RemediationPageMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/RemediationProposalResponse"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "proposals",
+          "count"
+        ],
+        "title": "RemediationListResponse",
+        "type": "object"
+      },
+      "RemediationPageMeta": {
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "offset",
+          "returned",
+          "total",
+          "has_more"
+        ],
+        "title": "RemediationPageMeta",
+        "type": "object"
+      },
+      "RemediationProposalResponse": {
+        "properties": {
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "approval_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "drift_snapshot": {
+            "additionalProperties": true,
+            "title": "Drift Snapshot",
+            "type": "object"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "policy_verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Verdict"
+          },
+          "pr_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Body"
+          },
+          "pr_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Title"
+          },
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "remediation_kind": {
+            "title": "Remediation Kind",
+            "type": "string"
+          },
+          "selected_action": {
+            "additionalProperties": true,
+            "title": "Selected Action",
+            "type": "object"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "terminal": {
+            "default": false,
+            "title": "Terminal",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verification_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Snapshot"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "tenant_id",
+          "status",
+          "source",
+          "remediation_kind",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RemediationProposalResponse",
+        "type": "object"
+      },
       "ResolveApprovalRequest": {
         "properties": {
           "comment": {
@@ -2685,6 +2989,22 @@
           }
         },
         "title": "ResolveApprovalRequest",
+        "type": "object"
+      },
+      "ResolveRemediationRequest": {
+        "properties": {
+          "comment": {
+            "default": "",
+            "title": "Comment",
+            "type": "string"
+          },
+          "reviewer": {
+            "default": "",
+            "title": "Reviewer",
+            "type": "string"
+          }
+        },
+        "title": "ResolveRemediationRequest",
         "type": "object"
       },
       "ResponseEvaluateRequest": {
@@ -3443,7 +3763,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -5202,6 +5522,496 @@
         "summary": "Registry Tool",
         "tags": [
           "registry"
+        ]
+      }
+    },
+    "/remediation/proposals": {
+      "get": {
+        "operationId": "list_proposals_remediation_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Proposals",
+        "tags": [
+          "remediation"
+        ]
+      },
+      "post": {
+        "operationId": "create_proposal_remediation_proposals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateRemediationRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Proposal",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_proposal_remediation_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Proposal",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/approve": {
+      "post": {
+        "operationId": "approve_proposal_remediation_proposals__proposal_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ResolveRemediationRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Proposal",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/evaluate-policy": {
+      "post": {
+        "operationId": "evaluate_proposal_policy_remediation_proposals__proposal_id__evaluate_policy_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "environment",
+            "required": false,
+            "schema": {
+              "default": "production",
+              "title": "Environment",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Proposal Policy",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/mark-applied": {
+      "post": {
+        "operationId": "mark_proposal_applied_remediation_proposals__proposal_id__mark_applied_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MarkAppliedRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Proposal Applied",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/prepare-pr": {
+      "post": {
+        "operationId": "prepare_proposal_pr_remediation_proposals__proposal_id__prepare_pr_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PreparePrRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Proposal Pr",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_proposal_remediation_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ResolveRemediationRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Proposal",
+        "tags": [
+          "remediation"
+        ]
+      }
+    },
+    "/remediation/proposals/{proposal_id}/verify": {
+      "post": {
+        "operationId": "verify_proposal_remediation_proposals__proposal_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemediationProposalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Proposal",
+        "tags": [
+          "remediation"
         ]
       }
     },

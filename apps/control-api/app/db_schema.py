@@ -45,6 +45,27 @@ CREATE TABLE IF NOT EXISTS audit_meta (
   created_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS remediation_proposals (
+  proposal_id TEXT PRIMARY KEY,
+  tenant_id TEXT,
+  status TEXT,
+  source TEXT,
+  remediation_kind TEXT,
+  drift_snapshot_json TEXT,
+  selected_action_json TEXT,
+  decision_id TEXT,
+  approval_id TEXT,
+  policy_verdict TEXT,
+  pr_title TEXT,
+  pr_body TEXT,
+  pr_url TEXT,
+  applied_at TEXT,
+  verification_snapshot_json TEXT,
+  failure_reason TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version TEXT PRIMARY KEY,
   applied_at TEXT
@@ -64,6 +85,10 @@ CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id
   ON audit_meta (decision_id);
 CREATE INDEX IF NOT EXISTS idx_audit_meta_created_at
   ON audit_meta (created_at);
+CREATE INDEX IF NOT EXISTS idx_remediation_proposals_status_created
+  ON remediation_proposals (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_remediation_proposals_tenant_created
+  ON remediation_proposals (tenant_id, created_at);
 """
 
 
@@ -153,6 +178,65 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
             "WHERE tenant_id IS NULL OR tenant_id = ''",
             "CREATE INDEX IF NOT EXISTS idx_decisions_tenant_created "
             "ON decisions (tenant_id, created_at)",
+        ),
+    ),
+    _migration(
+        "007_remediation_proposals",
+        postgres=(
+            """
+            CREATE TABLE IF NOT EXISTS remediation_proposals (
+              proposal_id TEXT PRIMARY KEY,
+              tenant_id TEXT,
+              status TEXT,
+              source TEXT,
+              remediation_kind TEXT,
+              drift_snapshot_json TEXT,
+              selected_action_json TEXT,
+              decision_id TEXT,
+              approval_id TEXT,
+              policy_verdict TEXT,
+              pr_title TEXT,
+              pr_body TEXT,
+              pr_url TEXT,
+              applied_at TEXT,
+              verification_snapshot_json TEXT,
+              failure_reason TEXT,
+              created_at TEXT,
+              updated_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_remediation_proposals_status_created "
+            "ON remediation_proposals (status, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_remediation_proposals_tenant_created "
+            "ON remediation_proposals (tenant_id, created_at)",
+        ),
+        sqlite=(
+            """
+            CREATE TABLE IF NOT EXISTS remediation_proposals (
+              proposal_id TEXT PRIMARY KEY,
+              tenant_id TEXT,
+              status TEXT,
+              source TEXT,
+              remediation_kind TEXT,
+              drift_snapshot_json TEXT,
+              selected_action_json TEXT,
+              decision_id TEXT,
+              approval_id TEXT,
+              policy_verdict TEXT,
+              pr_title TEXT,
+              pr_body TEXT,
+              pr_url TEXT,
+              applied_at TEXT,
+              verification_snapshot_json TEXT,
+              failure_reason TEXT,
+              created_at TEXT,
+              updated_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_remediation_proposals_status_created "
+            "ON remediation_proposals (status, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_remediation_proposals_tenant_created "
+            "ON remediation_proposals (tenant_id, created_at)",
         ),
     ),
 )
