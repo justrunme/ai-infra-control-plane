@@ -66,6 +66,21 @@ CREATE TABLE IF NOT EXISTS remediation_proposals (
   updated_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS capability_contracts (
+  contract_id TEXT PRIMARY KEY,
+  kind TEXT,
+  name TEXT,
+  tenant_id TEXT,
+  status TEXT,
+  version TEXT,
+  content_digest TEXT,
+  capabilities_json TEXT,
+  source TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  activated_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version TEXT PRIMARY KEY,
   applied_at TEXT
@@ -89,6 +104,12 @@ CREATE INDEX IF NOT EXISTS idx_remediation_proposals_status_created
   ON remediation_proposals (status, created_at);
 CREATE INDEX IF NOT EXISTS idx_remediation_proposals_tenant_created
   ON remediation_proposals (tenant_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_capability_contracts_kind_name_status
+  ON capability_contracts (kind, name, status);
+CREATE INDEX IF NOT EXISTS idx_capability_contracts_tenant_created
+  ON capability_contracts (tenant_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_capability_contracts_digest
+  ON capability_contracts (kind, name, tenant_id, content_digest);
 """
 
 
@@ -237,6 +258,57 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
             "ON remediation_proposals (status, created_at)",
             "CREATE INDEX IF NOT EXISTS idx_remediation_proposals_tenant_created "
             "ON remediation_proposals (tenant_id, created_at)",
+        ),
+    ),
+    _migration(
+        "008_capability_contracts",
+        postgres=(
+            """
+            CREATE TABLE IF NOT EXISTS capability_contracts (
+              contract_id TEXT PRIMARY KEY,
+              kind TEXT,
+              name TEXT,
+              tenant_id TEXT,
+              status TEXT,
+              version TEXT,
+              content_digest TEXT,
+              capabilities_json TEXT,
+              source TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              activated_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_capability_contracts_kind_name_status "
+            "ON capability_contracts (kind, name, status)",
+            "CREATE INDEX IF NOT EXISTS idx_capability_contracts_tenant_created "
+            "ON capability_contracts (tenant_id, created_at)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_capability_contracts_digest "
+            "ON capability_contracts (kind, name, tenant_id, content_digest)",
+        ),
+        sqlite=(
+            """
+            CREATE TABLE IF NOT EXISTS capability_contracts (
+              contract_id TEXT PRIMARY KEY,
+              kind TEXT,
+              name TEXT,
+              tenant_id TEXT,
+              status TEXT,
+              version TEXT,
+              content_digest TEXT,
+              capabilities_json TEXT,
+              source TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              activated_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_capability_contracts_kind_name_status "
+            "ON capability_contracts (kind, name, status)",
+            "CREATE INDEX IF NOT EXISTS idx_capability_contracts_tenant_created "
+            "ON capability_contracts (tenant_id, created_at)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_capability_contracts_digest "
+            "ON capability_contracts (kind, name, tenant_id, content_digest)",
         ),
     ),
 )

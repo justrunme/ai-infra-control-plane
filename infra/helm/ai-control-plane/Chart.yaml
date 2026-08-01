@@ -2,7 +2,7 @@ apiVersion: v2
 name: ai-control-plane
 description: Helm chart for the AI Infrastructure Control Plane API.
 type: application
-version: 1.7.0
-appVersion: "1.7.0"
+version: 1.8.0
+appVersion: "1.8.0"
 icon: https://raw.githubusercontent.com/justrunme/ai-infra-control-plane/main/docs/images/operator-dashboard.png
 
