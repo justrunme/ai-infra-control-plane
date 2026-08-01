@@ -147,7 +147,10 @@ def test_github_provider_updates_existing_note() -> None:
         if path.endswith("/pulls"):
             return httpx.Response(
                 201,
-                json={"html_url": "https://github.com/acme/platform/pull/7", "draft": True},
+                json={
+                    "html_url": "https://github.com/acme/platform/pull/7",
+                    "draft": True,
+                },
             )
         return httpx.Response(500, text=path)
 
