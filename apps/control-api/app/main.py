@@ -56,6 +56,8 @@ async def lifespan(_app: FastAPI):
 
         get_policy_lifecycle().ensure_bootstrapped()
     except Exception:  # noqa: BLE001
+        # Error is recorded on PolicyLifecycle; fail_closed makes /readyz 503.
+        # Do not crash the process so operators can inspect readiness details.
         pass
     yield
     http_client.close_http_client()
@@ -66,7 +68,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="2.0.0",
+    version="2.0.1",
     description="Control API for private AI inference infrastructure.",
     lifespan=lifespan,
 )

@@ -15,9 +15,23 @@ policySource:
   reference: ghcr.io/justrunme/ai-policies:production
   digest: sha256:...
   verifySignature: true
+  failureMode: fail_closed
+  initContainer:
+    enabled: true
 ```
 
-Failed OCI loads keep the **last-known-good** in-memory bundle.
+With `initContainer.enabled`, Helm pulls/verifies the OCI artifact before the API
+starts and mounts it read-only; the API uses `POLICY_SOURCE_TYPE=filesystem`.
+
+`POLICY_SOURCE_FAILURE_MODE`:
+
+| Mode | Behavior |
+| --- | --- |
+| `fail_closed` (production) | Bootstrap error → `/readyz` 503 |
+| `last_known_good` (demo default) | Keep previous valid bundle; mark fallback |
+
+Policy lifecycle candidates/active remain **process-local** (Reference for HA)
+until durable generations land in v2.1.
 
 ## Lifecycle API
 

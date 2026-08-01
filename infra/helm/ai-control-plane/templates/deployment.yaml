@@ -23,6 +23,42 @@ spec:
       serviceAccountName: {{ include "ai-control-plane.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- $ociInit := and (eq (.Values.policySource.type | default "filesystem") "oci") (.Values.policySource.initContainer.enabled | default false) }}
+      {{- if $ociInit }}
+      initContainers:
+        - name: materialize-policy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              REF={{ .Values.policySource.reference | quote }}
+              DIGEST={{ .Values.policySource.digest | quote }}
+              OUT={{ .Values.policySource.initContainer.mountPath | default "/policy" | quote }}
+              mkdir -p "$OUT"
+              PULL_REF="$REF"
+              if [ -n "$DIGEST" ] && ! echo "$REF" | grep -q '@'; then
+                REPO="${REF%%:*}"
+                PULL_REF="${REPO}@${DIGEST}"
+              fi
+              {{- if .Values.policySource.verifySignature }}
+              cosign verify "$PULL_REF"
+              {{- end }}
+              oras pull "$PULL_REF" -o "$OUT"
+              if [ -d "$OUT/governance" ]; then
+                echo "materialized governance tree under $OUT/governance"
+              elif [ -d "$OUT/policy-packs" ]; then
+                echo "materialized policy packs under $OUT"
+              else
+                echo "OCI artifact missing governance/ or policy-packs/" >&2
+                exit 1
+              fi
+          volumeMounts:
+            - name: policy-oci
+              mountPath: {{ .Values.policySource.initContainer.mountPath | default "/policy" | quote }}
+      {{- end }}
       containers:
         - name: control-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -121,6 +157,12 @@ spec:
               value: {{ .Values.persistence.probeCacheTtlSeconds | quote }}
             - name: HTTP_TRUST_ENV
               value: {{ .Values.persistence.httpTrustEnv | quote }}
+            {{- if $ociInit }}
+            - name: POLICY_SOURCE_TYPE
+              value: "filesystem"
+            - name: POLICY_SOURCE_PATH
+              value: {{ printf "%s/governance" (.Values.policySource.initContainer.mountPath | default "/policy") | quote }}
+            {{- else }}
             - name: POLICY_SOURCE_TYPE
               value: {{ .Values.policySource.type | default "filesystem" | quote }}
             {{- if .Values.policySource.path }}
@@ -137,6 +179,9 @@ spec:
             {{- end }}
             - name: POLICY_SOURCE_VERIFY_SIGNATURE
               value: {{ .Values.policySource.verifySignature | default false | quote }}
+            {{- end }}
+            - name: POLICY_SOURCE_FAILURE_MODE
+              value: {{ .Values.policySource.failureMode | default "last_known_good" | quote }}
             {{- end }}
           {{- if .Values.secrets.externalSecrets.enabled }}
           envFrom:
@@ -159,7 +204,7 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 15
-          {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled }}
+          {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled $ociInit }}
           volumeMounts:
             {{- if .Values.modelInventory.enabled }}
             - name: model-inventory
@@ -190,10 +235,15 @@ spec:
             - name: decision-store
               mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
+            {{- if $ociInit }}
+            - name: policy-oci
+              mountPath: {{ .Values.policySource.initContainer.mountPath | default "/policy" | quote }}
+              readOnly: true
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled }}
+      {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled $ociInit }}
       volumes:
         {{- if .Values.modelInventory.enabled }}
         - name: model-inventory
@@ -225,5 +275,9 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- end }}
+        {{- if $ociInit }}
+        - name: policy-oci
+          emptyDir: {}
         {{- end }}
       {{- end }}

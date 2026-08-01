@@ -14,9 +14,17 @@
 
 [![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
 
-**What works today (production path):** versioned policy evaluation, durable decisions/approvals (SQLite), runtime enforcement via gateway, Redis/Prometheus live inputs, Helm packaging, signed images.
+```text
+Detect → Decide → Approve → GitOps Proposal → Verify
+```
 
-**Honest boundary:** forecasting, FinOps heuristics, multi-cluster federation, and some agentic modules remain prototype/reference. See [maturity map](docs/product-roadmap.md).
+| Tier | What you get |
+| --- | --- |
+| **Supported** | `/governance/evaluate`, durable decisions/approvals (Postgres HA / SQLite single-node), tenant isolation + JWT-only tenant, RBAC roles, quota `onUnavailable`, signed OCI Helm/images, capability contracts registry |
+| **Reference** | PolicyBundle lifecycle (process-local until durable HA), remediation PR drafts + probe verify, CRD desired-state samples, live Redis/Prometheus inputs, demos |
+| **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
+
+Current release line: **v2.0.1**. Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
 
 ### Run in 2 minutes
 
@@ -36,7 +44,7 @@ request → versioned PolicyBundle evaluate → decision_id
        → human approve/reject → retry with x-ai-approval-id → allow
 ```
 
-Docs: [durable governance](docs/durable-governance.md) · [roadmap](docs/product-roadmap.md) · [architecture](docs/platform-architecture.md) · [demo](demo/platform/README.md)
+Docs: [durable governance](docs/durable-governance.md) · [remediation](docs/remediation-proposals.md) · [RBAC](docs/rbac.md) · [capability contracts](docs/capability-contracts.md) · [roadmap](docs/product-roadmap.md) · [architecture](docs/platform-architecture.md) · [demo](demo/platform/README.md)
 
 ## Operator Dashboard
 
@@ -285,7 +293,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v2.0.0**.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v2.0.1**.
 
 ## Kubernetes Deployment
 
@@ -294,9 +302,9 @@ From the published OCI chart (preferred):
 ```sh
 helm upgrade --install ai-control-plane \
   oci://ghcr.io/justrunme/charts/ai-control-plane \
-  --version 2.0.0 \
+  --version 2.0.1 \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=2.0.0
+  --set image.tag=2.0.1
 ```
 
 Or from a git checkout:
@@ -304,7 +312,7 @@ Or from a git checkout:
 ```sh
 helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=2.0.0
+  --set image.tag=2.0.1
 ```
 
 The chart ships production defaults: non-root execution, read-only root filesystem, model inventory ConfigMap, HPA, PodDisruptionBudget, and optional ServiceMonitor, Ingress, and NetworkPolicy. See `infra/helm/ai-control-plane/README.md`.

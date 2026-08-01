@@ -20,6 +20,7 @@ from app.policy_bundle import (
 )
 from app.policy_source import (
     PolicySource,
+    get_policy_failure_mode,
     materialize_policy_root,
     policy_source_from_env,
 )
@@ -64,6 +65,10 @@ class PolicyLifecycle:
         self._previous: PolicyBundle | None = None
         self._impacts: dict[str, BundleImpact] = {}
         self._active_source: PolicySource = policy_source_from_env()
+        self._bootstrap_error: str | None = None
+        self._fallback_active: bool = False
+        self._expected_digest: str = ""
+        self._observed_digest: str = ""
 
     def active(self) -> PolicyBundle:
         return get_policy_bundle()
@@ -103,30 +108,71 @@ class PolicyLifecycle:
             self._active_source = source
         return bundle
 
+    def bootstrap_status(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "ok": self._bootstrap_error is None
+                and get_policy_bundle().validation_status == "ok",
+                "error": self._bootstrap_error,
+                "fallback_active": self._fallback_active,
+                "expected_digest": self._expected_digest,
+                "observed_digest": self._observed_digest
+                or get_policy_bundle().content_digest,
+                "source_type": self._active_source.type,
+                "failure_mode": get_policy_failure_mode(),
+            }
+
     def ensure_bootstrapped(self) -> PolicyBundle:
-        """Load active bundle from configured source; keep last-known-good on failure."""
+        """Load active bundle from configured source.
+
+        ``POLICY_SOURCE_FAILURE_MODE=fail_closed`` (production): bootstrap errors
+        are recorded and re-raised so readiness stays 503.
+        ``last_known_good`` (demo default): keep a previously valid embedded
+        bundle and mark ``fallback_active``.
+        """
         with self._lock:
             current = get_policy_bundle()
+            source = policy_source_from_env()
+            self._active_source = source
+            self._expected_digest = source.digest or ""
             try:
-                source = policy_source_from_env()
                 root = materialize_policy_root(
                     source, default_root=get_governance_root()
                 )
                 loaded = PolicyBundle.load(root)
                 if loaded.validation_status != "ok":
-                    if current.validation_status == "ok":
-                        return current
                     raise RuntimeError(loaded.error or "policy bundle invalid")
+                if (
+                    source.digest
+                    and loaded.content_digest
+                    and not loaded.content_digest.endswith(
+                        source.digest.removeprefix("sha256:")
+                    )
+                    and loaded.content_digest != source.digest
+                ):
+                    # Soft check: when OCI digest pin is a content digest match.
+                    if source.type == "oci" and source.digest.startswith("sha256:"):
+                        # Artifact digest may differ from content digest; keep pin
+                        # on OCI pull path. Content digest is still observed.
+                        pass
                 if current.validation_status == "ok" and current.content_digest != (
                     loaded.content_digest
                 ):
                     self._previous = current
                 reload_policy_bundle(root=root)
-                self._active_source = source
-                return get_policy_bundle()
-            except Exception:
-                if current.validation_status == "ok":
+                active = get_policy_bundle()
+                self._bootstrap_error = None
+                self._fallback_active = False
+                self._observed_digest = active.content_digest
+                return active
+            except Exception as exc:
+                self._bootstrap_error = str(exc)
+                mode = get_policy_failure_mode()
+                if mode == "last_known_good" and current.validation_status == "ok":
+                    self._fallback_active = True
+                    self._observed_digest = current.content_digest
                     return current
+                self._fallback_active = False
                 raise
 
     def simulate(

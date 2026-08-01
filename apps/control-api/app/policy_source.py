@@ -31,6 +31,14 @@ def policy_source_from_env() -> PolicySource:
     )
 
 
+def get_policy_failure_mode() -> str:
+    """Return ``fail_closed`` or ``last_known_good`` (default last_known_good)."""
+    raw = os.getenv("POLICY_SOURCE_FAILURE_MODE", "last_known_good").strip().lower()
+    if raw in {"fail_closed", "fail-closed", "closed"}:
+        return "fail_closed"
+    return "last_known_good"
+
+
 def materialize_policy_root(
     source: PolicySource,
     *,

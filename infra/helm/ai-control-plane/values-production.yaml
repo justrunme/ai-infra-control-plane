@@ -8,7 +8,7 @@ autoscaling:
   maxReplicas: 6
 
 image:
-  tag: "2.0.0"
+  tag: "2.0.1"
   pullPolicy: IfNotPresent
 
 persistence:
@@ -29,6 +29,11 @@ persistence:
 
 quota:
   onUnavailable: approval_required
+
+policySource:
+  failureMode: fail_closed
+  initContainer:
+    enabled: true
 
 oidc:
   jwtVerify: true
