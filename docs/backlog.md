@@ -1,30 +1,41 @@
 # Backlog
 
-Use this backlog to create small, reviewable pull requests.
+Use this backlog for small, reviewable maintenance and deferred-product PRs.
 
-## Completed
+## Current stable
 
-- Ollama/vLLM probes, Prometheus metrics, Grafana dashboards
-- Config-driven inventory, operator dashboard, drift detection
-- Helm hardening, GHCR cosign/SBOM, Terraform k3s bootstrap
-- Governance pipeline, registries, live Redis/Prometheus inputs
-- Platform demo tiers (laptop / production / enterprise)
-- **v0.2:** PolicyBundle digests, durable SQLite decisions/approvals, approval API, probe cache, shared httpx client (`HTTP_TRUST_ENV=false`)
-- **v0.3:** Control API router split, Postgres backend + CI, production JWKS fail-closed profile, kind Helm e2e
-- **v0.4:** Governance latency histogram + SLO, Grafana SLO dashboard, concurrent benchmark, failure-injection matrix, SQLite WAL/concurrency, fail-closed 503
-- **v0.5:** Request-bound one-time approvals (cost/token digest + OIDC approver auth), production PostgreSQL via Secret, single-node SQLite profile, Helm multi-replica SQLite guard, `/livez` + `/readyz`
-- **v1.0:** Postgres connection pool + schema migrations + DB metrics, multi-replica Postgres kind e2e, frozen OpenAPI + compatibility CI, unified error envelope, approval pagination, maturity boundary + upgrade guide
-- **v1.1–v1.2:** Transactional UoW, indexes, pagination metadata, oasdiff, OCI Helm
-- **v1.3:** Retention purge API, decision FKs, cosign-signed OCI Helm chart
-- **v1.4:** Tenant isolation, PrometheusRule SLO alerts, drift suggested actions, ADRs/threat model
+**v2.4.0** is the current Supported control-plane contract:
 
-## Next (post-1.4)
+- Durable decisions/approvals (Postgres HA / SQLite single-node)
+- Durable PolicyBundle generations + OCI load/signature verify
+- Optional GitHub draft-PR GitOps provider
+- Runtime verification contract (`runtime-verification/2.3`)
+- Capability-bound approval digests
+- RBAC, JWT-only tenant, quota `onUnavailable`, signed OCI Helm/images
+
+See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity-boundary.md).
+
+## Completed (selected)
+
+- **v0.2–v0.5:** PolicyBundle digests, durable store, Postgres, SLO/failure-injection, request-bound approvals
+- **v1.0–v1.4:** Migrations/pool, OpenAPI freeze, OCI Helm, retention, tenant isolation, ADRs
+- **v1.5–v1.8:** OCI PolicyBundle lifecycle APIs, RemediationProposal closed-loop, RBAC/JWT-only/quota policy, capability contracts
+- **v2.0–v2.0.1:** CRD/API stabilize + security/correctness patch
+- **v2.1:** Durable HA PolicyBundle generations
+- **v2.2:** GitOpsProvider + GitHub draft PR adapter
+- **v2.3:** Runtime verification contract
+- **v2.4:** Capability-bound execution digests
+
+## Deferred (not in Supported scope)
 
 1. Optional ITSM webhook adapter behind a single `ApprovalNotifier` interface
 2. External install walkthrough / recorded failure demo
 3. Thin Operator Console (approval inbox) — only after external install proof
 4. Multi-region control-plane federation
+5. In-tree CRD controllers (CRDs remain desired-state schemas)
+6. Argo Application sync status inside runtime verify (`gitops_sync: not_checked` today)
 
-## Explicitly deferred
+## Explicitly out of scope
 
-OpenWebUI health, new cloud Terraform modules, ITSM connectors, new forecasting models, Kubernetes operator/CRDs.
+OpenWebUI health, new cloud Terraform modules, ITSM connectors as a product surface,
+new forecasting models, GPU scheduler/big UI/FinOps clone.

@@ -20,8 +20,8 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 
 | Tier | What you get |
 | --- | --- |
-| **Supported** | `/governance/evaluate`, durable decisions/approvals (Postgres HA / SQLite single-node), tenant isolation + JWT-only tenant, RBAC roles, quota `onUnavailable`, signed OCI Helm/images, capability contracts registry |
-| **Reference** | PolicyBundle lifecycle (process-local until durable HA), remediation PR drafts + probe verify, CRD desired-state samples, live Redis/Prometheus inputs, demos |
+| **Supported** | `/governance/evaluate`, durable decisions/approvals (Postgres HA / SQLite single-node), tenant isolation + JWT-only tenant, RBAC roles, quota `onUnavailable`, signed OCI Helm/images, capability contracts registry, durable PolicyBundle generations + OCI load/signature verify, optional GitHub draft-PR provider, runtime verification contract, capability-bound approvals |
+| **Reference** | Argo sync status `not_checked` in verify, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
 Current release line: **v2.4.0**. Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
@@ -315,16 +315,20 @@ helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
   --set image.tag=2.4.0
 ```
 
-The chart ships production defaults: non-root execution, read-only root filesystem, model inventory ConfigMap, HPA, PodDisruptionBudget, and optional ServiceMonitor, Ingress, and NetworkPolicy. See `infra/helm/ai-control-plane/README.md`.
+The chart ships security-hardened single-node defaults. Use `values-production.yaml` for PostgreSQL HA, HPA, PDB, JWT fail-closed, NetworkPolicy and monitoring resources. See `infra/helm/ai-control-plane/README.md`.
 
 ## Portfolio Docs
 
 - `docs/case-study.md` explains the problem, architecture, capabilities, governance pipeline, observability, forecasting, GitOps, security, and demo flow.
 - `docs/platform-architecture.md` describes the system boundary, logical layers, control API, governance architecture, delivery path, and extension points.
 
-## Remaining Backlog
+## Project status
 
-See [`docs/product-roadmap.md`](docs/product-roadmap.md) and [`docs/durable-governance.md`](docs/durable-governance.md). Next focus: SLO benchmarks and failure-injection matrix — not more surface-area modules.
+The v2.4 control-plane contract is feature-complete for the declared
+Supported scope. Further work is maintenance-oriented: compatibility testing,
+security updates, dependency upgrades and external deployment evidence.
+
+Deferred product extensions are documented in [`docs/backlog.md`](docs/backlog.md).
 
 ```sh
 bash demo/e2e/kind-e2e.sh   # Helm on kind: allow/block/approval + PVC restart
