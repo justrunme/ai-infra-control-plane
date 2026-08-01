@@ -13,7 +13,8 @@ Use this backlog for small, reviewable maintenance and deferred-product PRs.
 - Capability-bound approval digests
 - RBAC, JWT-only tenant, quota `onUnavailable`, signed OCI Helm/images
 
-See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity-boundary.md).
+See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity-boundary.md)
+(recommended pair **CP 2.4.x + Runtime 2.3.x**, honest limitations table).
 
 ## Completed (selected)
 
