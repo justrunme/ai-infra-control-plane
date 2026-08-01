@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version TEXT PRIMARY KEY,
   applied_at TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_approvals_status_created
+  ON approvals (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_approvals_decision_id
+  ON approvals (decision_id);
+CREATE INDEX IF NOT EXISTS idx_decisions_request_id
+  ON decisions (request_id);
+CREATE INDEX IF NOT EXISTS idx_decisions_team_created
+  ON decisions (team, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id
+  ON audit_meta (decision_id);
 """
 
 
@@ -56,6 +67,19 @@ def _migration(
 ) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
     return (version, postgres, sqlite)
 
+
+_INDEX_STATEMENTS = (
+    "CREATE INDEX IF NOT EXISTS idx_approvals_status_created "
+    "ON approvals (status, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_approvals_decision_id "
+    "ON approvals (decision_id)",
+    "CREATE INDEX IF NOT EXISTS idx_decisions_request_id "
+    "ON decisions (request_id)",
+    "CREATE INDEX IF NOT EXISTS idx_decisions_team_created "
+    "ON decisions (team, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id "
+    "ON audit_meta (decision_id)",
+)
 
 # Incremental migrations for databases created before schema_migrations existed.
 # Postgres uses IF NOT EXISTS so fresh CREATE TABLE columns do not abort the ledger.
@@ -70,6 +94,11 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
         "003_approval_used_at",
         postgres=("ALTER TABLE approvals ADD COLUMN IF NOT EXISTS used_at TEXT",),
         sqlite=("ALTER TABLE approvals ADD COLUMN used_at TEXT",),
+    ),
+    _migration(
+        "004_query_indexes",
+        postgres=_INDEX_STATEMENTS,
+        sqlite=_INDEX_STATEMENTS,
     ),
 )
 

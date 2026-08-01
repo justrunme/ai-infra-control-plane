@@ -67,8 +67,10 @@ def test_create_approval_and_list_pending(store: DecisionStore) -> None:
     assert approval.decision_id == decision_id
 
     pending = store.list_approvals(status="pending")
-    assert len(pending) == 1
-    assert pending[0].approval_id == approval_id
+    assert len(pending.items) == 1
+    assert pending.items[0].approval_id == approval_id
+    assert pending.total == 1
+    assert pending.has_more is False
 
 
 def test_parent_dirs_created_for_sqlite(tmp_path: Path, monkeypatch) -> None:
