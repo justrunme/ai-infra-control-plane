@@ -22,6 +22,8 @@ helm-template:
 		-f infra/helm/ai-control-plane/values-production.yaml >/dev/null
 	helm template ai-control-plane infra/helm/ai-control-plane \
 		-f infra/helm/ai-control-plane/values-postgres.yaml >/dev/null
+	helm template ai-control-plane infra/helm/ai-control-plane \
+		-f infra/helm/ai-control-plane/values-single-node.yaml >/dev/null
 
 e2e-compose:
 	bash demo/e2e/compose-e2e.sh

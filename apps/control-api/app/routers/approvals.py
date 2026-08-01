@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from app.decision_store import StoreUnavailableError, get_decision_store
 from app.durable_governance import decision_to_dict
+from app.identity_service import (
+    AuthenticationError,
+    AuthorizationError,
+    resolve_approver_identity,
+)
 
 router = APIRouter(tags=["approvals"])
 
@@ -22,6 +27,7 @@ class ApprovalResponse(BaseModel):
     created_at: str
     expires_at: str
     resolved_at: str | None = None
+    used_at: str | None = None
 
 
 class ApprovalListResponse(BaseModel):
@@ -30,7 +36,8 @@ class ApprovalListResponse(BaseModel):
 
 
 class ResolveApprovalRequest(BaseModel):
-    reviewer: str = Field(min_length=1)
+    # Demo mode only. When OIDC_JWT_VERIFY=true the reviewer comes from the JWT.
+    reviewer: str = ""
     comment: str = ""
 
 
@@ -53,11 +60,30 @@ def _to_response(record) -> ApprovalResponse:
         created_at=record.created_at,
         expires_at=record.expires_at,
         resolved_at=record.resolved_at,
+        used_at=record.used_at,
     )
 
 
 def _store_unavailable(exc: StoreUnavailableError) -> HTTPException:
     return HTTPException(status_code=503, detail=_STORE_UNAVAILABLE_DETAIL)
+
+
+def _resolve_reviewer(request: Request, payload: ResolveApprovalRequest) -> str:
+    try:
+        return resolve_approver_identity(
+            dict(request.headers),
+            body_reviewer=payload.reviewer,
+        )
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": str(exc)},
+        ) from exc
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": str(exc)},
+        ) from exc
 
 
 @router.get("/approvals", response_model=ApprovalListResponse)
@@ -86,19 +112,21 @@ def get_approval(approval_id: str) -> ApprovalResponse:
 def approve_request(
     approval_id: str,
     payload: ResolveApprovalRequest,
+    request: Request,
 ) -> ApprovalResponse:
+    reviewer = _resolve_reviewer(request, payload)
     try:
         store = get_decision_store()
         record = store.resolve_approval(
             approval_id,
             status="approved",
-            reviewer=payload.reviewer,
+            reviewer=reviewer,
             comment=payload.comment,
         )
         store.append_audit_meta(
             decision_id=record.decision_id,
             event_type="approval_approved",
-            actor=payload.reviewer,
+            actor=reviewer,
             payload={"approval_id": approval_id, "comment": payload.comment},
         )
     except StoreUnavailableError as exc:
@@ -111,19 +139,24 @@ def approve_request(
 
 
 @router.post("/approvals/{approval_id}/reject", response_model=ApprovalResponse)
-def reject_request(approval_id: str, payload: ResolveApprovalRequest) -> ApprovalResponse:
+def reject_request(
+    approval_id: str,
+    payload: ResolveApprovalRequest,
+    request: Request,
+) -> ApprovalResponse:
+    reviewer = _resolve_reviewer(request, payload)
     try:
         store = get_decision_store()
         record = store.resolve_approval(
             approval_id,
             status="rejected",
-            reviewer=payload.reviewer,
+            reviewer=reviewer,
             comment=payload.comment,
         )
         store.append_audit_meta(
             decision_id=record.decision_id,
             event_type="approval_rejected",
-            actor=payload.reviewer,
+            actor=reviewer,
             payload={"approval_id": approval_id, "comment": payload.comment},
         )
     except StoreUnavailableError as exc:

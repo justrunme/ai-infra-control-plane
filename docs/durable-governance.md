@@ -11,27 +11,41 @@ Production golden path for auditable, restart-safe governance decisions.
 | Object | Storage | Notes |
 | --- | --- | --- |
 | Policy bundle | Process memory + content digest | Loaded once; `GET /governance/policy-bundle` |
-| Decision | SQLite (default) / Postgres optional | `decision_id`, verdict, stages, digest |
-| Approval | Same database | `pending → approved\|rejected\|expired` |
+| Decision | SQLite (single-node) / Postgres (HA) | `decision_id`, verdict, stages, digests |
+| Approval | Same database | `pending → approved\|rejected\|expired\|consumed` |
 | Audit meta | Same database + optional JSONL/Loki | Linked by `decision_id` |
 
 ## Evaluate response fields
 
-`POST /governance/evaluate` now returns:
+`POST /governance/evaluate` returns:
 
 - `decision_id`
 - `policy_bundle_id`
 - `policy_digest`
 - `approval_id` when `final_verdict == approval_required`
 
-## Approval lifecycle
+Decisions also persist `request_digest` (SHA-256 over the approval-binding field set).
+
+## Approval lifecycle (request-bound, one-time)
 
 ```text
 evaluate → approval_required + approval_id
   → POST /approvals/{id}/approve  (reviewer identity)
   → retry evaluate with header x-ai-approval-id: {id}
-  → allow
+     AND the same bound request (subject/team/model/action/env/…)
+  → allow (approval status becomes consumed)
 ```
+
+An approved `approval_id` **does not** authorize a different model, environment, action, tenant, cost/token envelope, or policy digest. Replay after first successful use fails closed to the normal evaluate path.
+
+### Approver authentication
+
+| Mode | `POST /approvals/{id}/approve\|reject` |
+| --- | --- |
+| Demo (`OIDC_JWT_VERIFY` off) | JSON `reviewer` accepted |
+| Production (`OIDC_JWT_VERIFY=true`) | Valid Bearer JWT required (`401`); reviewer from `preferred_username`/`sub`; must be in `OIDC_APPROVER_GROUPS` (`ai-approvers,secops` by default) or `403` |
+
+Body `reviewer` is ignored when OIDC verify is enabled.
 
 Endpoints:
 
@@ -42,6 +56,15 @@ Endpoints:
 - `GET /governance/decisions/{decision_id}`
 - `GET /governance/policy-bundle`
 - `POST /governance/policy-bundle/reload`
+
+## Health / readiness
+
+| Endpoint | Meaning |
+| --- | --- |
+| `/livez` | Process alive (no store dependency) |
+| `/readyz` | Decision store `ping()` + valid policy bundle (`503` otherwise) |
+| `/health` | Operator status (`ok` / `degraded`) |
+| `/healthz` | Liveness alias |
 
 ## Configuration
 
@@ -54,20 +77,14 @@ Endpoints:
 
 Helm: `persistence.*` in `infra/helm/ai-control-plane/values.yaml`.
 
-## Status legend
+## Helm profiles
 
-| Status | Meaning |
-| --- | --- |
-| Production path | Used on the deployable runtime evaluate path |
-| Integrated | Works in platform demo |
-| Prototype | Sample-driven / offline module |
-| Design only | Documented intent |
+| Profile | Store | Replicas |
+| --- | --- | --- |
+| defaults / `values-single-node.yaml` | SQLite + PVC | 1 |
+| `values-postgres.yaml` | PostgreSQL | operator choice |
+| `values-production.yaml` | PostgreSQL + JWKS fail-closed | HPA 2–6 |
 
-Durable decisions and approvals are **Production path** (SQLite by default, Postgres supported).
-
-Helm profiles:
-
-- `values-production.yaml` — PVC + JWKS verify fail-closed
-- `values-postgres.yaml` — `DATABASE_URL=postgresql://...`
+Helm **fails template** if SQLite is combined with `replicaCount` / `autoscaling.minReplicas` / `autoscaling.maxReplicas` > 1.
 
 Kind proof: `bash demo/e2e/kind-e2e.sh` (also runs in CI job `e2e-kind`).

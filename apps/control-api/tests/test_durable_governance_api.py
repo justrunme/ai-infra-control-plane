@@ -52,9 +52,10 @@ def test_evaluate_persists_decision_and_policy_bundle_ids() -> None:
     decision = client.get(f"/governance/decisions/{payload['decision_id']}")
     assert decision.status_code == 200
     assert decision.json()["final_verdict"] == "allow"
+    assert decision.json()["request_digest"]
 
 
-def test_approval_lifecycle_approve_and_reuse() -> None:
+def test_approval_lifecycle_approve_and_consume() -> None:
     evaluate = client.post("/governance/evaluate", json=_approval_required_payload())
     assert evaluate.status_code == 200
     payload = evaluate.json()
@@ -81,6 +82,11 @@ def test_approval_lifecycle_approve_and_reuse() -> None:
     assert reused.status_code == 200
     assert reused.json()["final_verdict"] == "allow"
     assert reused.json()["approval_id"] == approval_id
+    assert "durable approval grants allow" in reused.json()["reasons"]
+
+    consumed = client.get(f"/approvals/{approval_id}")
+    assert consumed.status_code == 200
+    assert consumed.json()["status"] == "consumed"
 
 
 def test_policy_bundle_status_endpoint() -> None:

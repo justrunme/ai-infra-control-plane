@@ -176,8 +176,10 @@ The demo prints the key control API endpoints and runs the end-to-end governance
 The control API exposes operator-facing signals for private AI infrastructure:
 
 - `GET /` - live operator dashboard with governance playground and drift panel (HTML).
-- `GET /health` - operator-facing service health.
-- `GET /healthz` - Kubernetes-compatible health check.
+- `GET /livez` - process liveness (no store dependency).
+- `GET /readyz` - readiness (decision store ping + policy bundle).
+- `GET /health` - operator-facing status (`ok` / `degraded` with store flags).
+- `GET /healthz` - liveness alias for older probes and demos.
 - `GET /models` - configured model backends and status.
 - `GET /metrics` - Prometheus-compatible text metrics.
 - `GET /capacity` - aggregate model serving capacity.

@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   reasons_json TEXT,
   stages_json TEXT,
   request_json TEXT,
+  request_digest TEXT,
   created_at TEXT
 );
 
@@ -42,7 +43,8 @@ CREATE TABLE IF NOT EXISTS approvals (
   review_comment TEXT,
   created_at TEXT,
   expires_at TEXT,
-  resolved_at TEXT
+  resolved_at TEXT,
+  used_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_meta (
@@ -54,6 +56,16 @@ CREATE TABLE IF NOT EXISTS audit_meta (
   created_at TEXT
 );
 """
+
+_SQLITE_MIGRATIONS = (
+    "ALTER TABLE decisions ADD COLUMN request_digest TEXT",
+    "ALTER TABLE approvals ADD COLUMN used_at TEXT",
+)
+
+_POSTGRES_MIGRATIONS = (
+    "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS request_digest TEXT",
+    "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS used_at TEXT",
+)
 
 _store: DecisionStore | None = None
 _lock = threading.Lock()
@@ -114,6 +126,7 @@ class DecisionRecord:
     reasons: list[Any]
     stages: dict[str, Any]
     request: dict[str, Any]
+    request_digest: str
     created_at: str
 
 
@@ -127,6 +140,7 @@ class ApprovalRecord:
     created_at: str
     expires_at: str
     resolved_at: str | None
+    used_at: str | None = None
 
 
 class DecisionStore:
@@ -186,6 +200,12 @@ class DecisionStore:
 
     def _init_schema_sqlite(self) -> None:
         self._conn.executescript(_SCHEMA)
+        for statement in _SQLITE_MIGRATIONS:
+            try:
+                self._conn.execute(statement)
+            except sqlite3.OperationalError:
+                # Column already exists on upgraded databases.
+                pass
         self._conn.commit()
 
     def _init_schema_postgres(self) -> None:  # pragma: no cover - optional path
@@ -193,6 +213,8 @@ class DecisionStore:
         statements = [part.strip() for part in _SCHEMA.split(";") if part.strip()]
         with self._conn.cursor() as cur:
             for statement in statements:
+                cur.execute(statement)
+            for statement in _POSTGRES_MIGRATIONS:
                 cur.execute(statement)
         self._conn.commit()
 
@@ -222,6 +244,7 @@ class DecisionStore:
         reasons: list[Any] | None = None,
         stages: dict[str, Any] | None = None,
         request: dict[str, Any] | None = None,
+        request_digest: str = "",
         decision_id: str | None = None,
     ) -> str:
         """Persist a governance decision and return its id."""
@@ -234,8 +257,9 @@ class DecisionStore:
                     INSERT INTO decisions (
                       decision_id, request_id, final_verdict, policy_bundle_id,
                       policy_digest, team, environment, model, subject,
-                      reasons_json, stages_json, request_json, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      reasons_json, stages_json, request_json, request_digest,
+                      created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         decision_id,
@@ -250,6 +274,7 @@ class DecisionStore:
                         json.dumps(reasons or []),
                         json.dumps(stages or {}),
                         json.dumps(request or {}),
+                        request_digest,
                         created_at,
                     ),
                 )
@@ -271,8 +296,8 @@ class DecisionStore:
                     """
                     INSERT INTO approvals (
                       approval_id, decision_id, status, reviewer, review_comment,
-                      created_at, expires_at, resolved_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      created_at, expires_at, resolved_at, used_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         approval_id,
@@ -283,6 +308,7 @@ class DecisionStore:
                         _isoformat(now),
                         _isoformat(expires_at),
                         None,
+                        None,
                     ),
                 )
                 self._commit()
@@ -291,6 +317,28 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
         return approval_id
+
+    def consume_approval(self, approval_id: str) -> bool:
+        """Atomically mark an approved approval as one-time consumed."""
+        now = _isoformat(_utcnow())
+        try:
+            with self._op_lock:
+                cur = self._execute(
+                    """
+                    UPDATE approvals
+                    SET status = 'consumed', used_at = ?
+                    WHERE approval_id = ?
+                      AND status = 'approved'
+                      AND (used_at IS NULL OR used_at = '')
+                    """,
+                    (now, approval_id),
+                )
+                self._commit()
+                return int(cur.rowcount or 0) == 1
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
 
     def get_decision(self, decision_id: str) -> DecisionRecord | None:
         try:
@@ -501,6 +549,7 @@ class DecisionStore:
             reasons=json.loads(mapping.get("reasons_json") or "[]"),
             stages=json.loads(mapping.get("stages_json") or "{}"),
             request=json.loads(mapping.get("request_json") or "{}"),
+            request_digest=mapping.get("request_digest") or "",
             created_at=mapping.get("created_at") or "",
         )
 
@@ -516,6 +565,7 @@ class DecisionStore:
             created_at=mapping.get("created_at") or "",
             expires_at=mapping.get("expires_at") or "",
             resolved_at=mapping.get("resolved_at"),
+            used_at=mapping.get("used_at"),
         )
 
 

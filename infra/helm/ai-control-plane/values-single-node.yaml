@@ -1,0 +1,35 @@
+# Single-node reference profile: SQLite on a local PVC, one replica.
+# Do not combine with HPA > 1. For HA use values-production.yaml (PostgreSQL).
+
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+
+image:
+  tag: "0.4.0"
+  pullPolicy: IfNotPresent
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClassName: ""
+  databaseUrl: sqlite:////var/lib/ai-control-plane/control-plane.db
+  approvalTtlSeconds: 3600
+  probeCacheTtlSeconds: 10
+  httpTrustEnv: false
+
+oidc:
+  jwtVerify: false
+
+networkPolicy:
+  enabled: false
+
+metrics:
+  serviceMonitor:
+    enabled: false
+
+podDisruptionBudget:
+  enabled: false
