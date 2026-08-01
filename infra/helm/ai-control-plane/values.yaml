@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "1.6.0"
+  tag: "1.7.0"
   pullPolicy: IfNotPresent
 
 # Durable governance decisions / approvals (SQLite by default).
@@ -32,8 +32,17 @@ persistence:
   retentionDays: 90
   # When true, decision/approval reads require x-ai-tenant (or JWT tenant) and filter by it.
   tenantIsolation: false
+  # When true (with oidc.jwtVerify), tenant/team come only from verified JWT claims.
+  tenantJwtOnly: false
   probeCacheTtlSeconds: 5
   httpTrustEnv: false
+
+# Redis-backed live quota counters (optional). When Redis is configured but
+# unreachable, onUnavailable controls evaluate fail-closed behavior.
+quota:
+  redisUrl: ""
+  # allow | block | approval_required
+  onUnavailable: allow
 
 serviceAccount:
   create: true
@@ -197,6 +206,13 @@ oidc:
   jwtIssuer: https://keycloak.example.com/realms/ai-platform
   # Comma-separated groups/roles allowed to approve/reject when jwtVerify=true.
   approverGroups: "ai-approvers,secops"
+  # Optional overrides for control-plane RBAC roles (comma-separated IdP groups).
+  roleGroups:
+    platformAdmin: "platform-admins,ai-platform-admins"
+    tenantAdmin: "tenant-admins,ai-tenant-admins"
+    auditor: "ai-auditors,auditors"
+    viewer: "ai-viewers,viewers"
+    runtimeService: "ai-runtime-services,runtime-services"
 
 # Sync provider and gateway credentials from Vault via External Secrets Operator.
 secrets:

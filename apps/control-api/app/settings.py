@@ -32,6 +32,10 @@ try:
             default=False,
             validation_alias="TENANT_ISOLATION",
         )
+        tenant_jwt_only: bool = Field(
+            default=False,
+            validation_alias="TENANT_JWT_ONLY",
+        )
         probe_cache_ttl_seconds: int = Field(
             default=5,
             validation_alias="PROBE_CACHE_TTL_SECONDS",
@@ -83,6 +87,7 @@ except ImportError:  # pragma: no cover - exercised when pydantic-settings missi
         approval_ttl_seconds: int = 3600
         retention_days: int = 90
         tenant_isolation: bool = False
+        tenant_jwt_only: bool = False
         probe_cache_ttl_seconds: int = 5
         http_trust_env: bool = False
         ollama_base_url: str | None = None
@@ -98,6 +103,7 @@ except ImportError:  # pragma: no cover - exercised when pydantic-settings missi
                 approval_ttl_seconds=_env_int("APPROVAL_TTL_SECONDS", 3600),
                 retention_days=_env_int("RETENTION_DAYS", 90),
                 tenant_isolation=_env_bool("TENANT_ISOLATION", False),
+                tenant_jwt_only=_env_bool("TENANT_JWT_ONLY", False),
                 probe_cache_ttl_seconds=_env_int("PROBE_CACHE_TTL_SECONDS", 5),
                 http_trust_env=_env_bool("HTTP_TRUST_ENV", False),
                 ollama_base_url=_env_optional("OLLAMA_BASE_URL"),

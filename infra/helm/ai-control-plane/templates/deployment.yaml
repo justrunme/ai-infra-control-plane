@@ -69,7 +69,35 @@ spec:
             - name: OIDC_APPROVER_GROUPS
               value: {{ .Values.oidc.approverGroups | quote }}
             {{- end }}
+            {{- with .Values.oidc.roleGroups }}
+            {{- if .platformAdmin }}
+            - name: OIDC_ROLE_PLATFORM_ADMIN_GROUPS
+              value: {{ .platformAdmin | quote }}
             {{- end }}
+            {{- if .tenantAdmin }}
+            - name: OIDC_ROLE_TENANT_ADMIN_GROUPS
+              value: {{ .tenantAdmin | quote }}
+            {{- end }}
+            {{- if .auditor }}
+            - name: OIDC_ROLE_AUDITOR_GROUPS
+              value: {{ .auditor | quote }}
+            {{- end }}
+            {{- if .viewer }}
+            - name: OIDC_ROLE_VIEWER_GROUPS
+              value: {{ .viewer | quote }}
+            {{- end }}
+            {{- if .runtimeService }}
+            - name: OIDC_ROLE_RUNTIME_SERVICE_GROUPS
+              value: {{ .runtimeService | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.quota.redisUrl }}
+            - name: QUOTA_REDIS_URL
+              value: {{ .Values.quota.redisUrl | quote }}
+            {{- end }}
+            - name: QUOTA_ON_UNAVAILABLE
+              value: {{ .Values.quota.onUnavailable | default "allow" | quote }}
             {{- if .Values.persistence.enabled }}
             {{- if .Values.persistence.existingSecret }}
             - name: DATABASE_URL
@@ -87,6 +115,8 @@ spec:
               value: {{ .Values.persistence.retentionDays | default 90 | quote }}
             - name: TENANT_ISOLATION
               value: {{ .Values.persistence.tenantIsolation | default false | quote }}
+            - name: TENANT_JWT_ONLY
+              value: {{ .Values.persistence.tenantJwtOnly | default false | quote }}
             - name: PROBE_CACHE_TTL_SECONDS
               value: {{ .Values.persistence.probeCacheTtlSeconds | quote }}
             - name: HTTP_TRUST_ENV

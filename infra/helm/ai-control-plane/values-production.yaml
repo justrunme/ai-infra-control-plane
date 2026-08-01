@@ -8,7 +8,7 @@ autoscaling:
   maxReplicas: 6
 
 image:
-  tag: "1.6.0"
+  tag: "1.7.0"
   pullPolicy: IfNotPresent
 
 persistence:
@@ -23,8 +23,12 @@ persistence:
   approvalTtlSeconds: 3600
   retentionDays: 90
   tenantIsolation: true
+  tenantJwtOnly: true
   probeCacheTtlSeconds: 10
   httpTrustEnv: false
+
+quota:
+  onUnavailable: approval_required
 
 oidc:
   jwtVerify: true

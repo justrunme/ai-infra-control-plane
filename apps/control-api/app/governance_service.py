@@ -139,6 +139,8 @@ def final_verdict(
         return "block", ["cost governance blocked the request"]
     if approval_result["decision"] == "block":
         return "block", ["approval workflow blocked the request"]
+    if quota_result["decision"] == "approval_required":
+        return "approval_required", quota_result["reasons"]
     if pack_post_result["decision"] == "approval_required":
         return "approval_required", pack_post_result["reasons"]
     if risk_result["level"] == "critical":
@@ -267,6 +269,22 @@ def evaluate_governance_request(
         )
         row["_pack_quota_multiplier"] = pack_pre["quota_multiplier"]
         quota_result = quota_module.evaluate_request(row, quota_policies)
+        if telemetry and telemetry.quota_source == "unavailable":
+            from app.quota_state_service import get_quota_on_unavailable
+
+            policy = get_quota_on_unavailable()
+            if policy == "approval_required":
+                quota_result = {
+                    "decision": "approval_required",
+                    "reasons": [
+                        "quota state unavailable; approval required"
+                    ],
+                }
+            elif policy == "block":
+                quota_result = {
+                    "decision": "block",
+                    "reasons": ["quota state unavailable; request blocked"],
+                }
         registry_result = registry_module.evaluate_model_policy(row, registry)
         model_entry = registry_module.lookup_model(registry, row["model"])
         sovereign_result = sovereign_module.evaluate_residency(

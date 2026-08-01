@@ -5,10 +5,13 @@ from __future__ import annotations
 import os
 import time
 from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
 REDIS_KEY_PREFIX = "ai:tenant:"
+
+QuotaOnUnavailable = Literal["allow", "block", "approval_required"]
 
 
 class QuotaStateSnapshot(BaseModel):
@@ -16,12 +19,14 @@ class QuotaStateSnapshot(BaseModel):
     requests_last_minute: int = 0
     tokens_today: int = 0
     source: str = "request"
+    unavailable: bool = False
 
 
 class QuotaStateStatus(BaseModel):
     enabled: bool
     redis_url: str | None = None
     backend: str = "request"
+    on_unavailable: QuotaOnUnavailable = "allow"
 
 
 def is_quota_redis_enabled() -> bool:
@@ -31,6 +36,18 @@ def is_quota_redis_enabled() -> bool:
 def get_quota_redis_url() -> str | None:
     url = os.getenv("QUOTA_REDIS_URL", "").strip()
     return url or None
+
+
+def get_quota_on_unavailable() -> QuotaOnUnavailable:
+    """Policy when Redis quota state cannot be read.
+
+    Default ``allow`` preserves demo/dev fail-open. Production Helm sets
+    ``approval_required`` (fail-closed to human review).
+    """
+    raw = os.getenv("QUOTA_ON_UNAVAILABLE", "allow").strip().lower()
+    if raw in {"allow", "block", "approval_required"}:
+        return raw  # type: ignore[return-value]
+    return "allow"
 
 
 def _normalize_state(
@@ -53,6 +70,13 @@ def _normalize_state(
 
 
 def read_quota_state(team: str) -> QuotaStateSnapshot | None:
+    """Return Redis snapshot, an unavailable marker, or None when Redis is off.
+
+    - Redis disabled → ``None`` (caller uses request body counters).
+    - Redis error → snapshot with ``unavailable=True`` (caller applies
+      ``QUOTA_ON_UNAVAILABLE``).
+    - Redis ok → normal snapshot ``source=redis``.
+    """
     redis_url = get_quota_redis_url()
     if not redis_url:
         return None
@@ -70,8 +94,12 @@ def read_quota_state(team: str) -> QuotaStateSnapshot | None:
             state = client.hgetall(f"{REDIS_KEY_PREFIX}{team}")
         finally:
             client.close()
-    except Exception:  # noqa: BLE001 — fail-open when Redis is unavailable
-        return None
+    except Exception:  # noqa: BLE001
+        return QuotaStateSnapshot(
+            team=team,
+            source="unavailable",
+            unavailable=True,
+        )
 
     rpm, tokens = _normalize_state(state)
     return QuotaStateSnapshot(
@@ -79,6 +107,7 @@ def read_quota_state(team: str) -> QuotaStateSnapshot | None:
         requests_last_minute=rpm,
         tokens_today=tokens,
         source="redis",
+        unavailable=False,
     )
 
 
@@ -88,4 +117,5 @@ def quota_state_status() -> QuotaStateStatus:
         enabled=bool(redis_url),
         redis_url=redis_url,
         backend="redis" if redis_url else "request",
+        on_unavailable=get_quota_on_unavailable(),
     )

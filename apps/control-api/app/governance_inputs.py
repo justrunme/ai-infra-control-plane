@@ -30,7 +30,7 @@ def enrich_governance_request(
 ) -> tuple[GovernanceEvaluateRequest, QuotaStateSnapshot | None, PrometheusSignals]:
     updates: dict[str, object] = {}
     quota_snapshot = read_quota_state(payload.team)
-    if quota_snapshot is not None:
+    if quota_snapshot is not None and not quota_snapshot.unavailable:
         if payload.requests_last_minute == 0:
             updates["requests_last_minute"] = quota_snapshot.requests_last_minute
         if payload.tokens_today == 0:

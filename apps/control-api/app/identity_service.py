@@ -86,6 +86,12 @@ def claim_roles(claims: dict[str, Any]) -> list[str]:
     return roles
 
 
+def is_tenant_jwt_only() -> bool:
+    """When true, tenant/team for isolation come only from a verified JWT."""
+    raw = os.getenv("TENANT_JWT_ONLY", "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def resolve_approver_identity(
     headers: dict[str, str],
     *,
@@ -94,21 +100,14 @@ def resolve_approver_identity(
     """Return the reviewer identity for approve/reject endpoints.
 
     When ``OIDC_JWT_VERIFY`` is enabled the reviewer is taken from the JWT and
-    must belong to an approver group. In demo mode the JSON body reviewer is
-    accepted.
+    must hold the ``approver`` control-plane role. In demo mode the JSON body
+    reviewer is accepted.
     """
     if is_jwt_verify_enabled():
-        claims = require_bearer_claims(headers)
-        reviewer = (
-            str(claims.get("preferred_username") or claims.get("sub") or "").strip()
-        )
-        if not reviewer:
-            raise AuthenticationError("token missing subject")
-        roles = claim_roles(claims)
-        allowed = get_approver_groups()
-        if not any(role in allowed for role in roles):
-            raise AuthorizationError("approver role required")
-        return reviewer
+        # Local import avoids a cycle with rbac → identity helpers.
+        from app.rbac import require_any_role
+
+        return require_any_role(headers, "approver")
 
     reviewer = body_reviewer.strip()
     if not reviewer:
@@ -142,7 +141,15 @@ def resolve_workload_identity(
     headers: dict[str, str],
     body: GovernanceEvaluateRequest,
 ) -> WorkloadIdentity:
-    claims = extract_bearer_claims(headers)
+    jwt_only = is_tenant_jwt_only()
+    if jwt_only:
+        if not is_jwt_verify_enabled():
+            raise AuthenticationError(
+                "TENANT_JWT_ONLY requires OIDC_JWT_VERIFY=true"
+            )
+        claims = require_bearer_claims(headers)
+    else:
+        claims = extract_bearer_claims(headers)
     header_groups = parse_groups_header(headers)
     claim_groups = normalize_groups(claims.get("groups"))
 
@@ -153,19 +160,32 @@ def resolve_workload_identity(
         or "anonymous"
     )
     groups = claim_groups or header_groups or list(body.groups)
-    team = (
-        str(claims.get("team") or "").strip()
-        or headers.get("x-ai-team", "").strip()
-        or team_from_groups(groups, None)
-        or body.team
-    )
-    body_tenant = str(getattr(body, "tenant_id", "") or "").strip()
-    tenant_id = (
-        str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
-        or headers.get("x-ai-tenant", "").strip()
-        or body_tenant
-        or team
-    )
+    if jwt_only:
+        team = (
+            str(claims.get("team") or "").strip()
+            or team_from_groups(claim_groups, None)
+            or ""
+        )
+        tenant_id = (
+            str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
+            or team
+        )
+        if not tenant_id:
+            raise AuthenticationError("token missing tenant claim")
+    else:
+        team = (
+            str(claims.get("team") or "").strip()
+            or headers.get("x-ai-team", "").strip()
+            or team_from_groups(groups, None)
+            or body.team
+        )
+        body_tenant = str(getattr(body, "tenant_id", "") or "").strip()
+        tenant_id = (
+            str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
+            or headers.get("x-ai-tenant", "").strip()
+            or body_tenant
+            or team
+        )
     owner = (
         str(claims.get("preferred_username") or claims.get("name") or "").strip()
         or headers.get("x-ai-owner", "").strip()
@@ -237,7 +257,22 @@ def apply_identity(
 
 
 def resolve_request_tenant(headers: dict[str, str]) -> str:
-    """Resolve tenant for read/list isolation (headers / JWT claims)."""
+    """Resolve tenant for read/list isolation (headers / JWT claims).
+
+    When ``TENANT_JWT_ONLY`` is enabled, only verified JWT ``tenant`` /
+    ``tenant_id`` / ``team`` claims are accepted (headers and body ignored).
+    """
+    if is_tenant_jwt_only():
+        if not is_jwt_verify_enabled():
+            raise AuthenticationError(
+                "TENANT_JWT_ONLY requires OIDC_JWT_VERIFY=true"
+            )
+        claims = require_bearer_claims(headers)
+        return (
+            str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
+            or str(claims.get("team") or "").strip()
+            or ""
+        )
     claims = extract_bearer_claims(headers)
     return (
         str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
