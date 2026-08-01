@@ -1,4 +1,4 @@
-# Policy bundles and GitOps (v1.5)
+# Policy bundles and GitOps (v2.1)
 
 ## Sources
 
@@ -30,8 +30,9 @@ starts and mounts it read-only; the API uses `POLICY_SOURCE_TYPE=filesystem`.
 | `fail_closed` (production) | Bootstrap error → `/readyz` 503 |
 | `last_known_good` (demo default) | Keep previous valid bundle; mark fallback |
 
-Policy lifecycle candidates/active remain **process-local** (Reference for HA)
-until durable generations land in v2.1.
+Active selection is **durable**: migration `009_policy_bundles` stores candidates,
+impacts, and a monotonic `generation` for the active bundle. Replicas catch up via
+`PolicyLifecycle.sync_active_from_store` on bootstrap, `/readyz`, and evaluate.
 
 ## Lifecycle API
 

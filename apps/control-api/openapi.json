@@ -2818,6 +2818,11 @@
             "title": "Details",
             "type": "array"
           },
+          "policy_active_generation": {
+            "default": 0,
+            "title": "Policy Active Generation",
+            "type": "integer"
+          },
           "policy_bundle_ok": {
             "default": true,
             "title": "Policy Bundle Ok",
@@ -2837,6 +2842,11 @@
             "default": false,
             "title": "Policy Fallback",
             "type": "boolean"
+          },
+          "policy_observed_generation": {
+            "default": 0,
+            "title": "Policy Observed Generation",
+            "type": "integer"
           },
           "status": {
             "default": "ready",
@@ -3970,7 +3980,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "2.0.1"
+    "version": "2.1.0"
   },
   "openapi": "3.1.0",
   "paths": {

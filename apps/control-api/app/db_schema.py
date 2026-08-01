@@ -110,6 +110,47 @@ CREATE INDEX IF NOT EXISTS idx_capability_contracts_tenant_created
   ON capability_contracts (tenant_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_capability_contracts_digest
   ON capability_contracts (kind, name, tenant_id, content_digest);
+
+CREATE TABLE IF NOT EXISTS policy_bundles (
+  record_id TEXT PRIMARY KEY,
+  bundle_id TEXT NOT NULL,
+  content_digest TEXT NOT NULL,
+  git_revision TEXT,
+  status TEXT NOT NULL,
+  generation INTEGER,
+  source_type TEXT,
+  source_json TEXT,
+  validation_status TEXT,
+  error TEXT,
+  loaded_at TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  activated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS policy_bundle_impacts (
+  impact_id TEXT PRIMARY KEY,
+  bundle_id TEXT NOT NULL,
+  content_digest TEXT NOT NULL,
+  evaluated_decisions INTEGER,
+  unchanged INTEGER,
+  allow_to_block INTEGER,
+  allow_to_approval INTEGER,
+  block_to_allow INTEGER,
+  approval_to_allow INTEGER,
+  approval_to_block INTEGER,
+  other_changes INTEGER,
+  sample_changes_json TEXT,
+  simulate_limit INTEGER,
+  created_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_policy_bundles_status_updated
+  ON policy_bundles (status, updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_policy_bundles_digest
+  ON policy_bundles (bundle_id, content_digest);
+CREATE INDEX IF NOT EXISTS idx_policy_bundle_impacts_bundle
+  ON policy_bundle_impacts (bundle_id, created_at);
 """
 
 
@@ -309,6 +350,97 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
             "ON capability_contracts (tenant_id, created_at)",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_capability_contracts_digest "
             "ON capability_contracts (kind, name, tenant_id, content_digest)",
+        ),
+    ),
+    _migration(
+        "009_policy_bundles",
+        postgres=(
+            """
+            CREATE TABLE IF NOT EXISTS policy_bundles (
+              record_id TEXT PRIMARY KEY,
+              bundle_id TEXT NOT NULL,
+              content_digest TEXT NOT NULL,
+              git_revision TEXT,
+              status TEXT NOT NULL,
+              generation INTEGER,
+              source_type TEXT,
+              source_json TEXT,
+              validation_status TEXT,
+              error TEXT,
+              loaded_at TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              activated_at TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS policy_bundle_impacts (
+              impact_id TEXT PRIMARY KEY,
+              bundle_id TEXT NOT NULL,
+              content_digest TEXT NOT NULL,
+              evaluated_decisions INTEGER,
+              unchanged INTEGER,
+              allow_to_block INTEGER,
+              allow_to_approval INTEGER,
+              block_to_allow INTEGER,
+              approval_to_allow INTEGER,
+              approval_to_block INTEGER,
+              other_changes INTEGER,
+              sample_changes_json TEXT,
+              simulate_limit INTEGER,
+              created_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_policy_bundles_status_updated "
+            "ON policy_bundles (status, updated_at)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_policy_bundles_digest "
+            "ON policy_bundles (bundle_id, content_digest)",
+            "CREATE INDEX IF NOT EXISTS idx_policy_bundle_impacts_bundle "
+            "ON policy_bundle_impacts (bundle_id, created_at)",
+        ),
+        sqlite=(
+            """
+            CREATE TABLE IF NOT EXISTS policy_bundles (
+              record_id TEXT PRIMARY KEY,
+              bundle_id TEXT NOT NULL,
+              content_digest TEXT NOT NULL,
+              git_revision TEXT,
+              status TEXT NOT NULL,
+              generation INTEGER,
+              source_type TEXT,
+              source_json TEXT,
+              validation_status TEXT,
+              error TEXT,
+              loaded_at TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              activated_at TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS policy_bundle_impacts (
+              impact_id TEXT PRIMARY KEY,
+              bundle_id TEXT NOT NULL,
+              content_digest TEXT NOT NULL,
+              evaluated_decisions INTEGER,
+              unchanged INTEGER,
+              allow_to_block INTEGER,
+              allow_to_approval INTEGER,
+              block_to_allow INTEGER,
+              approval_to_allow INTEGER,
+              approval_to_block INTEGER,
+              other_changes INTEGER,
+              sample_changes_json TEXT,
+              simulate_limit INTEGER,
+              created_at TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_policy_bundles_status_updated "
+            "ON policy_bundles (status, updated_at)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_policy_bundles_digest "
+            "ON policy_bundles (bundle_id, content_digest)",
+            "CREATE INDEX IF NOT EXISTS idx_policy_bundle_impacts_bundle "
+            "ON policy_bundle_impacts (bundle_id, created_at)",
         ),
     ),
 )

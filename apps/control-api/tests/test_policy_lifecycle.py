@@ -114,3 +114,59 @@ def test_validate_simulate_activate_rollback(api) -> None:
     roles = {item["role"] for item in listed.json()}
     assert "active" in roles
     assert active_before  # sanity
+
+    active_record = store.get_active_policy_bundle()
+    assert active_record is not None
+    assert active_record.generation is not None
+    assert active_record.generation >= 1
+
+
+def test_ha_replica_catches_up_active_generation(tmp_path: Path, monkeypatch) -> None:
+    """Two PolicyLifecycle instances share one store and catch up by generation."""
+    from app.policy_lifecycle import PolicyLifecycle
+
+    db_path = tmp_path / "ha-policy.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    clear_settings_cache()
+    clear_policy_bundle()
+    reset_policy_lifecycle()
+    reset_decision_store(None)
+
+    store = DecisionStore.from_env()
+    reset_decision_store(store)
+    root = get_governance_root()
+
+    replica_a = PolicyLifecycle(store=store)
+    replica_a.ensure_bootstrapped()
+    validated = replica_a.validate_from_path(root)
+    assert validated.validation_status == "ok"
+    activated = replica_a.activate(validated.bundle_id)
+    assert activated.bundle_id == validated.bundle_id
+    gen = store.get_active_policy_generation()
+    assert gen >= 1
+    status_a = replica_a.bootstrap_status()
+    assert status_a["policy_observed_generation"] == gen
+
+    # Fresh process-local cache on replica B (shared durable store).
+    clear_policy_bundle()
+    replica_b = PolicyLifecycle(store=store)
+    # Seed with env bootstrap path first (as a new pod would), then sync.
+    replica_b.ensure_bootstrapped()
+    synced = replica_b.sync_active_from_store(force=True)
+    assert synced is not None
+    assert synced.content_digest == activated.content_digest
+    status_b = replica_b.bootstrap_status()
+    assert status_b["policy_observed_generation"] == gen
+    assert status_b["policy_active_generation"] == gen
+
+    ready = TestClient(__import__("app.main", fromlist=["app"]).app).get("/readyz")
+    assert ready.status_code == 200
+    body = ready.json()
+    assert body["policy_active_generation"] >= 1
+    assert body["policy_observed_generation"] >= 1
+
+    reset_decision_store(None)
+    store.close()
+    clear_policy_bundle()
+    reset_policy_lifecycle()
+    clear_settings_cache()
