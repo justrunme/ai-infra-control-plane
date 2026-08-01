@@ -59,11 +59,19 @@ def read_quota_state(team: str) -> QuotaStateSnapshot | None:
 
     import redis
 
-    client = redis.Redis.from_url(redis_url, decode_responses=True)
     try:
-        state = client.hgetall(f"{REDIS_KEY_PREFIX}{team}")
-    finally:
-        client.close()
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=0.5,
+            socket_timeout=0.5,
+        )
+        try:
+            state = client.hgetall(f"{REDIS_KEY_PREFIX}{team}")
+        finally:
+            client.close()
+    except Exception:  # noqa: BLE001 — fail-open when Redis is unavailable
+        return None
 
     rpm, tokens = _normalize_state(state)
     return QuotaStateSnapshot(

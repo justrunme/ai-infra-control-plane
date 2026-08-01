@@ -58,13 +58,15 @@ Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-dura
 | --- | --- | --- |
 | v0.1.0 | Enterprise demo + agentic surface | Done |
 | v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | Done |
-| v0.3.0 | Router split, Postgres profile, JWKS fail-closed, kind e2e | This release |
-| v0.4.0 | Failure injection matrix, SLO benchmark dashboard | Planned |
+| v0.3.0 | Router split, Postgres profile, JWKS fail-closed, kind e2e | Done |
+| v0.4.0 | Failure injection matrix, governance SLO benchmark + dashboard | This release |
 | v1.0 | Stable API schema + supported/reference/experimental boundary | Planned |
 
 ## Related docs
 
 - [Durable governance](durable-governance.md)
+- [Control plane SLOs](slo.md)
+- [Failure injection](failure-injection.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

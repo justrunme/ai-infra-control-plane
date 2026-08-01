@@ -59,8 +59,20 @@ _store: DecisionStore | None = None
 _lock = threading.Lock()
 
 
+class StoreUnavailableError(RuntimeError):
+    """Raised when the authoritative decision store cannot serve requests."""
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def _is_operational_db_error(exc: BaseException) -> bool:
+    if isinstance(exc, (sqlite3.Error, OSError, TimeoutError, ConnectionError)):
+        return True
+    # Optional Postgres path.
+    module = type(exc).__module__ or ""
+    return module.startswith("psycopg")
 
 
 def _isoformat(value: datetime) -> str:
@@ -125,6 +137,7 @@ class DecisionStore:
         self._backend = "sqlite"
         self._conn: sqlite3.Connection | Any
         self._pg = False
+        self._op_lock = threading.RLock()
 
         if database_url.startswith(("postgres://", "postgresql://")):
             try:
@@ -147,6 +160,9 @@ class DecisionStore:
         # check_same_thread=False: FastAPI may touch the store from workers.
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
         self._init_schema_sqlite()
 
     @classmethod
@@ -155,7 +171,18 @@ class DecisionStore:
         return cls(get_settings().database_url)
 
     def close(self) -> None:
-        self._conn.close()
+        with self._op_lock:
+            self._conn.close()
+
+    def ping(self) -> bool:
+        """Return True when a trivial round-trip against the store succeeds."""
+        try:
+            with self._op_lock:
+                cur = self._execute("SELECT 1")
+                cur.fetchone()
+            return True
+        except Exception:  # noqa: BLE001
+            return False
 
     def _init_schema_sqlite(self) -> None:
         self._conn.executescript(_SCHEMA)
@@ -174,6 +201,12 @@ class DecisionStore:
             sql = sql.replace("?", "%s")
         cur = self._conn.execute(sql, params)
         return cur
+
+    def _commit(self) -> None:
+        self._conn.commit()
+
+    def _wrap_db(self, _exc: BaseException) -> StoreUnavailableError:
+        return StoreUnavailableError("authoritative store unavailable")
 
     def create_decision(
         self,
@@ -194,31 +227,37 @@ class DecisionStore:
         """Persist a governance decision and return its id."""
         decision_id = decision_id or str(uuid.uuid4())
         created_at = _isoformat(_utcnow())
-        self._execute(
-            """
-            INSERT INTO decisions (
-              decision_id, request_id, final_verdict, policy_bundle_id,
-              policy_digest, team, environment, model, subject,
-              reasons_json, stages_json, request_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                decision_id,
-                request_id,
-                final_verdict,
-                policy_bundle_id,
-                policy_digest,
-                team,
-                environment,
-                model,
-                subject,
-                json.dumps(reasons or []),
-                json.dumps(stages or {}),
-                json.dumps(request or {}),
-                created_at,
-            ),
-        )
-        self._conn.commit()
+        try:
+            with self._op_lock:
+                self._execute(
+                    """
+                    INSERT INTO decisions (
+                      decision_id, request_id, final_verdict, policy_bundle_id,
+                      policy_digest, team, environment, model, subject,
+                      reasons_json, stages_json, request_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        decision_id,
+                        request_id,
+                        final_verdict,
+                        policy_bundle_id,
+                        policy_digest,
+                        team,
+                        environment,
+                        model,
+                        subject,
+                        json.dumps(reasons or []),
+                        json.dumps(stages or {}),
+                        json.dumps(request or {}),
+                        created_at,
+                    ),
+                )
+                self._commit()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         return decision_id
 
     def create_approval(self, decision_id: str, ttl_seconds: int) -> str:
@@ -226,55 +265,80 @@ class DecisionStore:
         approval_id = str(uuid.uuid4())
         now = _utcnow()
         expires_at = now + timedelta(seconds=max(ttl_seconds, 0))
-        self._execute(
-            """
-            INSERT INTO approvals (
-              approval_id, decision_id, status, reviewer, review_comment,
-              created_at, expires_at, resolved_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                approval_id,
-                decision_id,
-                "pending",
-                None,
-                None,
-                _isoformat(now),
-                _isoformat(expires_at),
-                None,
-            ),
-        )
-        self._conn.commit()
+        try:
+            with self._op_lock:
+                self._execute(
+                    """
+                    INSERT INTO approvals (
+                      approval_id, decision_id, status, reviewer, review_comment,
+                      created_at, expires_at, resolved_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        approval_id,
+                        decision_id,
+                        "pending",
+                        None,
+                        None,
+                        _isoformat(now),
+                        _isoformat(expires_at),
+                        None,
+                    ),
+                )
+                self._commit()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         return approval_id
 
     def get_decision(self, decision_id: str) -> DecisionRecord | None:
-        cur = self._execute(
-            "SELECT * FROM decisions WHERE decision_id = ?",
-            (decision_id,),
-        )
-        row = cur.fetchone()
+        try:
+            with self._op_lock:
+                cur = self._execute(
+                    "SELECT * FROM decisions WHERE decision_id = ?",
+                    (decision_id,),
+                )
+                row = cur.fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         if row is None:
             return None
         return self._decision_from_row(row)
 
     def get_approval(self, approval_id: str) -> ApprovalRecord | None:
-        self._expire_if_needed(approval_id)
-        cur = self._execute(
-            "SELECT * FROM approvals WHERE approval_id = ?",
-            (approval_id,),
-        )
-        row = cur.fetchone()
+        try:
+            with self._op_lock:
+                self._expire_if_needed(approval_id)
+                cur = self._execute(
+                    "SELECT * FROM approvals WHERE approval_id = ?",
+                    (approval_id,),
+                )
+                row = cur.fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         if row is None:
             return None
         return self._approval_from_row(row)
 
     def list_approvals(self, status: str = "pending") -> list[ApprovalRecord]:
-        self.expire_stale_approvals()
-        cur = self._execute(
-            "SELECT * FROM approvals WHERE status = ? ORDER BY created_at ASC",
-            (status,),
-        )
-        return [self._approval_from_row(row) for row in cur.fetchall()]
+        try:
+            with self._op_lock:
+                self.expire_stale_approvals()
+                cur = self._execute(
+                    "SELECT * FROM approvals WHERE status = ? ORDER BY created_at ASC",
+                    (status,),
+                )
+                rows = cur.fetchall()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return [self._approval_from_row(row) for row in rows]
 
     def resolve_approval(
         self,
@@ -287,41 +351,57 @@ class DecisionStore:
         if status not in {"approved", "rejected"}:
             raise ValueError("status must be 'approved' or 'rejected'")
 
-        approval = self.get_approval(approval_id)
-        if approval is None:
-            raise KeyError(f"approval not found: {approval_id}")
-        if approval.status == "expired":
-            raise ValueError("approval expired")
-        if approval.status != "pending":
-            raise ValueError(f"approval is not pending (status={approval.status})")
+        try:
+            with self._op_lock:
+                approval = self.get_approval(approval_id)
+                if approval is None:
+                    raise KeyError(f"approval not found: {approval_id}")
+                if approval.status == "expired":
+                    raise ValueError("approval expired")
+                if approval.status != "pending":
+                    raise ValueError(
+                        f"approval is not pending (status={approval.status})"
+                    )
 
-        resolved_at = _isoformat(_utcnow())
-        self._execute(
-            """
-            UPDATE approvals
-            SET status = ?, reviewer = ?, review_comment = ?, resolved_at = ?
-            WHERE approval_id = ?
-            """,
-            (status, reviewer, comment, resolved_at, approval_id),
-        )
-        self._conn.commit()
-        updated = self.get_approval(approval_id)
+                resolved_at = _isoformat(_utcnow())
+                self._execute(
+                    """
+                    UPDATE approvals
+                    SET status = ?, reviewer = ?, review_comment = ?, resolved_at = ?
+                    WHERE approval_id = ?
+                    """,
+                    (status, reviewer, comment, resolved_at, approval_id),
+                )
+                self._commit()
+                updated = self.get_approval(approval_id)
+        except (KeyError, ValueError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         assert updated is not None
         return updated
 
     def expire_stale_approvals(self) -> int:
         """Mark pending approvals past expires_at as expired. Returns count."""
         now = _isoformat(_utcnow())
-        cur = self._execute(
-            """
-            UPDATE approvals
-            SET status = 'expired', resolved_at = ?
-            WHERE status = 'pending' AND expires_at <= ?
-            """,
-            (now, now),
-        )
-        self._conn.commit()
-        return int(cur.rowcount or 0)
+        try:
+            with self._op_lock:
+                cur = self._execute(
+                    """
+                    UPDATE approvals
+                    SET status = 'expired', resolved_at = ?
+                    WHERE status = 'pending' AND expires_at <= ?
+                    """,
+                    (now, now),
+                )
+                self._commit()
+                return int(cur.rowcount or 0)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
 
     def append_audit_meta(
         self,
@@ -334,25 +414,32 @@ class DecisionStore:
     ) -> str:
         """Optional helper for audit_meta rows."""
         event_id = event_id or str(uuid.uuid4())
-        self._execute(
-            """
-            INSERT INTO audit_meta (
-              event_id, decision_id, event_type, actor, payload_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                event_id,
-                decision_id,
-                event_type,
-                actor,
-                json.dumps(payload or {}),
-                _isoformat(_utcnow()),
-            ),
-        )
-        self._conn.commit()
+        try:
+            with self._op_lock:
+                self._execute(
+                    """
+                    INSERT INTO audit_meta (
+                      event_id, decision_id, event_type, actor, payload_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event_id,
+                        decision_id,
+                        event_type,
+                        actor,
+                        json.dumps(payload or {}),
+                        _isoformat(_utcnow()),
+                    ),
+                )
+                self._commit()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
         return event_id
 
     def _expire_if_needed(self, approval_id: str) -> None:
+        # Caller holds _op_lock.
         cur = self._execute(
             "SELECT status, expires_at FROM approvals WHERE approval_id = ?",
             (approval_id,),
@@ -376,7 +463,7 @@ class DecisionStore:
             """,
             (now, approval_id),
         )
-        self._conn.commit()
+        self._commit()
 
     @staticmethod
     def _as_mapping(row: Any) -> dict[str, Any]:
@@ -438,8 +525,16 @@ def get_decision_store() -> DecisionStore:
     if _store is not None:
         return _store
     with _lock:
-        if _store is None:
+        if _store is not None:
+            return _store
+        try:
             _store = DecisionStore.from_env()
+        except Exception as exc:  # noqa: BLE001
+            if isinstance(exc, StoreUnavailableError):
+                raise
+            raise StoreUnavailableError(
+                "authoritative store unavailable"
+            ) from exc
     return _store
 
 
@@ -447,7 +542,7 @@ def reset_decision_store(store: DecisionStore | None = None) -> None:
     """Replace or clear the singleton (tests)."""
     global _store
     with _lock:
-        if _store is not None:
+        if _store is not None and store is not _store:
             try:
                 _store.close()
             except Exception:  # noqa: BLE001

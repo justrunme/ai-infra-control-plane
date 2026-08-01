@@ -25,6 +25,21 @@ groups:
       - record: slo:control_plane_model_availability:ratio
         expr: avg(ai_control_model_available)
 
+      - record: slo:control_plane_governance_evaluate_latency_ms:p95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(ai_control_governance_evaluate_latency_ms_bucket[5m])) by (le)
+          )
+
+      - record: slo:control_plane_governance_evaluate_availability:ratio
+        expr: |
+          1 - (
+            sum(rate(ai_control_governance_evaluate_errors_total[5m]))
+            /
+            clamp_min(sum(rate(ai_control_governance_evaluate_latency_ms_count[5m])), 1)
+          )
+
       - alert: GatewayLatencyP95High
         expr: slo:gateway_chat_duration_seconds:p95 > 2.5
         for: 10m
@@ -72,3 +87,19 @@ groups:
           severity: critical
         annotations:
           summary: Model availability dropped below 99% SLO
+
+      - alert: GovernanceEvaluateLatencyP95High
+        expr: slo:control_plane_governance_evaluate_latency_ms:p95 > 250
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Control-plane governance evaluate p95 exceeds 250ms SLO
+
+      - alert: GovernanceEvaluateAvailabilityLow
+        expr: slo:control_plane_governance_evaluate_availability:ratio < 0.999
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Control-plane governance evaluate availability below 99.9% SLO

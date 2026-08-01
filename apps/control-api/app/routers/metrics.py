@@ -11,6 +11,7 @@ from app.metrics_util import (
     HTTP_REQUEST_LATENCY_MS_TOTAL,
     HTTP_REQUESTS_TOTAL,
     metric_line,
+    render_governance_latency_metrics,
 )
 from app.probes import (
     extract_ollama_models,
@@ -81,6 +82,8 @@ def metrics() -> str:
                 environment=environment,
             )
         )
+
+    lines.extend(render_governance_latency_metrics())
 
     lines.extend(
         [

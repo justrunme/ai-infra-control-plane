@@ -283,7 +283,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.3.0`) to publish semver tags. Current release line: **v0.3.0**.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v0.4.0`) to publish semver tags. Current release line: **v0.4.0**.
 
 ## Kubernetes Deployment
 

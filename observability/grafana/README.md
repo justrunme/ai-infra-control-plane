@@ -5,6 +5,7 @@ This directory contains Grafana dashboards for the AI Infrastructure Control Pla
 ## Dashboards
 
 - `dashboards/ai-control-plane.json` - overview dashboard for backend health, latency, request traffic, model availability, capacity, and hourly cost.
+- `dashboards/governance-slo.json` - governance evaluate p95 latency, error ratio, and throughput against the v0.4 SLO.
 - `dashboards/loki-logs.json` - Loki dashboard for control plane logs, Argo CD deployment signals, and observability stack logs.
 - `dashboards/chargeback-attribution.json` - FinOps view combining runtime tenant metrics (`gateway_tenant_*`), governance verdicts, and estimated inference cost. Import when the Execution Plane and Control Plane metrics are federated into one Prometheus.
 
@@ -22,6 +23,8 @@ Core metrics:
 - `ai_control_model_available`
 - `ai_control_capacity_available`
 - `ai_control_estimated_hourly_cost_usd`
+- `ai_control_governance_evaluate_latency_ms_*`
+- `ai_control_governance_evaluate_errors_total`
 
 ## Import
 
