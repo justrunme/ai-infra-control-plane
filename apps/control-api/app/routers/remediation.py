@@ -96,13 +96,24 @@ def _store_unavailable(exc: StoreUnavailableError) -> HTTPException:
 def _tenant_scope(request: Request, body_tenant: str = "") -> str | None:
     if not get_settings().tenant_isolation:
         return body_tenant.strip() or None
-    tenant = resolve_request_tenant(dict(request.headers)) or body_tenant.strip()
+    try:
+        tenant = resolve_request_tenant(dict(request.headers))
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=401, detail={"error": str(exc)}
+        ) from exc
+    if not tenant:
+        # Body tenant is ignored when TENANT_JWT_ONLY is on (resolve already JWT-only).
+        tenant = body_tenant.strip()
     if not tenant:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": "tenant required",
-                "hint": "set x-ai-tenant or JWT tenant/team claim",
+                "hint": (
+                    "set JWT tenant/team claim "
+                    "(or x-ai-tenant when TENANT_JWT_ONLY=false)"
+                ),
             },
         )
     return tenant

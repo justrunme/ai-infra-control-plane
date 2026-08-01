@@ -86,13 +86,21 @@ def _tenant_scope(request: Request) -> str | None:
     """Return tenant filter when isolation is enabled; else None (no filter)."""
     if not get_settings().tenant_isolation:
         return None
-    tenant = resolve_request_tenant(dict(request.headers))
+    try:
+        tenant = resolve_request_tenant(dict(request.headers))
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=401, detail={"error": str(exc)}
+        ) from exc
     if not tenant:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": "tenant required",
-                "hint": "set x-ai-tenant or JWT tenant/team claim",
+                "hint": (
+                    "set JWT tenant/team claim "
+                    "(or x-ai-tenant when TENANT_JWT_ONLY=false)"
+                ),
             },
         )
     return tenant

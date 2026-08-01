@@ -20,8 +20,10 @@ _EVALUATE_BODY = {
 
 def test_redis_unavailable_evaluate_still_ok(monkeypatch) -> None:
     monkeypatch.setenv("QUOTA_REDIS_URL", "redis://127.0.0.1:1/0")
+    monkeypatch.setenv("QUOTA_ON_UNAVAILABLE", "allow")
     response = client.post("/governance/evaluate", json=_EVALUATE_BODY)
     assert response.status_code == 200
+    assert response.json()["final_verdict"] in {"allow", "approval_required", "block"}
 
 
 def test_prometheus_unavailable_evaluate_still_ok(monkeypatch) -> None:

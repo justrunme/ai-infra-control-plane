@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.identity_service import AuthenticationError, AuthorizationError
 from app.policy_lifecycle import get_policy_lifecycle
 from app.policy_source import PolicySource
+from app.rbac import require_any_role
 
 router = APIRouter(prefix="/governance/policy-bundles", tags=["policy-bundles"])
 
@@ -59,6 +61,19 @@ def _info(bundle, *, role: str) -> PolicyBundleInfo:
         error=bundle.error,
         role=role,
     )
+
+
+def _require_platform_admin(request: Request) -> None:
+    try:
+        require_any_role(dict(request.headers), "platform-admin")
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=401, detail={"error": str(exc)}
+        ) from exc
+    except AuthorizationError as exc:
+        raise HTTPException(
+            status_code=403, detail={"error": str(exc)}
+        ) from exc
 
 
 @router.get("", response_model=list[PolicyBundleInfo])
@@ -131,7 +146,8 @@ def get_impact(bundle_id: str) -> ImpactResponse:
 
 
 @router.post("/{bundle_id}/activate", response_model=PolicyBundleInfo)
-def activate_bundle(bundle_id: str) -> PolicyBundleInfo:
+def activate_bundle(bundle_id: str, request: Request) -> PolicyBundleInfo:
+    _require_platform_admin(request)
     life = get_policy_lifecycle()
     try:
         bundle = life.activate(bundle_id)
@@ -141,7 +157,8 @@ def activate_bundle(bundle_id: str) -> PolicyBundleInfo:
 
 
 @router.post("/rollback", response_model=PolicyBundleInfo)
-def rollback_bundle() -> PolicyBundleInfo:
+def rollback_bundle(request: Request) -> PolicyBundleInfo:
+    _require_platform_admin(request)
     life = get_policy_lifecycle()
     try:
         bundle = life.rollback()

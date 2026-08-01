@@ -26,7 +26,11 @@ from app.governance_service import (
     GovernanceEvaluateResponse,
     evaluate_governance_request,
 )
-from app.identity_service import apply_identity, resolve_workload_identity
+from app.identity_service import (
+    AuthenticationError,
+    apply_identity,
+    resolve_workload_identity,
+)
 from app.intent_service import (
     IntentResolveRequest,
     IntentResolveResponse,
@@ -79,7 +83,12 @@ def governance_evaluate(
     try:
         header_map = dict(request.headers)
         payload = apply_supply_chain_headers(payload, header_map)
-        identity = resolve_workload_identity(header_map, payload)
+        try:
+            identity = resolve_workload_identity(header_map, payload)
+        except AuthenticationError as exc:
+            raise HTTPException(
+                status_code=401, detail={"error": str(exc)}
+            ) from exc
         merged = apply_identity(payload, identity)
         request_id = request.headers.get("x-request-id") or str(uuid4())
         prior_approval = header_map.get("x-ai-approval-id", "").strip()

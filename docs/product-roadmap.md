@@ -53,8 +53,8 @@ flowchart TD
 | v1.3.0 | Retention purge, decision FKs, signed OCI Helm chart | Done |
 | v1.4.0 | Tenant isolation, PrometheusRule SLO alerts, drift actions, ADRs | Done |
 | v1.5.0 | Signed OCI PolicyBundle + simulate/activate/rollback + CRD | Done |
-| v1.6.0 | RemediationProposal closed-loop (detect→approve→PR→verify) | This release |
-| v1.7.0 | RBAC + JWT-only tenant + quota failure policy | Planned |
+| v1.6.0 | RemediationProposal closed-loop (detect→approve→PR→verify) | Done |
+| v1.7.0 | RBAC + JWT-only tenant + quota failure policy | This release |
 | v1.8.0 | Durable agent/tool capability contract | Planned |
 | v2.0.0 | Stabilize CRD/API + upgrade boundary | Planned |
 
@@ -73,6 +73,7 @@ flowchart TD
 - [ADRs](adr/README.md)
 - [Policy bundles GitOps](policy-bundles-gitops.md)
 - [Remediation proposals](remediation-proposals.md)
+- [RBAC](rbac.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)
