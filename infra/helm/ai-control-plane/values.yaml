@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "1.7.0"
+  tag: "1.8.0"
   pullPolicy: IfNotPresent
 
 # Durable governance decisions / approvals (SQLite by default).

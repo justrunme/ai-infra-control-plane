@@ -34,6 +34,7 @@ from app.routers import (
     topology,
 )
 from app.routers.approvals import router as approvals_router
+from app.routers.capabilities import router as capabilities_router
 from app.routers.policy_bundles import router as policy_bundles_router
 from app.routers.remediation import router as remediation_router
 from app.settings import get_settings
@@ -65,7 +66,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="1.7.0",
+    version="1.8.0",
     description="Control API for private AI inference infrastructure.",
     lifespan=lifespan,
 )
@@ -74,6 +75,7 @@ install_error_handlers(app)
 app.include_router(approvals_router)
 app.include_router(policy_bundles_router)
 app.include_router(remediation_router)
+app.include_router(capabilities_router)
 app.include_router(dashboard.router)
 app.include_router(health.router)
 app.include_router(inventory.router)

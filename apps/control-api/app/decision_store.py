@@ -159,6 +159,34 @@ class RemediationProposalPage:
         return self.offset + len(self.items) < self.total
 
 
+@dataclass
+class CapabilityContractRecord:
+    contract_id: str
+    kind: str
+    name: str
+    tenant_id: str
+    status: str
+    version: str
+    content_digest: str
+    capabilities: dict[str, Any]
+    source: str
+    created_at: str
+    updated_at: str
+    activated_at: str | None
+
+
+@dataclass(frozen=True)
+class CapabilityContractPage:
+    items: list[CapabilityContractRecord]
+    total: int
+    limit: int
+    offset: int
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+
 class DecisionStore:
     """Durable decision / approval store (SQLite or pooled Postgres)."""
 
@@ -1129,6 +1157,264 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
+    def upsert_capability_contract(
+        self,
+        *,
+        kind: str,
+        name: str,
+        tenant_id: str,
+        version: str,
+        content_digest: str,
+        capabilities: dict[str, Any],
+        source: str = "filesystem",
+        status: str = "draft",
+        contract_id: str | None = None,
+        conn: Any | None = None,
+    ) -> CapabilityContractRecord:
+        existing = self.get_capability_contract_by_digest(
+            kind=kind,
+            name=name,
+            tenant_id=tenant_id,
+            content_digest=content_digest,
+            conn=conn,
+        )
+        if existing is not None:
+            return existing
+        contract_id = contract_id or str(uuid.uuid4())
+        now = _isoformat(_utcnow())
+        params = (
+            contract_id,
+            kind,
+            name,
+            tenant_id,
+            status,
+            version,
+            content_digest,
+            json.dumps(capabilities or {}),
+            source,
+            now,
+            now,
+            None,
+        )
+        sql = """
+            INSERT INTO capability_contracts (
+              contract_id, kind, name, tenant_id, status, version,
+              content_digest, capabilities_json, source, created_at,
+              updated_at, activated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+
+        def _run(session: Any) -> CapabilityContractRecord:
+            self._execute(session, sql, params)
+            row = self._execute(
+                session,
+                "SELECT * FROM capability_contracts WHERE contract_id = ?",
+                (contract_id,),
+            ).fetchone()
+            assert row is not None
+            return self._capability_from_row(row)
+
+        try:
+            with observe_db_operation("upsert_capability_contract"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
+    def get_capability_contract(
+        self,
+        contract_id: str,
+        *,
+        tenant_id: str | None = None,
+    ) -> CapabilityContractRecord | None:
+        try:
+            with observe_db_operation("get_capability_contract"):
+                with self._session() as conn:
+                    row = self._execute(
+                        conn,
+                        "SELECT * FROM capability_contracts WHERE contract_id = ?",
+                        (contract_id,),
+                    ).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        if row is None:
+            return None
+        record = self._capability_from_row(row)
+        if tenant_id is not None and record.tenant_id != tenant_id:
+            return None
+        return record
+
+    def get_capability_contract_by_digest(
+        self,
+        *,
+        kind: str,
+        name: str,
+        tenant_id: str,
+        content_digest: str,
+        conn: Any | None = None,
+    ) -> CapabilityContractRecord | None:
+        sql = """
+            SELECT * FROM capability_contracts
+            WHERE kind = ? AND name = ? AND tenant_id = ? AND content_digest = ?
+            """
+        params = (kind, name, tenant_id, content_digest)
+        try:
+            with observe_db_operation("get_capability_contract_by_digest"):
+                if conn is not None:
+                    row = self._execute(conn, sql, params).fetchone()
+                else:
+                    with self._session() as session:
+                        row = self._execute(session, sql, params).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        if row is None:
+            return None
+        return self._capability_from_row(row)
+
+    def list_capability_contracts(
+        self,
+        *,
+        kind: str | None = None,
+        status: str | None = None,
+        name: str | None = None,
+        tenant_id: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> CapabilityContractPage:
+        limit = max(1, min(limit, 500))
+        offset = max(0, offset)
+        filters: list[str] = []
+        params: list[Any] = []
+        if kind:
+            filters.append("kind = ?")
+            params.append(kind)
+        if status:
+            filters.append("status = ?")
+            params.append(status)
+        if name:
+            filters.append("name = ?")
+            params.append(name)
+        if tenant_id is not None:
+            filters.append("tenant_id = ?")
+            params.append(tenant_id)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        try:
+            with observe_db_operation("list_capability_contracts"):
+                with self._session() as conn:
+                    total = int(
+                        self._as_mapping(
+                            self._execute(
+                                conn,
+                                f"SELECT COUNT(*) AS total "
+                                f"FROM capability_contracts {where}",
+                                tuple(params),
+                            ).fetchone()
+                        ).get("total")
+                        or 0
+                    )
+                    rows = self._execute(
+                        conn,
+                        f"""
+                        SELECT * FROM capability_contracts
+                        {where}
+                        ORDER BY updated_at DESC
+                        LIMIT ? OFFSET ?
+                        """,
+                        tuple(params + [limit, offset]),
+                    ).fetchall()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return CapabilityContractPage(
+            items=[self._capability_from_row(row) for row in rows],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    def set_capability_contract_status(
+        self,
+        contract_id: str,
+        status: str,
+        *,
+        conn: Any | None = None,
+    ) -> CapabilityContractRecord:
+        if status not in {"draft", "active", "retired"}:
+            raise ValueError("status must be draft, active, or retired")
+        now = _isoformat(_utcnow())
+        activated_at = now if status == "active" else None
+
+        def _run(session: Any) -> CapabilityContractRecord:
+            current = self._execute(
+                session,
+                "SELECT * FROM capability_contracts WHERE contract_id = ?",
+                (contract_id,),
+            ).fetchone()
+            if current is None:
+                raise KeyError(f"capability contract not found: {contract_id}")
+            record = self._capability_from_row(current)
+            if status == "active":
+                # Retire previously active contract for same kind/name/tenant.
+                self._execute(
+                    session,
+                    """
+                    UPDATE capability_contracts
+                    SET status = 'retired', updated_at = ?
+                    WHERE kind = ? AND name = ? AND tenant_id = ?
+                      AND status = 'active' AND contract_id <> ?
+                    """,
+                    (
+                        now,
+                        record.kind,
+                        record.name,
+                        record.tenant_id,
+                        contract_id,
+                    ),
+                )
+            self._execute(
+                session,
+                """
+                UPDATE capability_contracts
+                SET status = ?, updated_at = ?,
+                    activated_at = COALESCE(?, activated_at)
+                WHERE contract_id = ?
+                """,
+                (status, now, activated_at, contract_id),
+            )
+            row = self._execute(
+                session,
+                "SELECT * FROM capability_contracts WHERE contract_id = ?",
+                (contract_id,),
+            ).fetchone()
+            assert row is not None
+            return self._capability_from_row(row)
+
+        try:
+            with observe_db_operation("set_capability_contract_status"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except (KeyError, ValueError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
     def append_audit_meta(
         self,
         *,
@@ -1294,6 +1580,24 @@ class DecisionStore:
             failure_reason=mapping.get("failure_reason"),
             created_at=mapping.get("created_at") or "",
             updated_at=mapping.get("updated_at") or "",
+        )
+
+    @classmethod
+    def _capability_from_row(cls, row: Any) -> CapabilityContractRecord:
+        mapping = cls._as_mapping(row)
+        return CapabilityContractRecord(
+            contract_id=mapping["contract_id"],
+            kind=mapping.get("kind") or "",
+            name=mapping.get("name") or "",
+            tenant_id=mapping.get("tenant_id") or "",
+            status=mapping.get("status") or "",
+            version=mapping.get("version") or "",
+            content_digest=mapping.get("content_digest") or "",
+            capabilities=json.loads(mapping.get("capabilities_json") or "{}"),
+            source=mapping.get("source") or "",
+            created_at=mapping.get("created_at") or "",
+            updated_at=mapping.get("updated_at") or "",
+            activated_at=mapping.get("activated_at"),
         )
 
 
