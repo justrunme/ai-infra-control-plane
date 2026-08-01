@@ -7,8 +7,18 @@ Detect → Propose → Evaluate policy → Approve → PR draft → Applied (Git
 ```
 
 The control plane **does not** pull models or rewrite production inventory. It
-records proposals, evaluates policy, drafts GitOps PR text, and verifies runtime
-drift after apply.
+records proposals, evaluates policy, opens an optional **draft** GitOps PR, and
+verifies runtime drift after apply.
+
+## GitOps provider (v2.2+)
+
+| Mode | When | Behavior |
+| --- | --- | --- |
+| `noop` (default) | No token/repo, or `GITOPS_PROVIDER=noop` | Persist `pr_title` / `pr_body` only |
+| `github` | `GITHUB_TOKEN` + `GITHUB_REPOSITORY`, or `GITOPS_PROVIDER=github` | Create branch + remediation note + **draft** PR; store `pr_url` |
+
+If `prepare-pr` includes `pr_url`, the adapter is skipped. Failures leave the
+proposal in `approved` (no half-applied `pr_created`).
 
 ## API
 
@@ -20,7 +30,7 @@ drift after apply.
 | POST | `/remediation/proposals/{id}/evaluate-policy` | Run governance evaluate |
 | POST | `/remediation/proposals/{id}/approve` | Approve (`approval_required`) |
 | POST | `/remediation/proposals/{id}/reject` | Reject |
-| POST | `/remediation/proposals/{id}/prepare-pr` | Persist PR draft (+ optional URL) |
+| POST | `/remediation/proposals/{id}/prepare-pr` | Persist PR draft; open GitHub draft PR when configured |
 | POST | `/remediation/proposals/{id}/mark-applied` | Signal GitOps applied |
 | POST | `/remediation/proposals/{id}/verify` | Re-check `GET /drift` semantics |
 
@@ -44,7 +54,7 @@ When `approval_required`, resolve via `/approve` or `/reject` (and the linked
 2. `POST /remediation/proposals`
 3. `POST .../evaluate-policy`
 4. Approve if needed
-5. `POST .../prepare-pr` → open PR externally from `pr_title` / `pr_body`
+5. `POST .../prepare-pr` → draft PR via GitOps adapter (or use returned title/body)
 6. Merge / Argo sync
 7. `POST .../mark-applied`
 8. `POST .../verify` until `verified`

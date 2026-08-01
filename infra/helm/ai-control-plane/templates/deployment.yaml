@@ -183,6 +183,26 @@ spec:
             - name: POLICY_SOURCE_FAILURE_MODE
               value: {{ .Values.policySource.failureMode | default "last_known_good" | quote }}
             {{- end }}
+            {{- with .Values.gitops }}
+            {{- if .provider }}
+            - name: GITOPS_PROVIDER
+              value: {{ .provider | quote }}
+            {{- end }}
+            {{- if .repository }}
+            - name: GITHUB_REPOSITORY
+              value: {{ .repository | quote }}
+            {{- end }}
+            {{- if .apiUrl }}
+            - name: GITHUB_API_URL
+              value: {{ .apiUrl | quote }}
+            {{- end }}
+            {{- if .baseBranch }}
+            - name: GITHUB_BASE_BRANCH
+              value: {{ .baseBranch | quote }}
+            {{- end }}
+            - name: GITHUB_PR_DRAFT
+              value: {{ .draft | default true | quote }}
+            {{- end }}
           {{- if .Values.secrets.externalSecrets.enabled }}
           envFrom:
             - secretRef:
