@@ -125,6 +125,40 @@ class RetentionPurgeResult:
     deleted_decisions: int
 
 
+@dataclass
+class RemediationProposalRecord:
+    proposal_id: str
+    tenant_id: str
+    status: str
+    source: str
+    remediation_kind: str
+    drift_snapshot: dict[str, Any]
+    selected_action: dict[str, Any]
+    decision_id: str | None
+    approval_id: str | None
+    policy_verdict: str | None
+    pr_title: str | None
+    pr_body: str | None
+    pr_url: str | None
+    applied_at: str | None
+    verification_snapshot: dict[str, Any] | None
+    failure_reason: str | None
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True)
+class RemediationProposalPage:
+    items: list[RemediationProposalRecord]
+    total: int
+    limit: int
+    offset: int
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+
 class DecisionStore:
     """Durable decision / approval store (SQLite or pooled Postgres)."""
 
@@ -868,6 +902,233 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
+    def create_remediation_proposal(
+        self,
+        *,
+        tenant_id: str,
+        status: str,
+        source: str,
+        remediation_kind: str,
+        drift_snapshot: dict[str, Any],
+        selected_action: dict[str, Any] | None = None,
+        proposal_id: str | None = None,
+        conn: Any | None = None,
+    ) -> str:
+        proposal_id = proposal_id or str(uuid.uuid4())
+        now = _isoformat(_utcnow())
+        params = (
+            proposal_id,
+            tenant_id,
+            status,
+            source,
+            remediation_kind,
+            json.dumps(drift_snapshot or {}),
+            json.dumps(selected_action or {}),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            now,
+            now,
+        )
+        sql = """
+            INSERT INTO remediation_proposals (
+              proposal_id, tenant_id, status, source, remediation_kind,
+              drift_snapshot_json, selected_action_json, decision_id,
+              approval_id, policy_verdict, pr_title, pr_body, pr_url,
+              applied_at, verification_snapshot_json, failure_reason,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+        try:
+            with observe_db_operation("create_remediation_proposal"):
+                if conn is not None:
+                    self._execute(conn, sql, params)
+                else:
+                    with self._session() as session:
+                        self._execute(session, sql, params)
+                        self._commit(session)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return proposal_id
+
+    def get_remediation_proposal(
+        self,
+        proposal_id: str,
+        *,
+        tenant_id: str | None = None,
+    ) -> RemediationProposalRecord | None:
+        try:
+            with observe_db_operation("get_remediation_proposal"):
+                with self._session() as conn:
+                    cur = self._execute(
+                        conn,
+                        "SELECT * FROM remediation_proposals WHERE proposal_id = ?",
+                        (proposal_id,),
+                    )
+                    row = cur.fetchone()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        if row is None:
+            return None
+        record = self._remediation_from_row(row)
+        if tenant_id is not None and record.tenant_id != tenant_id:
+            return None
+        return record
+
+    def list_remediation_proposals(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        tenant_id: str | None = None,
+    ) -> RemediationProposalPage:
+        limit = max(1, min(limit, 500))
+        offset = max(0, offset)
+        filters: list[str] = []
+        params: list[Any] = []
+        if status:
+            filters.append("status = ?")
+            params.append(status)
+        if tenant_id is not None:
+            filters.append("tenant_id = ?")
+            params.append(tenant_id)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        try:
+            with observe_db_operation("list_remediation_proposals"):
+                with self._session() as conn:
+                    count_cur = self._execute(
+                        conn,
+                        f"SELECT COUNT(*) AS total FROM remediation_proposals {where}",
+                        tuple(params),
+                    )
+                    total = int(
+                        self._as_mapping(count_cur.fetchone()).get("total") or 0
+                    )
+                    list_params = tuple(params + [limit, offset])
+                    cur = self._execute(
+                        conn,
+                        f"""
+                        SELECT * FROM remediation_proposals
+                        {where}
+                        ORDER BY created_at ASC
+                        LIMIT ? OFFSET ?
+                        """,
+                        list_params,
+                    )
+                    rows = cur.fetchall()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return RemediationProposalPage(
+            items=[self._remediation_from_row(row) for row in rows],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    def update_remediation_proposal(
+        self,
+        proposal_id: str,
+        *,
+        status: str | None = None,
+        remediation_kind: str | None = None,
+        selected_action: dict[str, Any] | None = None,
+        decision_id: str | None = None,
+        approval_id: str | None = None,
+        policy_verdict: str | None = None,
+        pr_title: str | None = None,
+        pr_body: str | None = None,
+        pr_url: str | None = None,
+        applied_at: str | None = None,
+        verification_snapshot: dict[str, Any] | None = None,
+        failure_reason: str | None = None,
+        conn: Any | None = None,
+    ) -> RemediationProposalRecord:
+        sets: list[str] = ["updated_at = ?"]
+        params: list[Any] = [_isoformat(_utcnow())]
+        if status is not None:
+            sets.append("status = ?")
+            params.append(status)
+        if remediation_kind is not None:
+            sets.append("remediation_kind = ?")
+            params.append(remediation_kind)
+        if selected_action is not None:
+            sets.append("selected_action_json = ?")
+            params.append(json.dumps(selected_action))
+        if decision_id is not None:
+            sets.append("decision_id = ?")
+            params.append(decision_id)
+        if approval_id is not None:
+            sets.append("approval_id = ?")
+            params.append(approval_id)
+        if policy_verdict is not None:
+            sets.append("policy_verdict = ?")
+            params.append(policy_verdict)
+        if pr_title is not None:
+            sets.append("pr_title = ?")
+            params.append(pr_title)
+        if pr_body is not None:
+            sets.append("pr_body = ?")
+            params.append(pr_body)
+        if pr_url is not None:
+            sets.append("pr_url = ?")
+            params.append(pr_url)
+        if applied_at is not None:
+            sets.append("applied_at = ?")
+            params.append(applied_at)
+        if verification_snapshot is not None:
+            sets.append("verification_snapshot_json = ?")
+            params.append(json.dumps(verification_snapshot))
+        if failure_reason is not None:
+            sets.append("failure_reason = ?")
+            params.append(failure_reason)
+        params.append(proposal_id)
+        sql = (
+            "UPDATE remediation_proposals SET "
+            + ", ".join(sets)
+            + " WHERE proposal_id = ?"
+        )
+
+        def _run(session: Any) -> RemediationProposalRecord:
+            cur = self._execute(session, sql, tuple(params))
+            if int(cur.rowcount or 0) != 1:
+                raise KeyError(f"remediation proposal not found: {proposal_id}")
+            get_cur = self._execute(
+                session,
+                "SELECT * FROM remediation_proposals WHERE proposal_id = ?",
+                (proposal_id,),
+            )
+            row = get_cur.fetchone()
+            assert row is not None
+            return self._remediation_from_row(row)
+
+        try:
+            with observe_db_operation("update_remediation_proposal"):
+                if conn is not None:
+                    return _run(conn)
+                with self._session() as session:
+                    record = _run(session)
+                    self._commit(session)
+                    return record
+        except KeyError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
     def append_audit_meta(
         self,
         *,
@@ -1005,6 +1266,34 @@ class DecisionStore:
             expires_at=mapping.get("expires_at") or "",
             resolved_at=mapping.get("resolved_at"),
             used_at=mapping.get("used_at"),
+        )
+
+    @classmethod
+    def _remediation_from_row(cls, row: Any) -> RemediationProposalRecord:
+        mapping = cls._as_mapping(row)
+        verification_raw = mapping.get("verification_snapshot_json")
+        verification = (
+            json.loads(verification_raw) if verification_raw else None
+        )
+        return RemediationProposalRecord(
+            proposal_id=mapping["proposal_id"],
+            tenant_id=mapping.get("tenant_id") or "",
+            status=mapping.get("status") or "",
+            source=mapping.get("source") or "",
+            remediation_kind=mapping.get("remediation_kind") or "",
+            drift_snapshot=json.loads(mapping.get("drift_snapshot_json") or "{}"),
+            selected_action=json.loads(mapping.get("selected_action_json") or "{}"),
+            decision_id=mapping.get("decision_id"),
+            approval_id=mapping.get("approval_id"),
+            policy_verdict=mapping.get("policy_verdict"),
+            pr_title=mapping.get("pr_title"),
+            pr_body=mapping.get("pr_body"),
+            pr_url=mapping.get("pr_url"),
+            applied_at=mapping.get("applied_at"),
+            verification_snapshot=verification,
+            failure_reason=mapping.get("failure_reason"),
+            created_at=mapping.get("created_at") or "",
+            updated_at=mapping.get("updated_at") or "",
         )
 
 
