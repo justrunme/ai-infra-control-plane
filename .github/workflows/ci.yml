@@ -179,7 +179,7 @@ jobs:
           TEST_DATABASE_URL: postgresql://test:test@127.0.0.1:5432/ai_control
         run: |
           cd apps/control-api
-          PYTHONPATH=. pytest tests/test_decision_store_postgres.py -q
+          PYTHONPATH=. pytest tests/test_decision_store_postgres.py tests/test_schema_migrations.py -q
 
   benchmark:
     runs-on: ubuntu-latest

@@ -6,6 +6,7 @@ import os
 
 import pytest
 
+from app.db_schema import EXPECTED_MIGRATION_VERSIONS
 from app.decision_store import DecisionStore
 
 POSTGRES_URL = os.getenv(
@@ -21,6 +22,8 @@ POSTGRES_URL = os.getenv(
 def test_postgres_decision_and_approval_roundtrip() -> None:
     store = DecisionStore(POSTGRES_URL)
     try:
+        assert store.list_schema_migrations() == EXPECTED_MIGRATION_VERSIONS
+        store.assert_migrations_current()
         decision_id = store.create_decision(
             final_verdict="approval_required",
             policy_bundle_id="pg-bundle",

@@ -17,7 +17,12 @@ from pathlib import Path
 from typing import Any
 
 from app.db_metrics import observe_db_operation, set_pool_stats
-from app.db_schema import MIGRATIONS, SCHEMA_SQL
+from app.db_schema import (
+    EXPECTED_MIGRATION_VERSIONS,
+    MIGRATIONS,
+    SCHEMA_ADVISORY_LOCK_KEY,
+    SCHEMA_SQL,
+)
 from app.settings import get_settings
 
 _store: DecisionStore | None = None
@@ -126,6 +131,7 @@ class DecisionStore:
             )
             with self._pool.connection() as conn:
                 self._apply_schema(conn, postgres=True)
+            self.assert_migrations_current()
             self._refresh_pool_stats()
             return
 
@@ -137,6 +143,7 @@ class DecisionStore:
         self._conn.execute("PRAGMA busy_timeout=5000")
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._apply_schema(self._conn, postgres=False)
+        self.assert_migrations_current()
         set_pool_stats(backend="sqlite", size=1, available=1)
 
     @classmethod
@@ -210,39 +217,74 @@ class DecisionStore:
         self._run_migrations(conn, postgres=False)
 
     def _run_migrations(self, conn: Any, *, postgres: bool) -> None:
+        if postgres:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_advisory_lock(%s)", (SCHEMA_ADVISORY_LOCK_KEY,))
+            try:
+                self._apply_pending_migrations(conn, postgres=True)
+                conn.commit()
+            finally:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT pg_advisory_unlock(%s)", (SCHEMA_ADVISORY_LOCK_KEY,)
+                    )
+                conn.commit()
+            return
+        self._apply_pending_migrations(conn, postgres=False)
+
+    def _apply_pending_migrations(self, conn: Any, *, postgres: bool) -> None:
         now = _isoformat(_utcnow())
-        for version, statements in MIGRATIONS:
+        for version, postgres_statements, sqlite_statements in MIGRATIONS:
             if self._migration_applied(conn, version, postgres=postgres):
                 continue
+            statements = postgres_statements if postgres else sqlite_statements
             for statement in statements:
-                try:
-                    if postgres:
-                        with conn.cursor() as cur:
-                            cur.execute(statement)
-                    else:
-                        conn.execute(statement)
-                except Exception as exc:  # noqa: BLE001
-                    # Column may already exist on upgraded DBs.
-                    message = str(exc).lower()
-                    if "duplicate" in message or "already exists" in message:
-                        continue
-                    if not postgres and isinstance(exc, sqlite3.OperationalError):
-                        continue
-                    raise
-            insert = (
-                "INSERT INTO schema_migrations (version, applied_at) VALUES (%s, %s)"
-                if postgres
-                else "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)"
-            )
-            try:
-                if postgres:
-                    with conn.cursor() as cur:
-                        cur.execute(insert, (version, now))
-                else:
-                    conn.execute(insert, (version, now))
-            except Exception:  # noqa: BLE001
-                pass
+                self._execute_migration_statement(
+                    conn, statement, postgres=postgres
+                )
+            if postgres:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO schema_migrations (version, applied_at)
+                        VALUES (%s, %s)
+                        ON CONFLICT (version) DO NOTHING
+                        """,
+                        (version, now),
+                    )
+            else:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO schema_migrations (version, applied_at)
+                    VALUES (?, ?)
+                    """,
+                    (version, now),
+                )
             conn.commit()
+            if not self._migration_applied(conn, version, postgres=postgres):
+                raise RuntimeError(f"failed to record schema migration {version}")
+
+    def _execute_migration_statement(
+        self, conn: Any, statement: str, *, postgres: bool
+    ) -> None:
+        if postgres:
+            with conn.cursor() as cur:
+                cur.execute("SAVEPOINT mig_step")
+                try:
+                    cur.execute(statement)
+                    cur.execute("RELEASE SAVEPOINT mig_step")
+                except Exception:
+                    cur.execute("ROLLBACK TO SAVEPOINT mig_step")
+                    raise
+            return
+        try:
+            conn.execute(statement)
+        except sqlite3.OperationalError as exc:
+            # Older SQLite without IF NOT EXISTS on ADD COLUMN.
+            message = str(exc).lower()
+            if "duplicate column" in message or "already exists" in message:
+                return
+            raise
 
     def _migration_applied(self, conn: Any, version: str, *, postgres: bool) -> bool:
         query = (
@@ -250,15 +292,38 @@ class DecisionStore:
             if postgres
             else "SELECT 1 FROM schema_migrations WHERE version = ?"
         )
-        try:
-            if postgres:
+        if postgres:
+            with conn.cursor() as cur:
+                cur.execute(query, (version,))
+                return cur.fetchone() is not None
+        cur = conn.execute(query, (version,))
+        return cur.fetchone() is not None
+
+    def list_schema_migrations(self) -> set[str]:
+        """Return applied migration versions from the ledger."""
+        with self._session() as conn:
+            if self._pg:
                 with conn.cursor() as cur:
-                    cur.execute(query, (version,))
-                    return cur.fetchone() is not None
-            cur = conn.execute(query, (version,))
-            return cur.fetchone() is not None
-        except Exception:  # noqa: BLE001
-            return False
+                    cur.execute("SELECT version FROM schema_migrations")
+                    rows = cur.fetchall()
+            else:
+                rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
+        versions: set[str] = set()
+        for row in rows:
+            mapping = self._as_mapping(row)
+            version = mapping.get("version")
+            if version:
+                versions.add(str(version))
+        return versions
+
+    def assert_migrations_current(self) -> None:
+        applied = self.list_schema_migrations()
+        missing = EXPECTED_MIGRATION_VERSIONS - applied
+        if missing:
+            raise RuntimeError(
+                "schema_migrations incomplete: missing "
+                + ", ".join(sorted(missing))
+            )
 
     def _execute(self, conn: Any, sql: str, params: tuple[Any, ...] = ()) -> Any:
         if self._pg:
