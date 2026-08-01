@@ -162,13 +162,14 @@ class DecisionStore:
 
         path = sqlite_path_from_url(database_url)
         _ensure_sqlite_parent(path)
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA busy_timeout=15000")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
+        # Serialize connect+schema so concurrent startups cannot race WAL/DDL.
         with _sqlite_schema_lock:
+            self._conn = sqlite3.connect(path, check_same_thread=False)
+            self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=15000")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+            self._conn.execute("PRAGMA foreign_keys=ON")
             self._apply_schema(self._conn, postgres=False)
             self.assert_migrations_current()
         set_pool_stats(backend="sqlite", size=1, available=1)
