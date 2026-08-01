@@ -1728,6 +1728,72 @@
         "title": "HealthStatus",
         "type": "object"
       },
+      "ImpactResponse": {
+        "properties": {
+          "allow_to_approval": {
+            "title": "Allow To Approval",
+            "type": "integer"
+          },
+          "allow_to_block": {
+            "title": "Allow To Block",
+            "type": "integer"
+          },
+          "approval_to_allow": {
+            "title": "Approval To Allow",
+            "type": "integer"
+          },
+          "approval_to_block": {
+            "title": "Approval To Block",
+            "type": "integer"
+          },
+          "block_to_allow": {
+            "title": "Block To Allow",
+            "type": "integer"
+          },
+          "bundle_id": {
+            "title": "Bundle Id",
+            "type": "string"
+          },
+          "content_digest": {
+            "title": "Content Digest",
+            "type": "string"
+          },
+          "evaluated_decisions": {
+            "title": "Evaluated Decisions",
+            "type": "integer"
+          },
+          "other_changes": {
+            "title": "Other Changes",
+            "type": "integer"
+          },
+          "sample_changes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sample Changes",
+            "type": "array"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bundle_id",
+          "content_digest",
+          "evaluated_decisions",
+          "unchanged",
+          "allow_to_block",
+          "allow_to_approval",
+          "block_to_allow",
+          "approval_to_allow",
+          "approval_to_block",
+          "other_changes"
+        ],
+        "title": "ImpactResponse",
+        "type": "object"
+      },
       "IncidentAlert": {
         "properties": {
           "name": {
@@ -2395,6 +2461,55 @@
         "title": "OrchestrationPlan",
         "type": "object"
       },
+      "PolicyBundleInfo": {
+        "properties": {
+          "bundle_id": {
+            "title": "Bundle Id",
+            "type": "string"
+          },
+          "content_digest": {
+            "title": "Content Digest",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "git_revision": {
+            "title": "Git Revision",
+            "type": "string"
+          },
+          "loaded_at": {
+            "title": "Loaded At",
+            "type": "string"
+          },
+          "role": {
+            "default": "candidate",
+            "title": "Role",
+            "type": "string"
+          },
+          "validation_status": {
+            "title": "Validation Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle_id",
+          "content_digest",
+          "git_revision",
+          "loaded_at",
+          "validation_status"
+        ],
+        "title": "PolicyBundleInfo",
+        "type": "object"
+      },
       "PolicyBundleStatus": {
         "properties": {
           "bundle_id": {
@@ -2437,6 +2552,37 @@
           "validation_status"
         ],
         "title": "PolicyBundleStatus",
+        "type": "object"
+      },
+      "PolicySourceRequest": {
+        "properties": {
+          "digest": {
+            "default": "",
+            "title": "Digest",
+            "type": "string"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "title": "Reference",
+            "type": "string"
+          },
+          "type": {
+            "default": "filesystem",
+            "title": "Type",
+            "type": "string"
+          },
+          "verify_signature": {
+            "default": false,
+            "title": "Verify Signature",
+            "type": "boolean"
+          }
+        },
+        "title": "PolicySourceRequest",
         "type": "object"
       },
       "ReadyStatus": {
@@ -3191,6 +3337,18 @@
         "title": "TopologyStatus",
         "type": "object"
       },
+      "ValidateResponse": {
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/PolicyBundleInfo"
+          }
+        },
+        "required": [
+          "bundle"
+        ],
+        "title": "ValidateResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -3285,7 +3443,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "1.4.0"
+    "version": "1.5.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4253,6 +4411,231 @@
         "summary": "Policy Bundle Reload",
         "tags": [
           "approvals"
+        ]
+      }
+    },
+    "/governance/policy-bundles": {
+      "get": {
+        "operationId": "list_bundles_governance_policy_bundles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PolicyBundleInfo"
+                  },
+                  "title": "Response List Bundles Governance Policy Bundles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Bundles",
+        "tags": [
+          "policy-bundles"
+        ]
+      }
+    },
+    "/governance/policy-bundles/rollback": {
+      "post": {
+        "operationId": "rollback_bundle_governance_policy_bundles_rollback_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyBundleInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rollback Bundle",
+        "tags": [
+          "policy-bundles"
+        ]
+      }
+    },
+    "/governance/policy-bundles/validate": {
+      "post": {
+        "operationId": "validate_bundle_governance_policy_bundles_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicySourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Bundle",
+        "tags": [
+          "policy-bundles"
+        ]
+      }
+    },
+    "/governance/policy-bundles/{bundle_id}/activate": {
+      "post": {
+        "operationId": "activate_bundle_governance_policy_bundles__bundle_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bundle_id",
+            "required": true,
+            "schema": {
+              "title": "Bundle Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyBundleInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Bundle",
+        "tags": [
+          "policy-bundles"
+        ]
+      }
+    },
+    "/governance/policy-bundles/{bundle_id}/impact": {
+      "get": {
+        "operationId": "get_impact_governance_policy_bundles__bundle_id__impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bundle_id",
+            "required": true,
+            "schema": {
+              "title": "Bundle Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Impact",
+        "tags": [
+          "policy-bundles"
+        ]
+      }
+    },
+    "/governance/policy-bundles/{bundle_id}/simulate": {
+      "post": {
+        "operationId": "simulate_bundle_governance_policy_bundles__bundle_id__simulate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bundle_id",
+            "required": true,
+            "schema": {
+              "title": "Bundle Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Simulate Bundle",
+        "tags": [
+          "policy-bundles"
         ]
       }
     },

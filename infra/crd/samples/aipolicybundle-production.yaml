@@ -1,0 +1,19 @@
+apiVersion: ai.justrunme.dev/v1alpha1
+kind: AIPolicyBundle
+metadata:
+  name: production
+  namespace: ai-control
+spec:
+  source:
+    type: oci
+    oci: ghcr.io/justrunme/ai-policies:production
+    digest: sha256:replace-me
+  signature:
+    required: true
+  targets:
+    environments: [production]
+    teams: [platform]
+  rollout:
+    mode: approval
+status:
+  phase: Pending
