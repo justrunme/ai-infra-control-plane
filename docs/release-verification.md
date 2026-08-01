@@ -20,8 +20,9 @@ gh release create vX.Y.Z --title "vX.Y.Z — <title>" --notes-file /tmp/notes.md
 The Release workflow then:
 
 1. Builds and pushes `ghcr.io/justrunme/ai-infra-control-plane:X.Y.Z` (and floating tags)
-2. Generates SBOM + cosign signature
+2. Generates SBOM + cosign signature for the image
 3. Packages and pushes the Helm chart to `oci://ghcr.io/justrunme/charts/ai-control-plane`
+4. Cosign-signs the chart OCI artifact (keyless OIDC)
 
 ## Verify artifacts
 
@@ -33,6 +34,12 @@ docker pull ghcr.io/justrunme/ai-infra-control-plane:X.Y.Z
 helm pull oci://ghcr.io/justrunme/charts/ai-control-plane --version X.Y.Z
 helm template ai-control-plane oci://ghcr.io/justrunme/charts/ai-control-plane --version X.Y.Z \
   -f infra/helm/ai-control-plane/values-production.yaml >/dev/null
+
+# Verify chart signature (keyless)
+cosign verify \
+  --certificate-identity-regexp 'https://github.com/justrunme/ai-infra-control-plane/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/justrunme/charts/ai-control-plane:X.Y.Z
 ```
 
 Install example:

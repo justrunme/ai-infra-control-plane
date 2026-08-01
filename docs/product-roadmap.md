@@ -49,7 +49,8 @@ flowchart TD
 | v1.0.0 | Stable contract + maturity boundary + upgrade guide | Done |
 | v1.0.1 | Correct migration ledger + concurrent schema apply | Done |
 | v1.1.0 | Transactional Unit of Work, indexes, pagination metadata | Done |
-| v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | This release |
+| v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | Done |
+| v1.3.0 | Retention purge, decision FKs, signed OCI Helm chart | This release |
 
 ## Related docs
 
@@ -60,6 +61,7 @@ flowchart TD
 - [Maturity boundary](maturity-boundary.md)
 - [Upgrade v0.5 → v1.0](upgrade-v0.5-to-v1.0.md)
 - [Release verification](release-verification.md)
+- [Retention](retention.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

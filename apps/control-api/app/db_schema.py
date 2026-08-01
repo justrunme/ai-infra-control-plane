@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS decisions (
 
 CREATE TABLE IF NOT EXISTS approvals (
   approval_id TEXT PRIMARY KEY,
-  decision_id TEXT,
+  decision_id TEXT REFERENCES decisions(decision_id) ON DELETE CASCADE,
   status TEXT,
   reviewer TEXT,
   review_comment TEXT,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS approvals (
 
 CREATE TABLE IF NOT EXISTS audit_meta (
   event_id TEXT PRIMARY KEY,
-  decision_id TEXT,
+  decision_id TEXT REFERENCES decisions(decision_id) ON DELETE CASCADE,
   event_type TEXT,
   actor TEXT,
   payload_json TEXT,
@@ -59,6 +59,8 @@ CREATE INDEX IF NOT EXISTS idx_decisions_team_created
   ON decisions (team, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id
   ON audit_meta (decision_id);
+CREATE INDEX IF NOT EXISTS idx_audit_meta_created_at
+  ON audit_meta (created_at);
 """
 
 
@@ -79,11 +81,37 @@ _INDEX_STATEMENTS = (
     "ON decisions (team, created_at)",
     "CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id "
     "ON audit_meta (decision_id)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_meta_created_at "
+    "ON audit_meta (created_at)",
+)
+
+_POSTGRES_FK_STATEMENTS = (
+    """
+    DO $$ BEGIN
+      ALTER TABLE approvals
+        ADD CONSTRAINT approvals_decision_id_fkey
+        FOREIGN KEY (decision_id) REFERENCES decisions(decision_id)
+        ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$
+    """,
+    """
+    DO $$ BEGIN
+      ALTER TABLE audit_meta
+        ADD CONSTRAINT audit_meta_decision_id_fkey
+        FOREIGN KEY (decision_id) REFERENCES decisions(decision_id)
+        ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$
+    """,
 )
 
 # Incremental migrations for databases created before schema_migrations existed.
 # Postgres uses IF NOT EXISTS so fresh CREATE TABLE columns do not abort the ledger.
 # SQLite (pre-3.35) lacks ADD COLUMN IF NOT EXISTS; duplicate-column is handled in code.
+# SQLite cannot ADD FK to existing tables without rebuild; fresh SCHEMA_SQL has FKs.
 MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
     _migration(
         "002_request_digest",
@@ -99,6 +127,11 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
         "004_query_indexes",
         postgres=_INDEX_STATEMENTS,
         sqlite=_INDEX_STATEMENTS,
+    ),
+    _migration(
+        "005_decision_foreign_keys",
+        postgres=_POSTGRES_FK_STATEMENTS,
+        sqlite=(),
     ),
 )
 
