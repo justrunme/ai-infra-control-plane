@@ -59,9 +59,9 @@ flowchart TD
 | v2.0.0 | Stabilize CRD/API + upgrade boundary | Done |
 | v2.0.1 | Security/correctness: RBAC, policy fail-closed, OCI tooling | Done |
 | v2.1.0 | Durable HA PolicyBundle lifecycle | Done |
-| v2.2.0 | GitOpsProvider + GitHub PR adapter | This release |
-| v2.3.0 | Runtime verification contract | Next |
-| v2.4.0 | Capability-bound execution digests | Planned |
+| v2.2.0 | GitOpsProvider + GitHub PR adapter | Done |
+| v2.3.0 | Runtime verification contract | This release |
+| v2.4.0 | Capability-bound execution digests | Next |
 
 ## Related docs
 
@@ -79,6 +79,7 @@ flowchart TD
 - [ADRs](adr/README.md)
 - [Policy bundles GitOps](policy-bundles-gitops.md)
 - [Remediation proposals](remediation-proposals.md)
+- [Runtime verification](runtime-verification.md)
 - [RBAC](rbac.md)
 - [Capability contracts](capability-contracts.md)
 - [Portfolio overview](portfolio-overview.md)

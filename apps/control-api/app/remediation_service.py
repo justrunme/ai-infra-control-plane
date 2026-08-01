@@ -340,20 +340,41 @@ def verify_runtime(
     elif record.status != "verifying":
         _require_transition(record.status, "verified")
 
+    from app.probe_cache import clear_probe_cache
+    from app.verification_contract import build_verification_snapshot
+
+    probe_fresh = drift is None
+    if probe_fresh:
+        clear_probe_cache()
     status = drift or get_inventory_drift()
-    snapshot = status.model_dump()
-    if status.in_sync:
+    snapshot_model = build_verification_snapshot(
+        proposal_id=proposal_id,
+        inventory=status,
+        baseline_snapshot=record.drift_snapshot,
+        probe_fresh=probe_fresh,
+    )
+    snapshot = snapshot_model.to_persist_dict()
+    if snapshot_model.outcome == "verified":
         return decision_store.update_remediation_proposal(
             proposal_id,
             status="verified",
             verification_snapshot=snapshot,
             failure_reason="",
         )
+    failed_check = next(
+        (check for check in snapshot_model.checks if check.status == "fail"),
+        None,
+    )
+    reason = (
+        (failed_check.detail if failed_check else None)
+        or status.summary
+        or "runtime verification failed"
+    )
     return decision_store.update_remediation_proposal(
         proposal_id,
         status="failed",
         verification_snapshot=snapshot,
-        failure_reason=status.summary or "inventory still drifting",
+        failure_reason=reason,
     )
 
 

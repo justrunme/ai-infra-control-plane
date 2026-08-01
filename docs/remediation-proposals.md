@@ -32,7 +32,7 @@ proposal in `approved` (no half-applied `pr_created`).
 | POST | `/remediation/proposals/{id}/reject` | Reject |
 | POST | `/remediation/proposals/{id}/prepare-pr` | Persist PR draft; open GitHub draft PR when configured |
 | POST | `/remediation/proposals/{id}/mark-applied` | Signal GitOps applied |
-| POST | `/remediation/proposals/{id}/verify` | Re-check `GET /drift` semantics |
+| POST | `/remediation/proposals/{id}/verify` | Runtime verification contract (`runtime-verification/2.3`) |
 
 Create body (optional):
 
@@ -57,7 +57,7 @@ When `approval_required`, resolve via `/approve` or `/reject` (and the linked
 5. `POST .../prepare-pr` → draft PR via GitOps adapter (or use returned title/body)
 6. Merge / Argo sync
 7. `POST .../mark-applied`
-8. `POST .../verify` until `verified`
+8. `POST .../verify` until `verified` (see [runtime-verification.md](runtime-verification.md))
 
 ## Related
 
