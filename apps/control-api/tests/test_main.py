@@ -171,7 +171,7 @@ def test_ollama_health(monkeypatch) -> None:
         )
 
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.local:11434")
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/ollama/health")
 
@@ -196,7 +196,7 @@ def test_ollama_models(monkeypatch) -> None:
             request=httpx.Request("GET", url),
         )
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/ollama/models")
 
@@ -216,7 +216,7 @@ def test_ollama_latency(monkeypatch) -> None:
             request=httpx.Request("GET", url),
         )
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/ollama/latency")
 
@@ -230,7 +230,7 @@ def test_ollama_health_reports_down_on_error(monkeypatch) -> None:
     def fake_get(url: str, timeout: float) -> httpx.Response:
         raise httpx.ConnectError("connection refused")
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/ollama/health")
 
@@ -251,7 +251,7 @@ def test_vllm_health(monkeypatch) -> None:
         )
 
     monkeypatch.setenv("VLLM_BASE_URL", "http://vllm.local:8000")
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/vllm/health")
 
@@ -277,7 +277,7 @@ def test_vllm_models(monkeypatch) -> None:
             request=httpx.Request("GET", url),
         )
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/vllm/models")
 
@@ -297,7 +297,7 @@ def test_vllm_latency(monkeypatch) -> None:
             request=httpx.Request("GET", url),
         )
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/vllm/latency")
 
@@ -311,7 +311,7 @@ def test_vllm_health_reports_down_on_error(monkeypatch) -> None:
     def fake_get(url: str, timeout: float) -> httpx.Response:
         raise httpx.ConnectError("connection refused")
 
-    monkeypatch.setattr("app.main.httpx.get", fake_get)
+    monkeypatch.setattr("app.http_client.get", fake_get)
 
     response = client.get("/backends/vllm/health")
 

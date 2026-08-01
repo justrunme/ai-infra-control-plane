@@ -2,86 +2,69 @@
 
 **AI Infrastructure OS** is the open-source **operating layer** for enterprise AI on Kubernetes: models, agents, tools, identity, policy, cost, audit, and runtime control — not just inference.
 
-The [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform) is the reference **Execution Plane** — gateway, MCP proxy, routing, shadow traffic, and GitOps delivery.
+This repository is the **reference Control Plane**. The [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform) is the reference **Execution Plane**.
 
-## Platform map
+## Public positioning
 
-```text
-AI Infrastructure OS
-├── Execution Plane       → ai-runtime-platform (OpenAI gateway, MCP proxy, routing)
-├── Control Plane         → ai-infra-control-plane (Control API, dashboard)
-├── Policy Engine         → governance/ + OPA + runtime enforcement
-├── Tool & Agent Registry → tools.yaml, agents.yaml, MCP governance
-├── Prompt Governance     → PII, secrets, injection scan (pre-inference stage)
-├── Cost & Chargeback     → cost governance + tenant quota + forecasting
-├── Fleet & Topology      → /topology, inventory drift, digital twin
-├── Capacity Planner      → experiments/inference-autoscaling
-├── Observability & SLO   → observability/slo/, Grafana, OTel
-└── GitOps & Security     → infra/helm, Terraform, security/opa
-```
+> Kubernetes-native reference control plane for governed private AI inference.  
+> Part of the AI Infrastructure OS architecture.
 
-## Module maturity (main)
+## Status legend
 
-| Module | Location | Maturity | Notes |
+| Status | Meaning |
+| --- | --- |
+| Production path | Used on the deployable evaluate / enforce path |
+| Integrated | Works in the platform demo stack |
+| Prototype | Offline, sample-driven, or experimental |
+| Design only | Documented intent |
+
+## Module maturity
+
+| Module | Location | Status | Notes |
 | --- | --- | --- | --- |
-| Execution Plane | `ai-runtime-platform` | 8/10 | Routing, shadow, governance enforcement, MCP, intent proxy |
-| Control Plane API | `apps/control-api` | 8/10 | Dashboard, drift, topology, audit API, intent API |
-| Identity & Audit | `apps/control-api/app/identity_service.py` | 7/10 | Header/JWT identity, JWKS verify, JSONL/Loki audit |
-| Policy Engine | `governance/` + OPA | 8/10 | Policy packs → prompt → quota → registry → cost → risk |
-| Model Registry | `governance/registry/` | 7/10 | Digest, attestation, SBOM ref, model cards |
-| Tool Registry | `governance/tools/` | 5/10 | MCP tool catalog, action allowlists |
-| MCP Gateway | `ai-runtime-platform` `/mcp/*` | 6/10 | Governed tool calls via evaluate-tool |
-| Prompt Governance | `governance/prompt-security/` | 5/10 | PII, secrets, injection heuristics |
-| Agent Registry | `governance/agents/` | 5/10 | Agent → model + tools + policy binding |
-| Intent Engine | `governance/intent/` | 5/10 | NL → agent/model/tools/region plan |
-| Cost & Chargeback | cost + quota + tenant metrics | 7/10 | Redis quota state, tenant metrics, Grafana chargeback |
-| Fleet & Topology | `/topology`, `/drift` | 7/10 | Live probes vs desired inventory |
-| Live Governance Inputs | `apps/control-api/app/prometheus_service.py` | 7/10 | Prometheus telemetry plus Redis quota backfill |
-| Platform Demo | `demo/platform/` | 9/10 | Enterprise reference stack with Redis, Prometheus, Keycloak |
+| Execution Plane | `ai-runtime-platform` | Production path | Gateway enforces verdicts |
+| Control Plane API | `apps/control-api` | Production path | Dashboard, drift, durable evaluate |
+| Policy bundle | `app/policy_bundle.py` | Production path | Digest + reload API |
+| Durable decisions / approvals | `app/decision_store.py` | Production path | SQLite default; Postgres optional |
+| Identity & Audit | identity + audit + JSONL/Loki | Integrated | JWKS verify opt-in |
+| Policy Engine | `governance/` + OPA | Production path | Packs → prompt → quota → registry → cost → risk |
+| Model Registry | `governance/registry/` | Integrated | Digest / attestation metadata |
+| Tool / Agent / Intent | `governance/tools|agents|intent/` | Prototype | YAML registries + heuristics |
+| Prompt Governance | `governance/prompt-security/` | Prototype | Regex heuristics |
+| Live Governance Inputs | Redis + Prometheus | Integrated | Demo production overlay |
+| Fleet & Topology | `/topology`, `/drift` | Integrated | Live probes; remote clusters static |
+| Cost & FinOps | cost + `finops/` | Prototype | Rules + sample CSV |
+| Forecasting / capacity | `forecasting/`, `experiments/` | Prototype | Offline simulators |
+| Platform Demo | `demo/platform/` | Integrated | Laptop / production / enterprise tiers |
 
-## Decision vs execution
+## Golden path (v0.2)
 
 ```mermaid
-flowchart LR
-  Client["Client / Agent"] --> Gateway["Execution Plane\n(runtime + MCP gateway)"]
-  Gateway -->|CONTROL_PLANE_URL| Control["Control Plane\n/governance/evaluate"]
-  Gateway -->|tool calls| ToolEval["/governance/evaluate-tool"]
-  Control --> Verdict["allow | block | approval"]
-  ToolEval --> Verdict
-  Verdict --> Gateway
-  Gateway --> Model["Model backend"]
-  Gateway --> MCP["MCP backends"]
+flowchart TD
+    A["OpenAI request"] --> B["Runtime gateway"]
+    B --> C["Versioned policy evaluation"]
+    C -->|allow| D["Inference backend"]
+    C -->|block| E["Audited rejection"]
+    C -->|approval| F["Durable approval"]
+    F -->|approved| D
+    F -->|rejected or expired| E
 ```
 
-## Agentic epics (2026 focus)
+Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-durable-governance-store.md)
 
-| Epic | Priority | Target | Status |
-| --- | --- | --- | --- |
-| MCP Gateway + Tool Registry | P0 | runtime + `governance/tools/` | Done |
-| Prompt Security | P1 | `governance/prompt-security/` | Done |
-| Agent Registry | P2 | `governance/agents/` | Done |
-| Model Supply Chain (SBOM) | P3 | `governance/registry/` | Done |
-| AI Evaluations (post-response) | P4 | control-api | Done |
-| Sovereign AI (region routing) | P5 | policy packs + sovereign | Done |
-| Intent Engine | P6 | `governance/intent/` | Done |
+## Roadmap
 
-## Public narrative
-
-> I am building an open-source **AI Infrastructure OS** — the enterprise operating layer for private AI: govern models, agents, and tools; enforce identity, policy, cost, and audit; run inference and MCP on Kubernetes.
+| Release | Focus | Status |
+| --- | --- | --- |
+| v0.1.0 | Enterprise demo + agentic surface | Done |
+| v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | This release |
+| v0.3.0 | Postgres profile, richer approval UX, deeper router split | Next |
+| v0.4.0 | kind/k3d e2e, failure injection, SLO proof | Planned |
+| v1.0 | Stable API schema + supported/reference/experimental boundary | Planned |
 
 ## Related docs
 
-- [MCP Gateway](mcp-gateway.md)
-- [Tool Registry](tool-registry.md)
-- [Prompt Governance](prompt-governance.md)
-- [Agent Registry](agent-registry.md)
-- [Sovereign AI](sovereign-ai.md)
-- [AI Evaluations](ai-evaluations.md)
-- [Intent Engine](intent-engine.md)
-- [Portfolio blog outline](portfolio/blog-outline-enterprise-ai-os.md)
-- [Demo GIF script](portfolio/demo-gif-script.md)
-- [Reference architecture](portfolio/reference-architecture.md)
-- [Signed model registry](signed-model-registry.md)
+- [Durable governance](durable-governance.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
-- [Policy packs](policy-packs.md)
+- [Platform architecture](platform-architecture.md)

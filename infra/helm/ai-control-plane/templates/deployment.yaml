@@ -66,6 +66,16 @@ spec:
               value: {{ .Values.oidc.jwtIssuer | quote }}
             {{- end }}
             {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: DATABASE_URL
+              value: {{ .Values.persistence.databaseUrl | quote }}
+            - name: APPROVAL_TTL_SECONDS
+              value: {{ .Values.persistence.approvalTtlSeconds | quote }}
+            - name: PROBE_CACHE_TTL_SECONDS
+              value: {{ .Values.persistence.probeCacheTtlSeconds | quote }}
+            - name: HTTP_TRUST_ENV
+              value: {{ .Values.persistence.httpTrustEnv | quote }}
+            {{- end }}
           {{- if .Values.secrets.externalSecrets.enabled }}
           envFrom:
             - secretRef:
@@ -82,7 +92,7 @@ spec:
             httpGet:
               path: /healthz
               port: http
-          {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled }}
+          {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled }}
           volumeMounts:
             {{- if .Values.modelInventory.enabled }}
             - name: model-inventory
@@ -109,10 +119,14 @@ spec:
             - name: audit-logs
               mountPath: {{ .Values.audit.logMountPath }}
             {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: decision-store
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled }}
+      {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled }}
       volumes:
         {{- if .Values.modelInventory.enabled }}
         - name: model-inventory
@@ -132,5 +146,14 @@ spec:
         {{- if .Values.audit.jsonlEnabled }}
         - name: audit-logs
           emptyDir: {}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: decision-store
+          {{- if .Values.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- end }}
       {{- end }}

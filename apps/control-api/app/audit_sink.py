@@ -10,6 +10,7 @@ from pathlib import Path
 import httpx
 from pydantic import BaseModel
 
+from app import http_client
 from app.audit_service import AuditEvent
 
 
@@ -78,7 +79,7 @@ class AuditSink:
             ]
         }
         try:
-            response = httpx.post(
+            response = http_client.post(
                 f"{self.loki_url}/loki/api/v1/push",
                 json=body,
                 timeout=float(os.getenv("AUDIT_LOKI_TIMEOUT_SECONDS", "2.0")),
