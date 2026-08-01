@@ -10,5 +10,6 @@ Short, durable decisions for the AI Infrastructure Control Plane.
 | [0004](0004-remediation-proposal-closed-loop.md) | RemediationProposal closed-loop without direct apply |
 | [0005](0005-jwt-tenant-and-quota-fail-closed.md) | JWT-only tenant and quota fail-closed on unavailable |
 | [0006](0006-durable-capability-contracts.md) | Durable agent/tool capability contracts |
+| [0007](0007-v2-stability-boundary.md) | v2.0 stability boundary |
 
 Format: context → decision → consequences.

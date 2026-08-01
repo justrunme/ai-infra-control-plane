@@ -66,7 +66,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="1.8.0",
+    version="2.0.0",
     description="Control API for private AI inference infrastructure.",
     lifespan=lifespan,
 )

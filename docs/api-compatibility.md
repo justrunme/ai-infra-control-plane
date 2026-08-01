@@ -21,6 +21,12 @@ Commit the updated `openapi.json` in the same PR and document the change here.
 Breaking changes require a **major** release; set `ALLOW_OPENAPI_BREAKING=1` only
 for that controlled major bump, then move the baseline tag policy forward.
 
+## Stability rules (v2.0+)
+
+v2.0 is a stability major for CRDs and Supported surface area. REST OpenAPI
+remains checked against baseline tag `v1.0.0` until an intentional breaking
+bump moves `OPENAPI_BASELINE_TAG` forward.
+
 ## Stability rules (v1.0+)
 
 | Change | Allowed in patch/minor | Requires major |

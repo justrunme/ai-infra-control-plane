@@ -1,4 +1,4 @@
-apiVersion: ai.justrunme.dev/v1alpha1
+apiVersion: ai.justrunme.dev/v1
 kind: AIPolicyBundle
 metadata:
   name: production
