@@ -1,0 +1,4519 @@
+{
+  "components": {
+    "schemas": {
+      "AgentRegistryEntry": {
+        "properties": {
+          "allowed_namespaces": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Namespaces",
+            "type": "array"
+          },
+          "allowed_teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Teams",
+            "type": "array"
+          },
+          "forbidden": {
+            "default": false,
+            "title": "Forbidden",
+            "type": "boolean"
+          },
+          "memory_ttl_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Ttl Days"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "policy_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Pack"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AgentRegistryEntry",
+        "type": "object"
+      },
+      "AgentRegistryResponse": {
+        "properties": {
+          "agent_count": {
+            "title": "Agent Count",
+            "type": "integer"
+          },
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRegistryEntry"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "agent_count"
+        ],
+        "title": "AgentRegistryResponse",
+        "type": "object"
+      },
+      "ApprovalListResponse": {
+        "properties": {
+          "approvals": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalResponse"
+            },
+            "title": "Approvals",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "approvals",
+          "count"
+        ],
+        "title": "ApprovalListResponse",
+        "type": "object"
+      },
+      "ApprovalResponse": {
+        "properties": {
+          "approval_id": {
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "review_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Comment"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used At"
+          }
+        },
+        "required": [
+          "approval_id",
+          "decision_id",
+          "status",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "ApprovalResponse",
+        "type": "object"
+      },
+      "AuditEvent": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "blocking_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Stage"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "default": "governance_evaluate",
+            "title": "Event Type",
+            "type": "string"
+          },
+          "final_verdict": {
+            "title": "Final Verdict",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "identity_source": {
+            "default": "default",
+            "title": "Identity Source",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "policy_pack": {
+            "default": "",
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "timestamp",
+          "subject",
+          "team",
+          "owner",
+          "environment",
+          "namespace",
+          "model",
+          "action",
+          "final_verdict"
+        ],
+        "title": "AuditEvent",
+        "type": "object"
+      },
+      "AuditSinkStatus": {
+        "properties": {
+          "jsonl_enabled": {
+            "default": false,
+            "title": "Jsonl Enabled",
+            "type": "boolean"
+          },
+          "jsonl_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jsonl Path"
+          },
+          "jsonl_written": {
+            "default": 0,
+            "title": "Jsonl Written",
+            "type": "integer"
+          },
+          "loki_enabled": {
+            "default": false,
+            "title": "Loki Enabled",
+            "type": "boolean"
+          },
+          "loki_errors": {
+            "default": 0,
+            "title": "Loki Errors",
+            "type": "integer"
+          },
+          "loki_pushed": {
+            "default": 0,
+            "title": "Loki Pushed",
+            "type": "integer"
+          },
+          "loki_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loki Url"
+          },
+          "sinks": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Sinks",
+            "type": "array"
+          }
+        },
+        "title": "AuditSinkStatus",
+        "type": "object"
+      },
+      "BackendDrift": {
+        "properties": {
+          "actual_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actual Models",
+            "type": "array"
+          },
+          "backend": {
+            "enum": [
+              "ollama",
+              "vllm"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "desired_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Desired Models",
+            "type": "array"
+          },
+          "in_sync": {
+            "title": "In Sync",
+            "type": "boolean"
+          },
+          "missing_on_backend": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing On Backend",
+            "type": "array"
+          },
+          "probe_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probe Error"
+          },
+          "probe_healthy": {
+            "title": "Probe Healthy",
+            "type": "boolean"
+          },
+          "unexpected_on_backend": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unexpected On Backend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "backend",
+          "probe_healthy",
+          "desired_models",
+          "actual_models",
+          "missing_on_backend",
+          "unexpected_on_backend",
+          "in_sync"
+        ],
+        "title": "BackendDrift",
+        "type": "object"
+      },
+      "BackendHealthStatus": {
+        "properties": {
+          "backend": {
+            "enum": [
+              "ollama",
+              "vllm"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "healthy": {
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backend",
+          "base_url",
+          "healthy",
+          "status",
+          "latency_ms"
+        ],
+        "title": "BackendHealthStatus",
+        "type": "object"
+      },
+      "BackendLatencyStatus": {
+        "properties": {
+          "backend": {
+            "enum": [
+              "ollama",
+              "vllm"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "healthy": {
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "measured_endpoint": {
+            "title": "Measured Endpoint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backend",
+          "base_url",
+          "healthy",
+          "latency_ms",
+          "measured_endpoint"
+        ],
+        "title": "BackendLatencyStatus",
+        "type": "object"
+      },
+      "CapacityStatus": {
+        "properties": {
+          "healthy_models": {
+            "title": "Healthy Models",
+            "type": "integer"
+          },
+          "models": {
+            "title": "Models",
+            "type": "integer"
+          },
+          "total_capacity_tokens_per_second": {
+            "title": "Total Capacity Tokens Per Second",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "models",
+          "healthy_models",
+          "total_capacity_tokens_per_second"
+        ],
+        "title": "CapacityStatus",
+        "type": "object"
+      },
+      "CostStatus": {
+        "properties": {
+          "currency": {
+            "const": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "estimated_daily_cost": {
+            "title": "Estimated Daily Cost",
+            "type": "number"
+          },
+          "estimated_hourly_cost": {
+            "title": "Estimated Hourly Cost",
+            "type": "number"
+          },
+          "estimated_monthly_cost": {
+            "title": "Estimated Monthly Cost",
+            "type": "number"
+          }
+        },
+        "required": [
+          "currency",
+          "estimated_hourly_cost",
+          "estimated_daily_cost",
+          "estimated_monthly_cost"
+        ],
+        "title": "CostStatus",
+        "type": "object"
+      },
+      "DriftStatus": {
+        "properties": {
+          "backends": {
+            "items": {
+              "$ref": "#/components/schemas/BackendDrift"
+            },
+            "title": "Backends",
+            "type": "array"
+          },
+          "in_sync": {
+            "title": "In Sync",
+            "type": "boolean"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "in_sync",
+          "summary"
+        ],
+        "title": "DriftStatus",
+        "type": "object"
+      },
+      "EvaluationListResponse": {
+        "properties": {
+          "evaluation_count": {
+            "title": "Evaluation Count",
+            "type": "integer"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationRecord"
+            },
+            "title": "Evaluations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "evaluation_count"
+        ],
+        "title": "EvaluationListResponse",
+        "type": "object"
+      },
+      "EvaluationRecord": {
+        "properties": {
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "evaluation_id": {
+            "title": "Evaluation Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "scores": {
+            "$ref": "#/components/schemas/EvaluationScores"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluation_id",
+          "timestamp",
+          "team",
+          "model",
+          "request_id",
+          "decision",
+          "scores"
+        ],
+        "title": "EvaluationRecord",
+        "type": "object"
+      },
+      "EvaluationScores": {
+        "properties": {
+          "cost_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Ok"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "faithfulness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faithfulness"
+          },
+          "groundedness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groundedness"
+          },
+          "hallucination_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hallucination Risk"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "latency_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ok"
+          },
+          "safety": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safety"
+          }
+        },
+        "title": "EvaluationScores",
+        "type": "object"
+      },
+      "FinOpsRecommendation": {
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "category": {
+            "enum": [
+              "idle_capacity",
+              "budget_pressure",
+              "route_local",
+              "rightsizing"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "estimated_monthly_savings_usd": {
+            "title": "Estimated Monthly Savings Usd",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "severity",
+          "team",
+          "model",
+          "title",
+          "summary",
+          "estimated_monthly_savings_usd"
+        ],
+        "title": "FinOpsRecommendation",
+        "type": "object"
+      },
+      "FinOpsRecommendationsResponse": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "estimated_monthly_savings_usd": {
+            "title": "Estimated Monthly Savings Usd",
+            "type": "number"
+          },
+          "recommendation_count": {
+            "title": "Recommendation Count",
+            "type": "integer"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/FinOpsRecommendation"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "currency",
+          "recommendation_count",
+          "estimated_monthly_savings_usd"
+        ],
+        "title": "FinOpsRecommendationsResponse",
+        "type": "object"
+      },
+      "FleetBackendStatus": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "healthy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Healthy"
+          },
+          "latency_ms": {
+            "default": 0,
+            "title": "Latency Ms",
+            "type": "integer"
+          }
+        },
+        "title": "FleetBackendStatus",
+        "type": "object"
+      },
+      "FleetClusterStatus": {
+        "properties": {
+          "cloud": {
+            "title": "Cloud",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "health": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unknown",
+              "unreachable"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "healthy_models": {
+            "default": 0,
+            "title": "Healthy Models",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "node_count": {
+            "default": 0,
+            "title": "Node Count",
+            "type": "integer"
+          },
+          "ollama": {
+            "$ref": "#/components/schemas/FleetBackendStatus"
+          },
+          "primary": {
+            "default": false,
+            "title": "Primary",
+            "type": "boolean"
+          },
+          "probe_enabled": {
+            "default": false,
+            "title": "Probe Enabled",
+            "type": "boolean"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "vllm": {
+            "$ref": "#/components/schemas/FleetBackendStatus"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "cloud",
+          "region",
+          "environment",
+          "health",
+          "ollama",
+          "vllm"
+        ],
+        "title": "FleetClusterStatus",
+        "type": "object"
+      },
+      "FleetClustersResponse": {
+        "properties": {
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/FleetClusterStatus"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/FleetSummary"
+          }
+        },
+        "required": [
+          "summary"
+        ],
+        "title": "FleetClustersResponse",
+        "type": "object"
+      },
+      "FleetSummary": {
+        "properties": {
+          "cluster_count": {
+            "title": "Cluster Count",
+            "type": "integer"
+          },
+          "degraded_clusters": {
+            "title": "Degraded Clusters",
+            "type": "integer"
+          },
+          "healthy_clusters": {
+            "title": "Healthy Clusters",
+            "type": "integer"
+          },
+          "primary_cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Cluster"
+          },
+          "unreachable_clusters": {
+            "title": "Unreachable Clusters",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "cluster_count",
+          "healthy_clusters",
+          "degraded_clusters",
+          "unreachable_clusters"
+        ],
+        "title": "FleetSummary",
+        "type": "object"
+      },
+      "GovernanceEvaluateRequest": {
+        "properties": {
+          "action": {
+            "default": "invoke_model",
+            "title": "Action",
+            "type": "string"
+          },
+          "agent": {
+            "default": "",
+            "title": "Agent",
+            "type": "string"
+          },
+          "cost_per_hour_usd": {
+            "default": 0.18,
+            "minimum": 0.0,
+            "title": "Cost Per Hour Usd",
+            "type": "number"
+          },
+          "cost_per_request_usd": {
+            "default": 0.01,
+            "minimum": 0.0,
+            "title": "Cost Per Request Usd",
+            "type": "number"
+          },
+          "environment": {
+            "default": "development",
+            "title": "Environment",
+            "type": "string"
+          },
+          "forecast_monthly_cost_usd": {
+            "default": 400.0,
+            "minimum": 0.0,
+            "title": "Forecast Monthly Cost Usd",
+            "type": "number"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "input_tokens": {
+            "default": 1000,
+            "minimum": 0.0,
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "default": "llama3.1:8b",
+            "title": "Model",
+            "type": "string"
+          },
+          "model_artifact_digest": {
+            "default": "",
+            "title": "Model Artifact Digest",
+            "type": "string"
+          },
+          "model_revision": {
+            "default": "",
+            "title": "Model Revision",
+            "type": "string"
+          },
+          "month_to_date_cost_usd": {
+            "default": 100.0,
+            "minimum": 0.0,
+            "title": "Month To Date Cost Usd",
+            "type": "number"
+          },
+          "namespace": {
+            "default": "ai-dev",
+            "title": "Namespace",
+            "type": "string"
+          },
+          "output_tokens": {
+            "default": 500,
+            "minimum": 0.0,
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "owner": {
+            "default": "alice",
+            "title": "Owner",
+            "type": "string"
+          },
+          "policy_pack": {
+            "default": "",
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "prompt_text": {
+            "default": "",
+            "title": "Prompt Text",
+            "type": "string"
+          },
+          "provider": {
+            "default": "ollama",
+            "title": "Provider",
+            "type": "string"
+          },
+          "region": {
+            "default": "",
+            "title": "Region",
+            "type": "string"
+          },
+          "requests_last_minute": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Requests Last Minute",
+            "type": "integer"
+          },
+          "sensitive_data": {
+            "default": false,
+            "title": "Sensitive Data",
+            "type": "boolean"
+          },
+          "subject": {
+            "default": "",
+            "title": "Subject",
+            "type": "string"
+          },
+          "team": {
+            "default": "platform",
+            "title": "Team",
+            "type": "string"
+          },
+          "tokens_today": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Tokens Today",
+            "type": "integer"
+          },
+          "tool_access": {
+            "default": false,
+            "title": "Tool Access",
+            "type": "boolean"
+          },
+          "write_permission": {
+            "default": false,
+            "title": "Write Permission",
+            "type": "boolean"
+          }
+        },
+        "title": "GovernanceEvaluateRequest",
+        "type": "object"
+      },
+      "GovernanceEvaluateResponse": {
+        "properties": {
+          "approval_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Id"
+          },
+          "decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "final_verdict": {
+            "title": "Final Verdict",
+            "type": "string"
+          },
+          "flow": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flow",
+            "type": "array"
+          },
+          "policy_bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Bundle Id"
+          },
+          "policy_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Digest"
+          },
+          "policy_pack": {
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GovernanceStageResult"
+            },
+            "title": "Stages",
+            "type": "object"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GovernanceTelemetryStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "final_verdict",
+          "policy_pack",
+          "reasons",
+          "flow",
+          "stages"
+        ],
+        "title": "GovernanceEvaluateResponse",
+        "type": "object"
+      },
+      "GovernanceInputsStatus": {
+        "properties": {
+          "prometheus": {
+            "additionalProperties": true,
+            "title": "Prometheus",
+            "type": "object"
+          },
+          "quota": {
+            "additionalProperties": true,
+            "title": "Quota",
+            "type": "object"
+          }
+        },
+        "required": [
+          "quota",
+          "prometheus"
+        ],
+        "title": "GovernanceInputsStatus",
+        "type": "object"
+      },
+      "GovernanceStageResult": {
+        "properties": {
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "factors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "known_model": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Model"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tier"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "title": "GovernanceStageResult",
+        "type": "object"
+      },
+      "GovernanceTelemetryStage": {
+        "properties": {
+          "block_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Block Reasons",
+            "type": "array"
+          },
+          "gateway_error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway Error Rate"
+          },
+          "gateway_p95_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway P95 Latency Ms"
+          },
+          "governance_block_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Governance Block Rate"
+          },
+          "prometheus_enabled": {
+            "default": false,
+            "title": "Prometheus Enabled",
+            "type": "boolean"
+          },
+          "prometheus_errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prometheus Errors",
+            "type": "array"
+          },
+          "quota_source": {
+            "default": "request",
+            "title": "Quota Source",
+            "type": "string"
+          },
+          "requests_last_minute": {
+            "default": 0,
+            "title": "Requests Last Minute",
+            "type": "integer"
+          },
+          "tenant_request_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Request Rate"
+          },
+          "tokens_today": {
+            "default": 0,
+            "title": "Tokens Today",
+            "type": "integer"
+          }
+        },
+        "title": "GovernanceTelemetryStage",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthStatus": {
+        "properties": {
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checked_at"
+        ],
+        "title": "HealthStatus",
+        "type": "object"
+      },
+      "IncidentAlert": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "severity",
+          "summary"
+        ],
+        "title": "IncidentAlert",
+        "type": "object"
+      },
+      "IncidentRunbookResponse": {
+        "properties": {
+          "affected_clusters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Clusters",
+            "type": "array"
+          },
+          "affected_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Models",
+            "type": "array"
+          },
+          "affected_tenants": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Tenants",
+            "type": "array"
+          },
+          "alert": {
+            "$ref": "#/components/schemas/IncidentAlert"
+          },
+          "context_markdown": {
+            "default": "",
+            "title": "Context Markdown",
+            "type": "string"
+          },
+          "drift_in_sync": {
+            "default": true,
+            "title": "Drift In Sync",
+            "type": "boolean"
+          },
+          "drift_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drift Summary"
+          },
+          "finops_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Finops Actions",
+            "type": "array"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "recent_governance_blocks": {
+            "items": {
+              "$ref": "#/components/schemas/RecentGovernanceBlock"
+            },
+            "title": "Recent Governance Blocks",
+            "type": "array"
+          },
+          "recommended_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recommended Actions",
+            "type": "array"
+          },
+          "unhealthy_topology_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unhealthy Topology Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "incident_id",
+          "generated_at",
+          "alert"
+        ],
+        "title": "IncidentRunbookResponse",
+        "type": "object"
+      },
+      "IntentClusterHint": {
+        "properties": {
+          "cloud": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "title": "IntentClusterHint",
+        "type": "object"
+      },
+      "IntentResolveRequest": {
+        "properties": {
+          "environment": {
+            "default": "development",
+            "title": "Environment",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "default": "",
+            "title": "Model",
+            "type": "string"
+          },
+          "namespace": {
+            "default": "ai-dev",
+            "title": "Namespace",
+            "type": "string"
+          },
+          "owner": {
+            "default": "alice",
+            "title": "Owner",
+            "type": "string"
+          },
+          "policy_pack": {
+            "default": "",
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "provider": {
+            "default": "",
+            "title": "Provider",
+            "type": "string"
+          },
+          "region": {
+            "default": "",
+            "title": "Region",
+            "type": "string"
+          },
+          "run_governance": {
+            "default": true,
+            "title": "Run Governance",
+            "type": "boolean"
+          },
+          "subject": {
+            "default": "",
+            "title": "Subject",
+            "type": "string"
+          },
+          "team": {
+            "default": "platform",
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "IntentResolveRequest",
+        "type": "object"
+      },
+      "IntentResolveResponse": {
+        "properties": {
+          "cluster": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntentClusterHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "forbidden": {
+            "default": false,
+            "title": "Forbidden",
+            "type": "boolean"
+          },
+          "governance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GovernanceEvaluateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent": {
+            "title": "Intent",
+            "type": "string"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrchestrationPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "intent",
+          "confidence"
+        ],
+        "title": "IntentResolveResponse",
+        "type": "object"
+      },
+      "ModelRegistryEntry": {
+        "properties": {
+          "allowed_namespaces": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Namespaces",
+            "type": "array"
+          },
+          "allowed_regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Regions",
+            "type": "array"
+          },
+          "allowed_teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Teams",
+            "type": "array"
+          },
+          "artifact_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Digest"
+          },
+          "attestation_status": {
+            "default": "not_required",
+            "enum": [
+              "verified",
+              "unsigned",
+              "invalid",
+              "not_required"
+            ],
+            "title": "Attestation Status",
+            "type": "string"
+          },
+          "attestation_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attestation Verified"
+          },
+          "external_provider": {
+            "default": false,
+            "title": "External Provider",
+            "type": "boolean"
+          },
+          "forbidden": {
+            "default": false,
+            "title": "Forbidden",
+            "type": "boolean"
+          },
+          "has_attestation_signature": {
+            "default": false,
+            "title": "Has Attestation Signature",
+            "type": "boolean"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tier"
+          },
+          "sbom_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sbom Ref"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ModelRegistryEntry",
+        "type": "object"
+      },
+      "ModelRegistryResponse": {
+        "properties": {
+          "model_count": {
+            "title": "Model Count",
+            "type": "integer"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRegistryEntry"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "signature_verify_enabled": {
+            "title": "Signature Verify Enabled",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "signature_verify_enabled",
+          "model_count"
+        ],
+        "title": "ModelRegistryResponse",
+        "type": "object"
+      },
+      "ModelStatus": {
+        "properties": {
+          "backend": {
+            "enum": [
+              "mock",
+              "ollama",
+              "vllm"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "capacity_tokens_per_second": {
+            "title": "Capacity Tokens Per Second",
+            "type": "integer"
+          },
+          "estimated_hourly_cost_usd": {
+            "title": "Estimated Hourly Cost Usd",
+            "type": "number"
+          },
+          "healthy": {
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "backend",
+          "healthy",
+          "latency_ms",
+          "capacity_tokens_per_second",
+          "estimated_hourly_cost_usd"
+        ],
+        "title": "ModelStatus",
+        "type": "object"
+      },
+      "OllamaModel": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OllamaModel",
+        "type": "object"
+      },
+      "OllamaModelsStatus": {
+        "properties": {
+          "backend": {
+            "const": "ollama",
+            "title": "Backend",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "healthy": {
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/OllamaModel"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "backend",
+          "base_url",
+          "healthy",
+          "models"
+        ],
+        "title": "OllamaModelsStatus",
+        "type": "object"
+      },
+      "OperatorHealthStatus": {
+        "properties": {
+          "backends": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Backends",
+            "type": "object"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "live": {
+            "default": true,
+            "title": "Live",
+            "type": "boolean"
+          },
+          "policy_bundle_ok": {
+            "default": true,
+            "title": "Policy Bundle Ok",
+            "type": "boolean"
+          },
+          "ready": {
+            "default": true,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "store_ok": {
+            "default": true,
+            "title": "Store Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "checked_at"
+        ],
+        "title": "OperatorHealthStatus",
+        "type": "object"
+      },
+      "OrchestrationPlan": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "policy_pack": {
+            "default": "",
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "runtime": {
+            "title": "Runtime",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agent",
+          "model",
+          "region",
+          "runtime",
+          "namespace",
+          "team"
+        ],
+        "title": "OrchestrationPlan",
+        "type": "object"
+      },
+      "PolicyBundleStatus": {
+        "properties": {
+          "bundle_id": {
+            "title": "Bundle Id",
+            "type": "string"
+          },
+          "content_digest": {
+            "title": "Content Digest",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "git_revision": {
+            "title": "Git Revision",
+            "type": "string"
+          },
+          "loaded_at": {
+            "title": "Loaded At",
+            "type": "string"
+          },
+          "validation_status": {
+            "title": "Validation Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle_id",
+          "git_revision",
+          "content_digest",
+          "loaded_at",
+          "validation_status"
+        ],
+        "title": "PolicyBundleStatus",
+        "type": "object"
+      },
+      "ReadyStatus": {
+        "properties": {
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "policy_bundle_ok": {
+            "default": true,
+            "title": "Policy Bundle Ok",
+            "type": "boolean"
+          },
+          "policy_digest": {
+            "default": "",
+            "title": "Policy Digest",
+            "type": "string"
+          },
+          "status": {
+            "default": "ready",
+            "title": "Status",
+            "type": "string"
+          },
+          "store_ok": {
+            "default": true,
+            "title": "Store Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checked_at"
+        ],
+        "title": "ReadyStatus",
+        "type": "object"
+      },
+      "RecentGovernanceBlock": {
+        "properties": {
+          "blocking_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Stage"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "team",
+          "model",
+          "subject"
+        ],
+        "title": "RecentGovernanceBlock",
+        "type": "object"
+      },
+      "ResolveApprovalRequest": {
+        "properties": {
+          "comment": {
+            "default": "",
+            "title": "Comment",
+            "type": "string"
+          },
+          "reviewer": {
+            "default": "",
+            "title": "Reviewer",
+            "type": "string"
+          }
+        },
+        "title": "ResolveApprovalRequest",
+        "type": "object"
+      },
+      "ResponseEvaluateRequest": {
+        "properties": {
+          "cost_budget_usd": {
+            "default": 0.05,
+            "minimum": 0.0,
+            "title": "Cost Budget Usd",
+            "type": "number"
+          },
+          "cost_usd": {
+            "default": 0.0,
+            "minimum": 0.0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "latency_budget_ms": {
+            "default": 5000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Latency Budget Ms",
+            "type": "number"
+          },
+          "latency_ms": {
+            "default": 0.0,
+            "minimum": 0.0,
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "model": {
+            "default": "llama3.1:8b",
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_text": {
+            "default": "",
+            "title": "Prompt Text",
+            "type": "string"
+          },
+          "reference_context": {
+            "default": "",
+            "title": "Reference Context",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "response_text": {
+            "title": "Response Text",
+            "type": "string"
+          },
+          "team": {
+            "default": "platform",
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "response_text"
+        ],
+        "title": "ResponseEvaluateRequest",
+        "type": "object"
+      },
+      "SecretRefStatus": {
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "env_var": {
+            "title": "Env Var",
+            "type": "string"
+          },
+          "fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fingerprint"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "optional": {
+            "title": "Optional",
+            "type": "boolean"
+          },
+          "rotation_days": {
+            "title": "Rotation Days",
+            "type": "integer"
+          },
+          "source": {
+            "default": "environment",
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "configured",
+              "missing"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "env_var",
+          "component",
+          "description",
+          "optional",
+          "rotation_days",
+          "status"
+        ],
+        "title": "SecretRefStatus",
+        "type": "object"
+      },
+      "SecretsStatusResponse": {
+        "properties": {
+          "backend": {
+            "enum": [
+              "environment",
+              "kubernetes",
+              "external-secrets"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "configured_count": {
+            "title": "Configured Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SecretRefStatus"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missing_required_count": {
+            "title": "Missing Required Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checked_at",
+          "backend",
+          "configured_count",
+          "missing_required_count"
+        ],
+        "title": "SecretsStatusResponse",
+        "type": "object"
+      },
+      "ToolEvaluateRequest": {
+        "properties": {
+          "action": {
+            "default": "invoke",
+            "title": "Action",
+            "type": "string"
+          },
+          "agent": {
+            "default": "",
+            "title": "Agent",
+            "type": "string"
+          },
+          "environment": {
+            "default": "development",
+            "title": "Environment",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "mcp_server": {
+            "default": "",
+            "title": "Mcp Server",
+            "type": "string"
+          },
+          "namespace": {
+            "default": "ai-dev",
+            "title": "Namespace",
+            "type": "string"
+          },
+          "owner": {
+            "default": "gateway",
+            "title": "Owner",
+            "type": "string"
+          },
+          "policy_pack": {
+            "default": "",
+            "title": "Policy Pack",
+            "type": "string"
+          },
+          "subject": {
+            "default": "",
+            "title": "Subject",
+            "type": "string"
+          },
+          "team": {
+            "default": "platform",
+            "title": "Team",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "write_permission": {
+            "default": false,
+            "title": "Write Permission",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tool"
+        ],
+        "title": "ToolEvaluateRequest",
+        "type": "object"
+      },
+      "ToolEvaluateResponse": {
+        "properties": {
+          "final_verdict": {
+            "title": "Final Verdict",
+            "type": "string"
+          },
+          "flow": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flow",
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "stages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ToolEvaluateStageResult"
+            },
+            "title": "Stages",
+            "type": "object"
+          }
+        },
+        "required": [
+          "final_verdict",
+          "reasons",
+          "flow",
+          "stages"
+        ],
+        "title": "ToolEvaluateResponse",
+        "type": "object"
+      },
+      "ToolEvaluateStageResult": {
+        "properties": {
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "known_agent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Agent"
+          },
+          "known_tool": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Tool"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tier"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ToolEvaluateStageResult",
+        "type": "object"
+      },
+      "ToolRegistryEntry": {
+        "properties": {
+          "allowed_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "allowed_namespaces": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Namespaces",
+            "type": "array"
+          },
+          "allowed_teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Teams",
+            "type": "array"
+          },
+          "forbidden": {
+            "default": false,
+            "title": "Forbidden",
+            "type": "boolean"
+          },
+          "forbidden_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Forbidden Actions",
+            "type": "array"
+          },
+          "mcp_server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Server"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "risk_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tier"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ToolRegistryEntry",
+        "type": "object"
+      },
+      "ToolRegistryResponse": {
+        "properties": {
+          "tool_count": {
+            "title": "Tool Count",
+            "type": "integer"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolRegistryEntry"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "tool_count"
+        ],
+        "title": "ToolRegistryResponse",
+        "type": "object"
+      },
+      "TopologyEdge": {
+        "properties": {
+          "relationship": {
+            "enum": [
+              "probes",
+              "serves",
+              "scrapes",
+              "visualizes",
+              "collects",
+              "deploys",
+              "packages",
+              "forecasts",
+              "enforces",
+              "runs-on"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relationship"
+        ],
+        "title": "TopologyEdge",
+        "type": "object"
+      },
+      "TopologyNode": {
+        "properties": {
+          "health": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unknown",
+              "unreachable"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "api",
+              "inference-backend",
+              "ui",
+              "observability",
+              "gitops",
+              "cluster",
+              "package",
+              "forecasting",
+              "security"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/TopologySignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "health"
+        ],
+        "title": "TopologyNode",
+        "type": "object"
+      },
+      "TopologySignal": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "unit",
+          "description"
+        ],
+        "title": "TopologySignal",
+        "type": "object"
+      },
+      "TopologyStatus": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "graph_version": {
+            "title": "Graph Version",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/TopologyNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at",
+          "graph_version",
+          "nodes",
+          "edges"
+        ],
+        "title": "TopologyStatus",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VllmModel": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "VllmModel",
+        "type": "object"
+      },
+      "VllmModelsStatus": {
+        "properties": {
+          "backend": {
+            "const": "vllm",
+            "title": "Backend",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "healthy": {
+            "title": "Healthy",
+            "type": "boolean"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/VllmModel"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "backend",
+          "base_url",
+          "healthy",
+          "models"
+        ],
+        "title": "VllmModelsStatus",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Control API for private AI inference infrastructure.",
+    "title": "AI Infrastructure Control Plane",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/approvals": {
+      "get": {
+        "operationId": "list_approvals_approvals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Approvals",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/approvals/{approval_id}": {
+      "get": {
+        "operationId": "get_approval_approvals__approval_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Approval",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/approvals/{approval_id}/approve": {
+      "post": {
+        "operationId": "approve_request_approvals__approval_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Request",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/approvals/{approval_id}/reject": {
+      "post": {
+        "operationId": "reject_request_approvals__approval_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Request",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/audit/events": {
+      "get": {
+        "operationId": "audit_events_audit_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verdict",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verdict"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEvent"
+                  },
+                  "title": "Response Audit Events Audit Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Events",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/audit/status": {
+      "get": {
+        "operationId": "audit_status_audit_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditSinkStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Status",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/backends/ollama/health": {
+      "get": {
+        "operationId": "ollama_health_backends_ollama_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackendHealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ollama Health",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/backends/ollama/latency": {
+      "get": {
+        "operationId": "ollama_latency_backends_ollama_latency_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackendLatencyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ollama Latency",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/backends/ollama/models": {
+      "get": {
+        "operationId": "ollama_models_backends_ollama_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OllamaModelsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ollama Models",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/backends/vllm/health": {
+      "get": {
+        "operationId": "vllm_health_backends_vllm_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackendHealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vllm Health",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/backends/vllm/latency": {
+      "get": {
+        "operationId": "vllm_latency_backends_vllm_latency_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackendLatencyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vllm Latency",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/backends/vllm/models": {
+      "get": {
+        "operationId": "vllm_models_backends_vllm_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VllmModelsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vllm Models",
+        "tags": [
+          "backends"
+        ]
+      }
+    },
+    "/capacity": {
+      "get": {
+        "operationId": "capacity_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capacity",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/cost": {
+      "get": {
+        "operationId": "cost_cost_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cost",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/drift": {
+      "get": {
+        "operationId": "drift_drift_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Drift",
+        "tags": [
+          "topology"
+        ]
+      }
+    },
+    "/evaluations/recent": {
+      "get": {
+        "operationId": "evaluations_recent_evaluations_recent_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluations Recent",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/finops/recommendations": {
+      "get": {
+        "operationId": "finops_recommendations_finops_recommendations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinOpsRecommendationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finops Recommendations",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/fleet/clusters": {
+      "get": {
+        "operationId": "fleet_clusters_fleet_clusters_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetClustersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Fleet Clusters",
+        "tags": [
+          "topology"
+        ]
+      }
+    },
+    "/fleet/topology": {
+      "get": {
+        "operationId": "fleet_topology_fleet_topology_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Fleet Topology",
+        "tags": [
+          "topology"
+        ]
+      }
+    },
+    "/governance/decisions/{decision_id}": {
+      "get": {
+        "operationId": "get_decision_governance_decisions__decision_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Decision Governance Decisions  Decision Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Decision",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/governance/evaluate": {
+      "post": {
+        "operationId": "governance_evaluate_governance_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GovernanceEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceEvaluateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance Evaluate",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/governance/evaluate-response": {
+      "post": {
+        "operationId": "governance_evaluate_response_governance_evaluate_response_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponseEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance Evaluate Response",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/governance/evaluate-tool": {
+      "post": {
+        "operationId": "governance_evaluate_tool_governance_evaluate_tool_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolEvaluateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance Evaluate Tool",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/governance/inputs/status": {
+      "get": {
+        "operationId": "governance_inputs_status_endpoint_governance_inputs_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceInputsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Governance Inputs Status Endpoint",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/governance/policy-bundle": {
+      "get": {
+        "operationId": "policy_bundle_status_governance_policy_bundle_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyBundleStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Policy Bundle Status",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/governance/policy-bundle/reload": {
+      "post": {
+        "operationId": "policy_bundle_reload_governance_policy_bundle_reload_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyBundleStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Policy Bundle Reload",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Operator-facing status including store readiness (always 200 when live).",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorHealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "description": "Kubernetes-compatible liveness alias (process alive).",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/incidents/alerts": {
+      "get": {
+        "operationId": "incident_alerts_incidents_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Incident Alerts Incidents Alerts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Incident Alerts",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/incidents/runbook": {
+      "get": {
+        "operationId": "incident_runbook_incidents_runbook_get",
+        "parameters": [
+          {
+            "description": "Prometheus alert name from the SLO catalog",
+            "in": "query",
+            "name": "alert",
+            "required": true,
+            "schema": {
+              "description": "Prometheus alert name from the SLO catalog",
+              "title": "Alert",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentRunbookResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Incident Runbook",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/intent/resolve": {
+      "post": {
+        "operationId": "intent_resolve_intent_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntentResolveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intent Resolve",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/livez": {
+      "get": {
+        "description": "Process liveness \u2014 does not depend on the decision store.",
+        "operationId": "livez_livez_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Livez",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metrics",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/models": {
+      "get": {
+        "operationId": "list_models_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelStatus"
+                  },
+                  "title": "Response List Models Models Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Models",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "description": "Readiness: authoritative store ping + valid policy bundle.",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/registry/agents": {
+      "get": {
+        "operationId": "registry_agents_registry_agents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRegistryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Registry Agents",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/registry/agents/{agent_name}": {
+      "get": {
+        "operationId": "registry_agent_registry_agents__agent_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_name",
+            "required": true,
+            "schema": {
+              "title": "Agent Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRegistryEntry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registry Agent",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/registry/models": {
+      "get": {
+        "operationId": "registry_models_registry_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRegistryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Registry Models",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/registry/models/{model_name}": {
+      "get": {
+        "operationId": "registry_model_registry_models__model_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_name",
+            "required": true,
+            "schema": {
+              "title": "Model Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRegistryEntry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registry Model",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/registry/tools": {
+      "get": {
+        "operationId": "registry_tools_registry_tools_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolRegistryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Registry Tools",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/registry/tools/{tool_name}": {
+      "get": {
+        "operationId": "registry_tool_registry_tools__tool_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_name",
+            "required": true,
+            "schema": {
+              "title": "Tool Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolRegistryEntry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registry Tool",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/secrets/status": {
+      "get": {
+        "operationId": "secrets_status_secrets_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretsStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Secrets Status",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/summary": {
+      "get": {
+        "operationId": "summary_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "title": "Response Summary Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/topology": {
+      "get": {
+        "operationId": "topology_topology_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Topology",
+        "tags": [
+          "topology"
+        ]
+      }
+    }
+  }
+}

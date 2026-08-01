@@ -50,11 +50,13 @@ def test_expire_stale_and_lazy_expire(store: DecisionStore) -> None:
     approval_id = store.create_approval(decision_id, ttl_seconds=3600)
 
     past = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
-    store._execute(
-        "UPDATE approvals SET expires_at = ? WHERE approval_id = ?",
-        (past, approval_id),
-    )
-    store._conn.commit()
+    with store._session() as conn:
+        store._execute(
+            conn,
+            "UPDATE approvals SET expires_at = ? WHERE approval_id = ?",
+            (past, approval_id),
+        )
+        store._commit(conn)
 
     expired_count = store.expire_stale_approvals()
     assert expired_count == 1
@@ -72,11 +74,13 @@ def test_lazy_expire_on_get(store: DecisionStore) -> None:
     decision_id = store.create_decision(final_verdict="approval_required")
     approval_id = store.create_approval(decision_id, ttl_seconds=1)
     past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
-    store._execute(
-        "UPDATE approvals SET expires_at = ? WHERE approval_id = ?",
-        (past, approval_id),
-    )
-    store._conn.commit()
+    with store._session() as conn:
+        store._execute(
+            conn,
+            "UPDATE approvals SET expires_at = ? WHERE approval_id = ?",
+            (past, approval_id),
+        )
+        store._commit(conn)
 
     approval = store.get_approval(approval_id)
     assert approval is not None

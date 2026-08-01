@@ -20,24 +20,9 @@ This repository is the **reference Control Plane**. The [AI Runtime Platform](ht
 
 ## Module maturity
 
-| Module | Location | Status | Notes |
-| --- | --- | --- | --- |
-| Execution Plane | `ai-runtime-platform` | Production path | Gateway enforces verdicts |
-| Control Plane API | `apps/control-api` | Production path | Dashboard, drift, durable evaluate |
-| Policy bundle | `app/policy_bundle.py` | Production path | Digest + reload API |
-| Durable decisions / approvals | `app/decision_store.py` | Production path | SQLite default; Postgres optional |
-| Identity & Audit | identity + audit + JSONL/Loki | Integrated | JWKS verify opt-in |
-| Policy Engine | `governance/` + OPA | Production path | Packs → prompt → quota → registry → cost → risk |
-| Model Registry | `governance/registry/` | Integrated | Digest / attestation metadata |
-| Tool / Agent / Intent | `governance/tools|agents|intent/` | Prototype | YAML registries + heuristics |
-| Prompt Governance | `governance/prompt-security/` | Prototype | Regex heuristics |
-| Live Governance Inputs | Redis + Prometheus | Integrated | Demo production overlay |
-| Fleet & Topology | `/topology`, `/drift` | Integrated | Live probes; remote clusters static |
-| Cost & FinOps | cost + `finops/` | Prototype | Rules + sample CSV |
-| Forecasting / capacity | `forecasting/`, `experiments/` | Prototype | Offline simulators |
-| Platform Demo | `demo/platform/` | Integrated | Laptop / production / enterprise tiers |
+See [maturity-boundary.md](maturity-boundary.md) for Supported / Reference / Experimental tiers.
 
-## Golden path (v0.2)
+## Golden path
 
 ```mermaid
 flowchart TD
@@ -45,12 +30,10 @@ flowchart TD
     B --> C["Versioned policy evaluation"]
     C -->|allow| D["Inference backend"]
     C -->|block| E["Audited rejection"]
-    C -->|approval| F["Durable approval"]
-    F -->|approved| D
-    F -->|rejected or expired| E
+    C -->|approval| F["Request-bound durable approval"]
+    F -->|approved + matching digest| D
+    F -->|rejected expired or consumed| E
 ```
-
-Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-durable-governance-store.md)
 
 ## Roadmap
 
@@ -60,16 +43,19 @@ Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-dura
 | v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | Done |
 | v0.3.0 | Router split, Postgres profile, JWKS fail-closed, kind e2e | Done |
 | v0.4.0 | Failure injection matrix, governance SLO benchmark + dashboard | Done |
-| v0.5.0 | Trust boundary: request-bound one-time approvals, `/livez`/`/readyz`, HA Postgres production profile | Done |
-| v0.6.0 | Connection pool, migrations, multi-replica Postgres e2e | Next |
-| v0.7.0 | Versioned OpenAPI + breaking-change CI + unified errors | Planned |
-| v1.0 | Stable API schema + supported/reference/experimental boundary | Planned |
+| v0.5.0 | Trust boundary, HA Postgres production profile, readiness | Done |
+| v0.6.0 | Connection pool, schema migrations, DB metrics, multi-replica Postgres e2e | Done (rolled into v1.0) |
+| v0.7.0 | Frozen OpenAPI, unified errors, pagination, compatibility CI | Done (rolled into v1.0) |
+| v1.0.0 | Stable contract + maturity boundary + upgrade guide | This release |
 
 ## Related docs
 
 - [Durable governance](durable-governance.md)
 - [Control plane SLOs](slo.md)
 - [Failure injection](failure-injection.md)
+- [API compatibility](api-compatibility.md)
+- [Maturity boundary](maturity-boundary.md)
+- [Upgrade v0.5 → v1.0](upgrade-v0.5-to-v1.0.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

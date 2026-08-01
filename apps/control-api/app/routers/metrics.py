@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 
+from app.db_metrics import render_db_metrics
 from app.finops_service import build_finops_recommendations
 from app.fleet_service import fleet_cluster_metrics
 from app.inventory import get_capacity_status, get_cost_status
@@ -84,6 +85,7 @@ def metrics() -> str:
         )
 
     lines.extend(render_governance_latency_metrics())
+    lines.extend(render_db_metrics())
 
     lines.extend(
         [
