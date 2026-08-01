@@ -2,10 +2,12 @@ replicaCount: 1
 
 nameOverride: ""
 
+# Default chart uses SQLite; keep a single replica. Enable HPA only with PostgreSQL
+# (see values-production.yaml). values-single-node.yaml is the explicit SQLite PVC profile.
 autoscaling:
-  enabled: true
+  enabled: false
   minReplicas: 1
-  maxReplicas: 3
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 70
 
 image:

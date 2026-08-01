@@ -88,6 +88,22 @@ jobs:
         run: |
           helm template ai-control-plane infra/helm/ai-control-plane \
             -f infra/helm/ai-control-plane/values-postgres.yaml
+      - name: Helm template (single-node SQLite profile)
+        run: |
+          helm template ai-control-plane infra/helm/ai-control-plane \
+            -f infra/helm/ai-control-plane/values-single-node.yaml
+      - name: Helm rejects multi-replica SQLite
+        run: |
+          if helm template ai-control-plane infra/helm/ai-control-plane \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=2 \
+            --set autoscaling.maxReplicas=4 \
+            --set persistence.databaseUrl=sqlite:////var/lib/ai-control-plane/control-plane.db \
+            >/tmp/bad-sqlite.yaml 2>/tmp/bad-sqlite.err; then
+            echo "expected helm template to fail for multi-replica SQLite" >&2
+            exit 1
+          fi
+          grep -qi 'SQLite persistence cannot be used' /tmp/bad-sqlite.err
 
   policy:
     runs-on: ubuntu-latest

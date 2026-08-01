@@ -86,12 +86,17 @@ spec:
               containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /livez
               port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
           {{- if or .Values.modelInventory.enabled .Values.governance.enabled .Values.fleet.enabled .Values.audit.jsonlEnabled .Values.persistence.enabled }}
           volumeMounts:
             {{- if .Values.modelInventory.enabled }}

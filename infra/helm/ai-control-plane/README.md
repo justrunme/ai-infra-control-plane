@@ -6,28 +6,30 @@ This chart deploys the AI Control Plane API and optional Kubernetes autoscaling.
 
 The chart defaults to non-root containers, a read-only root filesystem, dropped Linux capabilities, and a non-`latest` image tag so rendered manifests can pass the repository OPA policy gates.
 
+## Profiles
+
+| Values file | Store | Replicas | Use |
+| --- | --- | --- | --- |
+| `values.yaml` (defaults) | SQLite | 1 (autoscaling off) | Local / CI |
+| `values-single-node.yaml` | SQLite + PVC | 1 | Single-node reference |
+| `values-postgres.yaml` | PostgreSQL | operator choice | Shared DB without full prod toggles |
+| `values-production.yaml` | PostgreSQL | HPA 2–6 | HA + JWKS fail-closed |
+
+The chart **fails** when SQLite is paired with more than one replica (`validate-store.yaml`).
+
 ## Autoscaling
 
-Autoscaling is enabled by default:
+Autoscaling is **disabled** by default because the default store is SQLite:
 
 ```yaml
 autoscaling:
-  enabled: true
+  enabled: false
   minReplicas: 1
-  maxReplicas: 3
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 70
 ```
 
-When autoscaling is enabled, the Deployment does not set `spec.replicas`; the HorizontalPodAutoscaler owns replica count.
-
-To disable autoscaling and use a fixed replica count:
-
-```yaml
-replicaCount: 1
-
-autoscaling:
-  enabled: false
-```
+Enable HPA only with PostgreSQL (`values-production.yaml`). When autoscaling is enabled, the Deployment does not set `spec.replicas`; the HorizontalPodAutoscaler owns replica count.
 
 ## Resources
 
@@ -95,6 +97,14 @@ metrics:
 
 ```sh
 helm template ai-control-plane infra/helm/ai-control-plane
+
+# Single-node SQLite PVC
+helm template ai-control-plane infra/helm/ai-control-plane \
+  -f infra/helm/ai-control-plane/values-single-node.yaml
+
+# Production HA (PostgreSQL URL required)
+helm template ai-control-plane infra/helm/ai-control-plane \
+  -f infra/helm/ai-control-plane/values-production.yaml
 
 # With all optional resources enabled
 helm template ai-control-plane infra/helm/ai-control-plane \

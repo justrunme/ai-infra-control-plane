@@ -22,6 +22,7 @@ class ApprovalResponse(BaseModel):
     created_at: str
     expires_at: str
     resolved_at: str | None = None
+    used_at: str | None = None
 
 
 class ApprovalListResponse(BaseModel):
@@ -53,6 +54,7 @@ def _to_response(record) -> ApprovalResponse:
         created_at=record.created_at,
         expires_at=record.expires_at,
         resolved_at=record.resolved_at,
+        used_at=record.used_at,
     )
 
 

@@ -84,10 +84,14 @@ def governance_evaluate(
         request_id = request.headers.get("x-request-id") or str(uuid4())
         prior_approval = header_map.get("x-ai-approval-id", "").strip()
         try:
-            if prior_approval and approval_grants_allow(prior_approval):
-                from app.policy_bundle import get_policy_bundle
+            from app.policy_bundle import get_policy_bundle
 
-                bundle = get_policy_bundle()
+            bundle = get_policy_bundle()
+            if prior_approval and approval_grants_allow(
+                prior_approval,
+                merged,
+                policy_digest=bundle.content_digest,
+            ):
                 result = GovernanceEvaluateResponse(
                     final_verdict="allow",
                     policy_pack=merged.policy_pack or "default",

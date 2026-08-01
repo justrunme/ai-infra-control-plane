@@ -1,5 +1,6 @@
-# Production profile: fail-closed OIDC + durable PVC for decisions/approvals.
-# Override oidc.jwksUrl / jwtIssuer / jwtAudience for your IdP before install.
+# Production HA profile: PostgreSQL authoritative store + multi-replica API.
+# Override persistence.databaseUrl and oidc.* for your environment before install.
+# For single-node SQLite demos use values-single-node.yaml instead.
 
 autoscaling:
   enabled: true
@@ -12,9 +13,10 @@ image:
 
 persistence:
   enabled: true
-  size: 5Gi
-  storageClassName: ""
-  databaseUrl: sqlite:////var/lib/ai-control-plane/control-plane.db
+  # Shared durable state lives in Postgres — no RWO SQLite PVC.
+  size: ""
+  existingClaim: ""
+  databaseUrl: postgresql://ai_control:CHANGE_ME@postgres.databases.svc:5432/ai_control
   approvalTtlSeconds: 3600
   probeCacheTtlSeconds: 10
   httpTrustEnv: false

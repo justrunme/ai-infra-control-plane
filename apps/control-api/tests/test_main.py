@@ -27,8 +27,9 @@ def test_health() -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json()["status"] in {"ok", "degraded"}
     assert "checked_at" in response.json()
+    assert response.json()["live"] is True
 
 
 def test_models() -> None:
