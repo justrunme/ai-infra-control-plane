@@ -34,7 +34,9 @@ jobs:
           cd apps/control-api
           PYTHONPATH=. pytest --cov=app --cov-report=term-missing --cov-fail-under=85
       - name: Run governance and forecasting tests
-        run: pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests
+        run: pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests experiments/finops-recommendations/tests
+      - name: OpenAPI contract freeze
+        run: PYTHONPATH=apps/control-api python scripts/check_openapi_freeze.py
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
 
@@ -215,3 +217,19 @@ jobs:
           CLUSTER_NAME: ai-cp-e2e
           KEEP_CLUSTER: "1"
         run: bash demo/e2e/kind-e2e.sh
+
+  e2e-kind-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: ai-cp-pg-e2e
+      - name: Run kind Postgres HA e2e
+        env:
+          SKIP_CLUSTER_CREATE: "1"
+          CLUSTER_NAME: ai-cp-pg-e2e
+          KEEP_CLUSTER: "1"
+        run: bash demo/e2e/kind-postgres-e2e.sh

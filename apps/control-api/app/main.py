@@ -6,6 +6,7 @@ from time import perf_counter
 from fastapi import FastAPI, Request
 
 from app import http_client
+from app.errors import install_error_handlers
 from app.inventory import (  # noqa: F401
     BUILTIN_MODEL_INVENTORY,
     DEFAULT_MODEL_INVENTORY_PATH,
@@ -40,17 +41,28 @@ from app.settings import get_settings
 async def lifespan(_app: FastAPI):
     get_settings()
     http_client.get_http_client()
+    # Eager-init decision store so /readyz and migrations run at boot.
+    try:
+        from app.decision_store import get_decision_store
+
+        get_decision_store()
+    except Exception:  # noqa: BLE001
+        pass
     yield
     http_client.close_http_client()
+    from app.decision_store import reset_decision_store
+
+    reset_decision_store(None)
 
 
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="0.5.0",
+    version="1.0.0",
     description="Control API for private AI inference infrastructure.",
     lifespan=lifespan,
 )
 
+install_error_handlers(app)
 app.include_router(approvals_router)
 app.include_router(dashboard.router)
 app.include_router(health.router)

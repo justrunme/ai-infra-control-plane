@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.decision_store import StoreUnavailableError, get_decision_store
@@ -87,10 +87,17 @@ def _resolve_reviewer(request: Request, payload: ResolveApprovalRequest) -> str:
 
 
 @router.get("/approvals", response_model=ApprovalListResponse)
-def list_approvals(status: str = "pending") -> ApprovalListResponse:
+def list_approvals(
+    status: str = "pending",
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> ApprovalListResponse:
     try:
         store = get_decision_store()
-        items = [_to_response(item) for item in store.list_approvals(status=status)]
+        items = [
+            _to_response(item)
+            for item in store.list_approvals(status=status, limit=limit, offset=offset)
+        ]
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
     return ApprovalListResponse(approvals=items, count=len(items))

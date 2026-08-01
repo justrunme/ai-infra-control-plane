@@ -1,7 +1,6 @@
-"""SQLite-backed durable store for governance decisions and approvals.
+"""Durable store for governance decisions and approvals.
 
-Postgres URLs (``postgres://`` / ``postgresql://``) are accepted when ``psycopg``
-is importable; otherwise only SQLite is supported.
+SQLite is the single-node default. PostgreSQL uses ``psycopg_pool.ConnectionPool``.
 """
 
 from __future__ import annotations
@@ -10,62 +9,16 @@ import json
 import sqlite3
 import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from app.db_metrics import observe_db_operation, set_pool_stats
+from app.db_schema import MIGRATIONS, SCHEMA_SQL
 from app.settings import get_settings
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS decisions (
-  decision_id TEXT PRIMARY KEY,
-  request_id TEXT,
-  final_verdict TEXT,
-  policy_bundle_id TEXT,
-  policy_digest TEXT,
-  team TEXT,
-  environment TEXT,
-  model TEXT,
-  subject TEXT,
-  reasons_json TEXT,
-  stages_json TEXT,
-  request_json TEXT,
-  request_digest TEXT,
-  created_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS approvals (
-  approval_id TEXT PRIMARY KEY,
-  decision_id TEXT,
-  status TEXT,
-  reviewer TEXT,
-  review_comment TEXT,
-  created_at TEXT,
-  expires_at TEXT,
-  resolved_at TEXT,
-  used_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS audit_meta (
-  event_id TEXT PRIMARY KEY,
-  decision_id TEXT,
-  event_type TEXT,
-  actor TEXT,
-  payload_json TEXT,
-  created_at TEXT
-);
-"""
-
-_SQLITE_MIGRATIONS = (
-    "ALTER TABLE decisions ADD COLUMN request_digest TEXT",
-    "ALTER TABLE approvals ADD COLUMN used_at TEXT",
-)
-
-_POSTGRES_MIGRATIONS = (
-    "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS request_digest TEXT",
-    "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS used_at TEXT",
-)
 
 _store: DecisionStore | None = None
 _lock = threading.Lock()
@@ -82,7 +35,6 @@ def _utcnow() -> datetime:
 def _is_operational_db_error(exc: BaseException) -> bool:
     if isinstance(exc, (sqlite3.Error, OSError, TimeoutError, ConnectionError)):
         return True
-    # Optional Postgres path.
     module = type(exc).__module__ or ""
     return module.startswith("psycopg")
 
@@ -144,88 +96,177 @@ class ApprovalRecord:
 
 
 class DecisionStore:
-    """Durable decision / approval store (SQLite by default)."""
+    """Durable decision / approval store (SQLite or pooled Postgres)."""
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
         self._backend = "sqlite"
-        self._conn: sqlite3.Connection | Any
         self._pg = False
         self._op_lock = threading.RLock()
+        self._conn: sqlite3.Connection | None = None
+        self._pool: Any = None
 
         if database_url.startswith(("postgres://", "postgresql://")):
             try:
-                import psycopg
-            except ImportError as exc:  # pragma: no cover - optional dependency
+                from psycopg.rows import dict_row
+                from psycopg_pool import ConnectionPool
+            except ImportError as exc:  # pragma: no cover
                 raise RuntimeError(
-                    "DATABASE_URL is postgres but psycopg is not installed; "
-                    "use a sqlite:/// URL or install psycopg"
+                    "DATABASE_URL is postgres but psycopg/psycopg_pool is not installed"
                 ) from exc
             self._backend = "postgres"
             self._pg = True
-            from psycopg.rows import dict_row
-
-            self._conn = psycopg.connect(database_url, row_factory=dict_row)
-            self._init_schema_postgres()
+            self._pool = ConnectionPool(
+                conninfo=database_url,
+                min_size=1,
+                max_size=10,
+                timeout=5.0,
+                kwargs={"row_factory": dict_row},
+                open=True,
+            )
+            with self._pool.connection() as conn:
+                self._apply_schema(conn, postgres=True)
+            self._refresh_pool_stats()
             return
 
         path = sqlite_path_from_url(database_url)
         _ensure_sqlite_parent(path)
-        # check_same_thread=False: FastAPI may touch the store from workers.
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA busy_timeout=5000")
         self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._init_schema_sqlite()
+        self._apply_schema(self._conn, postgres=False)
+        set_pool_stats(backend="sqlite", size=1, available=1)
 
     @classmethod
     def from_env(cls) -> DecisionStore:
-        """Construct a store using ``DATABASE_URL`` from settings."""
         return cls(get_settings().database_url)
 
     def close(self) -> None:
-        with self._op_lock:
-            self._conn.close()
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
+        if self._conn is not None:
+            with self._op_lock:
+                self._conn.close()
+            self._conn = None
+
+    def _refresh_pool_stats(self) -> None:
+        if self._pool is None:
+            set_pool_stats(backend=self._backend, size=1, available=1)
+            return
+        stats = self._pool.get_stats()
+        set_pool_stats(
+            backend="postgres",
+            size=int(stats.get("pool_size", 0) or 0),
+            available=int(stats.get("pool_available", 0) or 0),
+        )
 
     def ping(self) -> bool:
-        """Return True when a trivial round-trip against the store succeeds."""
         try:
-            with self._op_lock:
-                cur = self._execute("SELECT 1")
-                cur.fetchone()
+            with observe_db_operation("ping"):
+                with self._session() as conn:
+                    cur = self._execute(conn, "SELECT 1")
+                    cur.fetchone()
+            self._refresh_pool_stats()
             return True
         except Exception:  # noqa: BLE001
             return False
 
-    def _init_schema_sqlite(self) -> None:
-        self._conn.executescript(_SCHEMA)
-        for statement in _SQLITE_MIGRATIONS:
-            try:
-                self._conn.execute(statement)
-            except sqlite3.OperationalError:
-                # Column already exists on upgraded databases.
-                pass
-        self._conn.commit()
+    def pool_stats(self) -> dict[str, int | str]:
+        self._refresh_pool_stats()
+        from app import db_metrics
 
-    def _init_schema_postgres(self) -> None:  # pragma: no cover - optional path
-        # Same logical schema; TEXT maps cleanly for this workload.
-        statements = [part.strip() for part in _SCHEMA.split(";") if part.strip()]
-        with self._conn.cursor() as cur:
+        return {
+            "backend": db_metrics.DB_BACKEND,
+            "size": db_metrics.DB_POOL_SIZE,
+            "available": db_metrics.DB_POOL_AVAILABLE,
+        }
+
+    @contextmanager
+    def _session(self) -> Iterator[Any]:
+        if self._pg:
+            assert self._pool is not None
+            with self._pool.connection() as conn:
+                yield conn
+            self._refresh_pool_stats()
+            return
+        assert self._conn is not None
+        with self._op_lock:
+            yield self._conn
+
+    def _apply_schema(self, conn: Any, *, postgres: bool) -> None:
+        if postgres:
+            statements = [part.strip() for part in SCHEMA_SQL.split(";") if part.strip()]
+            with conn.cursor() as cur:
+                for statement in statements:
+                    cur.execute(statement)
+            conn.commit()
+            self._run_migrations(conn, postgres=True)
+            return
+        conn.executescript(SCHEMA_SQL)
+        conn.commit()
+        self._run_migrations(conn, postgres=False)
+
+    def _run_migrations(self, conn: Any, *, postgres: bool) -> None:
+        now = _isoformat(_utcnow())
+        for version, statements in MIGRATIONS:
+            if self._migration_applied(conn, version, postgres=postgres):
+                continue
             for statement in statements:
-                cur.execute(statement)
-            for statement in _POSTGRES_MIGRATIONS:
-                cur.execute(statement)
-        self._conn.commit()
+                try:
+                    if postgres:
+                        with conn.cursor() as cur:
+                            cur.execute(statement)
+                    else:
+                        conn.execute(statement)
+                except Exception as exc:  # noqa: BLE001
+                    # Column may already exist on upgraded DBs.
+                    message = str(exc).lower()
+                    if "duplicate" in message or "already exists" in message:
+                        continue
+                    if not postgres and isinstance(exc, sqlite3.OperationalError):
+                        continue
+                    raise
+            insert = (
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (%s, %s)"
+                if postgres
+                else "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)"
+            )
+            try:
+                if postgres:
+                    with conn.cursor() as cur:
+                        cur.execute(insert, (version, now))
+                else:
+                    conn.execute(insert, (version, now))
+            except Exception:  # noqa: BLE001
+                pass
+            conn.commit()
 
-    def _execute(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
-        if self._pg:  # pragma: no cover - optional path
+    def _migration_applied(self, conn: Any, version: str, *, postgres: bool) -> bool:
+        query = (
+            "SELECT 1 FROM schema_migrations WHERE version = %s"
+            if postgres
+            else "SELECT 1 FROM schema_migrations WHERE version = ?"
+        )
+        try:
+            if postgres:
+                with conn.cursor() as cur:
+                    cur.execute(query, (version,))
+                    return cur.fetchone() is not None
+            cur = conn.execute(query, (version,))
+            return cur.fetchone() is not None
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _execute(self, conn: Any, sql: str, params: tuple[Any, ...] = ()) -> Any:
+        if self._pg:
             sql = sql.replace("?", "%s")
-        cur = self._conn.execute(sql, params)
-        return cur
+        return conn.execute(sql, params)
 
-    def _commit(self) -> None:
-        self._conn.commit()
+    def _commit(self, conn: Any) -> None:
+        conn.commit()
 
     def _wrap_db(self, _exc: BaseException) -> StoreUnavailableError:
         return StoreUnavailableError("authoritative store unavailable")
@@ -247,38 +288,39 @@ class DecisionStore:
         request_digest: str = "",
         decision_id: str | None = None,
     ) -> str:
-        """Persist a governance decision and return its id."""
         decision_id = decision_id or str(uuid.uuid4())
         created_at = _isoformat(_utcnow())
         try:
-            with self._op_lock:
-                self._execute(
-                    """
-                    INSERT INTO decisions (
-                      decision_id, request_id, final_verdict, policy_bundle_id,
-                      policy_digest, team, environment, model, subject,
-                      reasons_json, stages_json, request_json, request_digest,
-                      created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        decision_id,
-                        request_id,
-                        final_verdict,
-                        policy_bundle_id,
-                        policy_digest,
-                        team,
-                        environment,
-                        model,
-                        subject,
-                        json.dumps(reasons or []),
-                        json.dumps(stages or {}),
-                        json.dumps(request or {}),
-                        request_digest,
-                        created_at,
-                    ),
-                )
-                self._commit()
+            with observe_db_operation("create_decision"):
+                with self._session() as conn:
+                    self._execute(
+                        conn,
+                        """
+                        INSERT INTO decisions (
+                          decision_id, request_id, final_verdict, policy_bundle_id,
+                          policy_digest, team, environment, model, subject,
+                          reasons_json, stages_json, request_json, request_digest,
+                          created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            decision_id,
+                            request_id,
+                            final_verdict,
+                            policy_bundle_id,
+                            policy_digest,
+                            team,
+                            environment,
+                            model,
+                            subject,
+                            json.dumps(reasons or []),
+                            json.dumps(stages or {}),
+                            json.dumps(request or {}),
+                            request_digest,
+                            created_at,
+                        ),
+                    )
+                    self._commit(conn)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -286,32 +328,33 @@ class DecisionStore:
         return decision_id
 
     def create_approval(self, decision_id: str, ttl_seconds: int) -> str:
-        """Create a pending approval linked to ``decision_id``."""
         approval_id = str(uuid.uuid4())
         now = _utcnow()
         expires_at = now + timedelta(seconds=max(ttl_seconds, 0))
         try:
-            with self._op_lock:
-                self._execute(
-                    """
-                    INSERT INTO approvals (
-                      approval_id, decision_id, status, reviewer, review_comment,
-                      created_at, expires_at, resolved_at, used_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        approval_id,
-                        decision_id,
-                        "pending",
-                        None,
-                        None,
-                        _isoformat(now),
-                        _isoformat(expires_at),
-                        None,
-                        None,
-                    ),
-                )
-                self._commit()
+            with observe_db_operation("create_approval"):
+                with self._session() as conn:
+                    self._execute(
+                        conn,
+                        """
+                        INSERT INTO approvals (
+                          approval_id, decision_id, status, reviewer, review_comment,
+                          created_at, expires_at, resolved_at, used_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            approval_id,
+                            decision_id,
+                            "pending",
+                            None,
+                            None,
+                            _isoformat(now),
+                            _isoformat(expires_at),
+                            None,
+                            None,
+                        ),
+                    )
+                    self._commit(conn)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -319,22 +362,23 @@ class DecisionStore:
         return approval_id
 
     def consume_approval(self, approval_id: str) -> bool:
-        """Atomically mark an approved approval as one-time consumed."""
         now = _isoformat(_utcnow())
         try:
-            with self._op_lock:
-                cur = self._execute(
-                    """
-                    UPDATE approvals
-                    SET status = 'consumed', used_at = ?
-                    WHERE approval_id = ?
-                      AND status = 'approved'
-                      AND (used_at IS NULL OR used_at = '')
-                    """,
-                    (now, approval_id),
-                )
-                self._commit()
-                return int(cur.rowcount or 0) == 1
+            with observe_db_operation("consume_approval"):
+                with self._session() as conn:
+                    cur = self._execute(
+                        conn,
+                        """
+                        UPDATE approvals
+                        SET status = 'consumed', used_at = ?
+                        WHERE approval_id = ?
+                          AND status = 'approved'
+                          AND (used_at IS NULL OR used_at = '')
+                        """,
+                        (now, approval_id),
+                    )
+                    self._commit(conn)
+                    return int(cur.rowcount or 0) == 1
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -342,12 +386,14 @@ class DecisionStore:
 
     def get_decision(self, decision_id: str) -> DecisionRecord | None:
         try:
-            with self._op_lock:
-                cur = self._execute(
-                    "SELECT * FROM decisions WHERE decision_id = ?",
-                    (decision_id,),
-                )
-                row = cur.fetchone()
+            with observe_db_operation("get_decision"):
+                with self._session() as conn:
+                    cur = self._execute(
+                        conn,
+                        "SELECT * FROM decisions WHERE decision_id = ?",
+                        (decision_id,),
+                    )
+                    row = cur.fetchone()
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -358,13 +404,15 @@ class DecisionStore:
 
     def get_approval(self, approval_id: str) -> ApprovalRecord | None:
         try:
-            with self._op_lock:
-                self._expire_if_needed(approval_id)
-                cur = self._execute(
-                    "SELECT * FROM approvals WHERE approval_id = ?",
-                    (approval_id,),
-                )
-                row = cur.fetchone()
+            with observe_db_operation("get_approval"):
+                with self._session() as conn:
+                    self._expire_if_needed(conn, approval_id)
+                    cur = self._execute(
+                        conn,
+                        "SELECT * FROM approvals WHERE approval_id = ?",
+                        (approval_id,),
+                    )
+                    row = cur.fetchone()
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -373,15 +421,30 @@ class DecisionStore:
             return None
         return self._approval_from_row(row)
 
-    def list_approvals(self, status: str = "pending") -> list[ApprovalRecord]:
+    def list_approvals(
+        self,
+        status: str = "pending",
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[ApprovalRecord]:
+        limit = max(1, min(limit, 500))
+        offset = max(0, offset)
         try:
-            with self._op_lock:
-                self.expire_stale_approvals()
-                cur = self._execute(
-                    "SELECT * FROM approvals WHERE status = ? ORDER BY created_at ASC",
-                    (status,),
-                )
-                rows = cur.fetchall()
+            with observe_db_operation("list_approvals"):
+                with self._session() as conn:
+                    self._expire_stale(conn)
+                    cur = self._execute(
+                        conn,
+                        """
+                        SELECT * FROM approvals
+                        WHERE status = ?
+                        ORDER BY created_at ASC
+                        LIMIT ? OFFSET ?
+                        """,
+                        (status, limit, offset),
+                    )
+                    rows = cur.fetchall()
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -395,57 +458,59 @@ class DecisionStore:
         reviewer: str,
         comment: str = "",
     ) -> ApprovalRecord:
-        """Resolve a pending approval; expire lazily if past TTL."""
         if status not in {"approved", "rejected"}:
             raise ValueError("status must be 'approved' or 'rejected'")
 
         try:
-            with self._op_lock:
-                approval = self.get_approval(approval_id)
-                if approval is None:
-                    raise KeyError(f"approval not found: {approval_id}")
-                if approval.status == "expired":
-                    raise ValueError("approval expired")
-                if approval.status != "pending":
-                    raise ValueError(
-                        f"approval is not pending (status={approval.status})"
+            with observe_db_operation("resolve_approval"):
+                with self._session() as conn:
+                    self._expire_if_needed(conn, approval_id)
+                    cur = self._execute(
+                        conn,
+                        "SELECT * FROM approvals WHERE approval_id = ?",
+                        (approval_id,),
                     )
-
-                resolved_at = _isoformat(_utcnow())
-                self._execute(
-                    """
-                    UPDATE approvals
-                    SET status = ?, reviewer = ?, review_comment = ?, resolved_at = ?
-                    WHERE approval_id = ?
-                    """,
-                    (status, reviewer, comment, resolved_at, approval_id),
-                )
-                self._commit()
-                updated = self.get_approval(approval_id)
+                    row = cur.fetchone()
+                    if row is None:
+                        raise KeyError(f"approval not found: {approval_id}")
+                    approval = self._approval_from_row(row)
+                    if approval.status == "expired":
+                        raise ValueError("approval expired")
+                    if approval.status != "pending":
+                        raise ValueError(
+                            f"approval is not pending (status={approval.status})"
+                        )
+                    resolved_at = _isoformat(_utcnow())
+                    self._execute(
+                        conn,
+                        """
+                        UPDATE approvals
+                        SET status = ?, reviewer = ?, review_comment = ?, resolved_at = ?
+                        WHERE approval_id = ?
+                        """,
+                        (status, reviewer, comment, resolved_at, approval_id),
+                    )
+                    self._commit(conn)
+                    cur = self._execute(
+                        conn,
+                        "SELECT * FROM approvals WHERE approval_id = ?",
+                        (approval_id,),
+                    )
+                    updated_row = cur.fetchone()
         except (KeyError, ValueError):
             raise
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
-        assert updated is not None
-        return updated
+        assert updated_row is not None
+        return self._approval_from_row(updated_row)
 
     def expire_stale_approvals(self) -> int:
-        """Mark pending approvals past expires_at as expired. Returns count."""
-        now = _isoformat(_utcnow())
         try:
-            with self._op_lock:
-                cur = self._execute(
-                    """
-                    UPDATE approvals
-                    SET status = 'expired', resolved_at = ?
-                    WHERE status = 'pending' AND expires_at <= ?
-                    """,
-                    (now, now),
-                )
-                self._commit()
-                return int(cur.rowcount or 0)
+            with observe_db_operation("expire_stale_approvals"):
+                with self._session() as conn:
+                    return self._expire_stale(conn)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
@@ -460,35 +525,51 @@ class DecisionStore:
         payload: dict[str, Any] | None = None,
         event_id: str | None = None,
     ) -> str:
-        """Optional helper for audit_meta rows."""
         event_id = event_id or str(uuid.uuid4())
         try:
-            with self._op_lock:
-                self._execute(
-                    """
-                    INSERT INTO audit_meta (
-                      event_id, decision_id, event_type, actor, payload_json, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        event_id,
-                        decision_id,
-                        event_type,
-                        actor,
-                        json.dumps(payload or {}),
-                        _isoformat(_utcnow()),
-                    ),
-                )
-                self._commit()
+            with observe_db_operation("append_audit_meta"):
+                with self._session() as conn:
+                    self._execute(
+                        conn,
+                        """
+                        INSERT INTO audit_meta (
+                          event_id, decision_id, event_type, actor,
+                          payload_json, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            event_id,
+                            decision_id,
+                            event_type,
+                            actor,
+                            json.dumps(payload or {}),
+                            _isoformat(_utcnow()),
+                        ),
+                    )
+                    self._commit(conn)
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
         return event_id
 
-    def _expire_if_needed(self, approval_id: str) -> None:
-        # Caller holds _op_lock.
+    def _expire_stale(self, conn: Any) -> int:
+        now = _isoformat(_utcnow())
         cur = self._execute(
+            conn,
+            """
+            UPDATE approvals
+            SET status = 'expired', resolved_at = ?
+            WHERE status = 'pending' AND expires_at <= ?
+            """,
+            (now, now),
+        )
+        self._commit(conn)
+        return int(cur.rowcount or 0)
+
+    def _expire_if_needed(self, conn: Any, approval_id: str) -> None:
+        cur = self._execute(
+            conn,
             "SELECT status, expires_at FROM approvals WHERE approval_id = ?",
             (approval_id,),
         )
@@ -504,6 +585,7 @@ class DecisionStore:
             return
         now = _isoformat(_utcnow())
         self._execute(
+            conn,
             """
             UPDATE approvals
             SET status = 'expired', resolved_at = ?
@@ -511,7 +593,7 @@ class DecisionStore:
             """,
             (now, approval_id),
         )
-        self._commit()
+        self._commit(conn)
 
     @staticmethod
     def _as_mapping(row: Any) -> dict[str, Any]:
@@ -520,7 +602,6 @@ class DecisionStore:
         try:
             return dict(row)
         except (TypeError, ValueError):
-            # Fallback for plain tuples (should not happen with dict_row/sqlite3.Row).
             keys = (
                 "approval_id",
                 "decision_id",

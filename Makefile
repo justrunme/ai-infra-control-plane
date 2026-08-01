@@ -31,6 +31,9 @@ e2e-compose:
 e2e-kind:
 	bash demo/e2e/kind-e2e.sh
 
+e2e-kind-postgres:
+	bash demo/e2e/kind-postgres-e2e.sh
+
 policy-check:
 	helm template ai-control-plane infra/helm/ai-control-plane \
 		--set metrics.serviceMonitor.enabled=true \
