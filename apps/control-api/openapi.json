@@ -1609,6 +1609,17 @@
       },
       "GovernanceEvaluateResponse": {
         "properties": {
+          "agent_capability_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Capability Digest"
+          },
           "approval_id": {
             "anyOf": [
               {
@@ -1691,6 +1702,17 @@
                 "type": "null"
               }
             ]
+          },
+          "tools_capability_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools Capability Digest"
           }
         },
         "required": [
@@ -3980,7 +4002,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "2.3.0"
+    "version": "2.4.0"
   },
   "openapi": "3.1.0",
   "paths": {

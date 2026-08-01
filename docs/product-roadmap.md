@@ -60,8 +60,8 @@ flowchart TD
 | v2.0.1 | Security/correctness: RBAC, policy fail-closed, OCI tooling | Done |
 | v2.1.0 | Durable HA PolicyBundle lifecycle | Done |
 | v2.2.0 | GitOpsProvider + GitHub PR adapter | Done |
-| v2.3.0 | Runtime verification contract | This release |
-| v2.4.0 | Capability-bound execution digests | Next |
+| v2.3.0 | Runtime verification contract | Done |
+| v2.4.0 | Capability-bound execution digests | This release |
 
 ## Related docs
 

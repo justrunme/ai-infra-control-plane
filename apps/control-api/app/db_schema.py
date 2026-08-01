@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS decisions (
   stages_json TEXT,
   request_json TEXT,
   request_digest TEXT,
+  agent_capability_digest TEXT,
+  tools_capability_digest TEXT,
   created_at TEXT
 );
 
@@ -441,6 +443,19 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
             "ON policy_bundles (bundle_id, content_digest)",
             "CREATE INDEX IF NOT EXISTS idx_policy_bundle_impacts_bundle "
             "ON policy_bundle_impacts (bundle_id, created_at)",
+        ),
+    ),
+    _migration(
+        "010_capability_execution_digests",
+        postgres=(
+            "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS "
+            "agent_capability_digest TEXT",
+            "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS "
+            "tools_capability_digest TEXT",
+        ),
+        sqlite=(
+            "ALTER TABLE decisions ADD COLUMN agent_capability_digest TEXT",
+            "ALTER TABLE decisions ADD COLUMN tools_capability_digest TEXT",
         ),
     ),
 )

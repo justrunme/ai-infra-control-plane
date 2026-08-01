@@ -66,6 +66,8 @@ class GovernanceEvaluateResponse(BaseModel):
     decision_id: str | None = None
     policy_bundle_id: str | None = None
     policy_digest: str | None = None
+    agent_capability_digest: str | None = None
+    tools_capability_digest: str | None = None
     approval_id: str | None = None
 
 
@@ -331,6 +333,13 @@ def evaluate_governance_request(
         pack_stage_decision = "approval_required"
         pack_stage_reasons = list(pack_post["reasons"])
 
+    from app.capability_service import resolve_execution_capability_digests
+
+    agent_cap_digest, tools_cap_digest = resolve_execution_capability_digests(
+        agent=getattr(payload, "agent", "") or "",
+        tenant_id=payload.tenant_id or payload.team,
+    )
+
     return GovernanceEvaluateResponse(
         final_verdict=verdict,
         policy_pack=str(pack_pre["pack"]),
@@ -353,6 +362,8 @@ def evaluate_governance_request(
         telemetry=telemetry,
         policy_bundle_id=bundle.bundle_id,
         policy_digest=bundle.content_digest,
+        agent_capability_digest=agent_cap_digest or None,
+        tools_capability_digest=tools_cap_digest or None,
         stages={
             "policy_pack": GovernanceStageResult(
                 decision=pack_stage_decision,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.approval_binding import compute_request_digest
+from app.capability_service import resolve_execution_capability_digests
 from app.decision_store import DecisionStore, get_decision_store
 from app.governance_service import (
     GovernanceEvaluateRequest,
@@ -26,6 +27,14 @@ def persist_evaluation(
         name: stage.model_dump() for name, stage in result.stages.items()
     }
     request_digest = compute_request_digest(request)
+    agent_digest = result.agent_capability_digest or ""
+    tools_digest = result.tools_capability_digest or ""
+    if not agent_digest and not tools_digest:
+        agent_digest, tools_digest = resolve_execution_capability_digests(
+            agent=getattr(request, "agent", "") or "",
+            tenant_id=request.tenant_id or request.team,
+            store=decision_store,
+        )
     actor = request.owner or request.subject or "system"
     approval_id = result.approval_id
 
@@ -44,6 +53,8 @@ def persist_evaluation(
             stages=stages_payload,
             request=request.model_dump(),
             request_digest=request_digest,
+            agent_capability_digest=agent_digest,
+            tools_capability_digest=tools_digest,
             conn=conn,
         )
         if result.final_verdict == "approval_required" and not approval_id:
@@ -76,7 +87,12 @@ def persist_evaluation(
         )
 
     return result.model_copy(
-        update={"decision_id": decision_id, "approval_id": approval_id}
+        update={
+            "decision_id": decision_id,
+            "approval_id": approval_id,
+            "agent_capability_digest": agent_digest or None,
+            "tools_capability_digest": tools_digest or None,
+        }
     )
 
 
@@ -94,6 +110,7 @@ def approval_grants_allow(
     - approval has not been consumed (one-time use)
     - current request digest matches the approved decision request digest
     - current policy digest matches the approved decision policy digest
+    - active capability digests match when both sides are pinned
 
     Consume + audit are committed in one transaction.
     """
@@ -119,6 +136,24 @@ def approval_grants_allow(
         policy_digest
         and decision.policy_digest
         and policy_digest != decision.policy_digest
+    ):
+        return False
+
+    agent_digest, tools_digest = resolve_execution_capability_digests(
+        agent=getattr(request, "agent", "") or "",
+        tenant_id=request.tenant_id or request.team,
+        store=decision_store,
+    )
+    if (
+        agent_digest
+        and decision.agent_capability_digest
+        and agent_digest != decision.agent_capability_digest
+    ):
+        return False
+    if (
+        tools_digest
+        and decision.tools_capability_digest
+        and tools_digest != decision.tools_capability_digest
     ):
         return False
 
@@ -154,6 +189,8 @@ def decision_to_dict(
         "final_verdict": record.final_verdict,
         "policy_bundle_id": record.policy_bundle_id,
         "policy_digest": record.policy_digest,
+        "agent_capability_digest": record.agent_capability_digest,
+        "tools_capability_digest": record.tools_capability_digest,
         "team": record.team,
         "tenant_id": record.tenant_id,
         "environment": record.environment,

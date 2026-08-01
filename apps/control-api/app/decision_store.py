@@ -87,6 +87,8 @@ class DecisionRecord:
     request: dict[str, Any]
     request_digest: str
     created_at: str
+    agent_capability_digest: str = ""
+    tools_capability_digest: str = ""
 
 
 @dataclass
@@ -493,6 +495,8 @@ class DecisionStore:
         stages: dict[str, Any] | None = None,
         request: dict[str, Any] | None = None,
         request_digest: str = "",
+        agent_capability_digest: str = "",
+        tools_capability_digest: str = "",
         decision_id: str | None = None,
         conn: Any | None = None,
     ) -> str:
@@ -514,6 +518,8 @@ class DecisionStore:
             json.dumps(stages or {}),
             json.dumps(request or {}),
             request_digest,
+            agent_capability_digest,
+            tools_capability_digest,
             created_at,
         )
         sql = """
@@ -521,8 +527,8 @@ class DecisionStore:
               decision_id, request_id, final_verdict, policy_bundle_id,
               policy_digest, team, tenant_id, environment, model, subject,
               reasons_json, stages_json, request_json, request_digest,
-              created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              agent_capability_digest, tools_capability_digest, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         try:
             with observe_db_operation("create_decision"):
@@ -2035,6 +2041,8 @@ class DecisionStore:
             request=json.loads(mapping.get("request_json") or "{}"),
             request_digest=mapping.get("request_digest") or "",
             created_at=mapping.get("created_at") or "",
+            agent_capability_digest=mapping.get("agent_capability_digest") or "",
+            tools_capability_digest=mapping.get("tools_capability_digest") or "",
         )
 
     @classmethod
