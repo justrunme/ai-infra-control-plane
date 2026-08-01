@@ -37,6 +37,10 @@ jobs:
         run: pytest tests experiments/capacity-loop/tests experiments/gpu-placement/tests experiments/finops-recommendations/tests
       - name: OpenAPI contract freeze
         run: PYTHONPATH=apps/control-api python scripts/check_openapi_freeze.py
+      - name: OpenAPI breaking-change check
+        run: |
+          git fetch --tags --force origin v1.0.0
+          bash scripts/check_openapi_breaking.sh
       - name: Compile Python modules
         run: cd apps/control-api && python -m compileall app tests
 
@@ -106,6 +110,8 @@ jobs:
             exit 1
           fi
           grep -qi 'SQLite persistence cannot be used' /tmp/bad-sqlite.err
+      - name: Helm package smoke (artifact, not checkout path)
+        run: bash scripts/helm_package_smoke.sh
 
   policy:
     runs-on: ubuntu-latest
