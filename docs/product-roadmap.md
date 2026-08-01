@@ -61,7 +61,7 @@ flowchart TD
 | v2.1.0 | Durable HA PolicyBundle lifecycle | Done |
 | v2.2.0 | GitOpsProvider + GitHub PR adapter | Done |
 | v2.3.0 | Runtime verification contract | Done |
-| v2.4.0 | Capability-bound execution digests | This release |
+| v2.4.0 | Capability-bound execution digests | Done — current stable |
 
 ## Related docs
 
