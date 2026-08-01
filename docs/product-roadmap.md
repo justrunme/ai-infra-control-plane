@@ -60,8 +60,8 @@ Docs: [durable-governance.md](durable-governance.md) · [ADR 0001](adr/0001-dura
 | v0.2.0 | PolicyBundle, durable decisions/approvals, probe cache | Done |
 | v0.3.0 | Router split, Postgres profile, JWKS fail-closed, kind e2e | Done |
 | v0.4.0 | Failure injection matrix, governance SLO benchmark + dashboard | Done |
-| v0.5.0 | Trust boundary: request-bound one-time approvals, `/livez`/`/readyz`, HA Postgres production profile | This release |
-| v0.6.0 | Connection pool, migrations, multi-replica Postgres e2e | Planned |
+| v0.5.0 | Trust boundary: request-bound one-time approvals, `/livez`/`/readyz`, HA Postgres production profile | Done |
+| v0.6.0 | Connection pool, migrations, multi-replica Postgres e2e | Next |
 | v0.7.0 | Versioned OpenAPI + breaking-change CI + unified errors | Planned |
 | v1.0 | Stable API schema + supported/reference/experimental boundary | Planned |
 
