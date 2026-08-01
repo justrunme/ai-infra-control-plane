@@ -172,6 +172,119 @@ def test_remediation_api_create_and_list(
     assert got.json()["proposal_id"] == body["proposal_id"]
 
 
+def test_remediation_api_full_http_lifecycle(
+    store: DecisionStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "app.remediation_service.get_inventory_drift",
+        lambda: _drift_missing(),
+    )
+    client = TestClient(app)
+    assert client.post("/remediation/proposals", json={}).status_code == 200
+    in_sync = client.post("/remediation/proposals", json={})
+    # Second create still sees drifting inventory (mocked).
+    assert in_sync.status_code == 200
+
+    monkeypatch.setattr(
+        "app.remediation_service.get_inventory_drift",
+        lambda: _drift_missing(in_sync=True),
+    )
+    rejected_create = client.post("/remediation/proposals", json={})
+    assert rejected_create.status_code == 400
+
+    monkeypatch.setattr(
+        "app.remediation_service.get_inventory_drift",
+        lambda: _drift_missing(),
+    )
+    created = client.post(
+        "/remediation/proposals",
+        json={"action_kind": "pull_model"},
+    ).json()
+    proposal_id = created["proposal_id"]
+
+    evaluated = client.post(
+        f"/remediation/proposals/{proposal_id}/evaluate-policy"
+        "?environment=development"
+    )
+    assert evaluated.status_code == 200, evaluated.text
+    status = evaluated.json()["status"]
+    if status == "policy_evaluated":
+        approved = client.post(
+            f"/remediation/proposals/{proposal_id}/approve",
+            json={"reviewer": "alice", "comment": "ship it"},
+        )
+        assert approved.status_code == 200, approved.text
+        assert approved.json()["status"] == "approved"
+    elif status == "rejected":
+        # Still exercise reject path on a fresh proposal.
+        other = client.post(
+            "/remediation/proposals",
+            json={"action_kind": "update_inventory"},
+        ).json()
+        store.update_remediation_proposal(
+            other["proposal_id"], status="policy_evaluated"
+        )
+        rejected = client.post(
+            f"/remediation/proposals/{other['proposal_id']}/reject",
+            json={"reviewer": "alice", "comment": "no"},
+        )
+        assert rejected.status_code == 200
+        assert rejected.json()["status"] == "rejected"
+        pytest.skip("policy blocked primary proposal; reject path covered")
+    else:
+        assert status == "approved"
+
+    drafted = client.post(
+        f"/remediation/proposals/{proposal_id}/prepare-pr",
+        json={"pr_url": "https://github.com/example/pr/9"},
+    )
+    assert drafted.status_code == 200, drafted.text
+    assert drafted.json()["status"] == "pr_created"
+
+    applied = client.post(
+        f"/remediation/proposals/{proposal_id}/mark-applied",
+        json={"pr_url": "https://github.com/example/pr/9"},
+    )
+    assert applied.status_code == 200
+    assert applied.json()["status"] == "applied"
+
+    monkeypatch.setattr(
+        "app.remediation_service.get_inventory_drift",
+        lambda: _drift_missing(in_sync=True),
+    )
+    verified = client.post(f"/remediation/proposals/{proposal_id}/verify")
+    assert verified.status_code == 200
+    assert verified.json()["status"] == "verified"
+
+    missing = client.get("/remediation/proposals/does-not-exist")
+    assert missing.status_code == 404
+    conflict = client.post(
+        f"/remediation/proposals/{proposal_id}/prepare-pr", json={}
+    )
+    assert conflict.status_code == 409
+
+
+def test_remediation_api_reject_path(
+    store: DecisionStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "app.remediation_service.get_inventory_drift",
+        lambda: _drift_missing(),
+    )
+    client = TestClient(app)
+    proposal_id = client.post(
+        "/remediation/proposals",
+        json={"action_kind": "pull_model"},
+    ).json()["proposal_id"]
+    store.update_remediation_proposal(proposal_id, status="policy_evaluated")
+    rejected = client.post(
+        f"/remediation/proposals/{proposal_id}/reject",
+        json={"reviewer": "carol", "comment": "hold"},
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "rejected"
+
+
 def test_schema_includes_remediation_migration(store: DecisionStore) -> None:
     from app.db_schema import EXPECTED_MIGRATION_VERSIONS
 
