@@ -24,6 +24,10 @@ try:
             default=3600,
             validation_alias="APPROVAL_TTL_SECONDS",
         )
+        retention_days: int = Field(
+            default=90,
+            validation_alias="RETENTION_DAYS",
+        )
         probe_cache_ttl_seconds: int = Field(
             default=5,
             validation_alias="PROBE_CACHE_TTL_SECONDS",
@@ -73,6 +77,7 @@ except ImportError:  # pragma: no cover - exercised when pydantic-settings missi
 
         database_url: str = "sqlite:///./data/control-plane.db"
         approval_ttl_seconds: int = 3600
+        retention_days: int = 90
         probe_cache_ttl_seconds: int = 5
         http_trust_env: bool = False
         ollama_base_url: str | None = None
@@ -86,6 +91,7 @@ except ImportError:  # pragma: no cover - exercised when pydantic-settings missi
                     "DATABASE_URL", "sqlite:///./data/control-plane.db"
                 ),
                 approval_ttl_seconds=_env_int("APPROVAL_TTL_SECONDS", 3600),
+                retention_days=_env_int("RETENTION_DAYS", 90),
                 probe_cache_ttl_seconds=_env_int("PROBE_CACHE_TTL_SECONDS", 5),
                 http_trust_env=_env_bool("HTTP_TRUST_ENV", False),
                 ollama_base_url=_env_optional("OLLAMA_BASE_URL"),

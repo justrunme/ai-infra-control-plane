@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/justrunme/ai-infra-control-plane
-  tag: "1.2.0"
+  tag: "1.3.0"
   pullPolicy: IfNotPresent
 
 # Durable governance decisions / approvals (SQLite by default).
@@ -28,6 +28,8 @@ persistence:
   size: ""
   storageClassName: ""
   approvalTtlSeconds: 3600
+  # Age-based purge for decisions/approvals/audit_meta (0 disables deletes).
+  retentionDays: 90
   probeCacheTtlSeconds: 5
   httpTrustEnv: false
 

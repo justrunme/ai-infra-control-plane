@@ -113,6 +113,17 @@ class ApprovalPage:
         return self.offset + len(self.items) < self.total
 
 
+@dataclass(frozen=True)
+class RetentionPurgeResult:
+    retention_days: int
+    cutoff: str
+    dry_run: bool
+    expired_approvals: int
+    deleted_audit_meta: int
+    deleted_approvals: int
+    deleted_decisions: int
+
+
 class DecisionStore:
     """Durable decision / approval store (SQLite or pooled Postgres)."""
 
@@ -155,6 +166,7 @@ class DecisionStore:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA busy_timeout=15000")
         self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
         with _sqlite_schema_lock:
             self._apply_schema(self._conn, postgres=False)
             self.assert_migrations_current()
@@ -632,6 +644,122 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
+    def purge_retained(
+        self,
+        *,
+        retention_days: int,
+        dry_run: bool = True,
+        limit: int = 5000,
+    ) -> RetentionPurgeResult:
+        """Expire stale approvals, then delete rows older than retention_days.
+
+        Deletes decisions (and cascaded approvals/audit_meta) with ``created_at``
+        before the cutoff. ``retention_days <= 0`` disables deletion (expire only).
+        """
+        if limit < 1 or limit > 50_000:
+            raise ValueError("limit must be between 1 and 50000")
+        cutoff_dt = _utcnow() - timedelta(days=max(retention_days, 0))
+        cutoff = _isoformat(cutoff_dt)
+        try:
+            with observe_db_operation("purge_retained"):
+                with self.transaction() as conn:
+                    expired = self._expire_stale(conn, commit=False)
+                    if retention_days <= 0:
+                        return RetentionPurgeResult(
+                            retention_days=retention_days,
+                            cutoff=cutoff,
+                            dry_run=dry_run,
+                            expired_approvals=expired,
+                            deleted_audit_meta=0,
+                            deleted_approvals=0,
+                            deleted_decisions=0,
+                        )
+                    ids_cur = self._execute(
+                        conn,
+                        """
+                        SELECT decision_id FROM decisions
+                        WHERE created_at < ?
+                        ORDER BY created_at ASC
+                        LIMIT ?
+                        """,
+                        (cutoff, limit),
+                    )
+                    decision_ids = [
+                        str(self._as_mapping(row)["decision_id"])
+                        for row in ids_cur.fetchall()
+                    ]
+                    if not decision_ids:
+                        return RetentionPurgeResult(
+                            retention_days=retention_days,
+                            cutoff=cutoff,
+                            dry_run=dry_run,
+                            expired_approvals=expired,
+                            deleted_audit_meta=0,
+                            deleted_approvals=0,
+                            deleted_decisions=0,
+                        )
+                    placeholders = ", ".join("?" for _ in decision_ids)
+                    audit_cur = self._execute(
+                        conn,
+                        f"SELECT COUNT(*) AS total FROM audit_meta "
+                        f"WHERE decision_id IN ({placeholders})",
+                        tuple(decision_ids),
+                    )
+                    approval_cur = self._execute(
+                        conn,
+                        f"SELECT COUNT(*) AS total FROM approvals "
+                        f"WHERE decision_id IN ({placeholders})",
+                        tuple(decision_ids),
+                    )
+                    deleted_audit = int(
+                        self._as_mapping(audit_cur.fetchone()).get("total") or 0
+                    )
+                    deleted_approvals = int(
+                        self._as_mapping(approval_cur.fetchone()).get("total") or 0
+                    )
+                    deleted_decisions = len(decision_ids)
+                    if not dry_run:
+                        id_params = tuple(decision_ids)
+                        self._execute(
+                            conn,
+                            (
+                                "DELETE FROM audit_meta "
+                                f"WHERE decision_id IN ({placeholders})"
+                            ),
+                            id_params,
+                        )
+                        self._execute(
+                            conn,
+                            (
+                                "DELETE FROM approvals "
+                                f"WHERE decision_id IN ({placeholders})"
+                            ),
+                            id_params,
+                        )
+                        self._execute(
+                            conn,
+                            (
+                                "DELETE FROM decisions "
+                                f"WHERE decision_id IN ({placeholders})"
+                            ),
+                            id_params,
+                        )
+                    return RetentionPurgeResult(
+                        retention_days=retention_days,
+                        cutoff=cutoff,
+                        dry_run=dry_run,
+                        expired_approvals=expired,
+                        deleted_audit_meta=deleted_audit,
+                        deleted_approvals=deleted_approvals,
+                        deleted_decisions=deleted_decisions,
+                    )
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+
     def append_audit_meta(
         self,
         *,
@@ -671,7 +799,7 @@ class DecisionStore:
             raise
         return event_id
 
-    def _expire_stale(self, conn: Any) -> int:
+    def _expire_stale(self, conn: Any, *, commit: bool = True) -> int:
         now = _isoformat(_utcnow())
         cur = self._execute(
             conn,
@@ -682,7 +810,8 @@ class DecisionStore:
             """,
             (now, now),
         )
-        self._commit(conn)
+        if commit:
+            self._commit(conn)
         return int(cur.rowcount or 0)
 
     def _expire_if_needed(self, conn: Any, approval_id: str) -> None:

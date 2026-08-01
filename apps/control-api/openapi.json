@@ -2466,6 +2466,68 @@
         "title": "ResponseEvaluateRequest",
         "type": "object"
       },
+      "RetentionPurgeResponse": {
+        "properties": {
+          "cutoff": {
+            "title": "Cutoff",
+            "type": "string"
+          },
+          "deleted_approvals": {
+            "title": "Deleted Approvals",
+            "type": "integer"
+          },
+          "deleted_audit_meta": {
+            "title": "Deleted Audit Meta",
+            "type": "integer"
+          },
+          "deleted_decisions": {
+            "title": "Deleted Decisions",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "expired_approvals": {
+            "title": "Expired Approvals",
+            "type": "integer"
+          },
+          "retention_days": {
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retention_days",
+          "cutoff",
+          "dry_run",
+          "expired_approvals",
+          "deleted_audit_meta",
+          "deleted_approvals",
+          "deleted_decisions"
+        ],
+        "title": "RetentionPurgeResponse",
+        "type": "object"
+      },
+      "RetentionStatusResponse": {
+        "properties": {
+          "approval_ttl_seconds": {
+            "title": "Approval Ttl Seconds",
+            "type": "integer"
+          },
+          "retention_days": {
+            "description": "Configured RETENTION_DAYS (0 disables age-based deletes)",
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retention_days",
+          "approval_ttl_seconds"
+        ],
+        "title": "RetentionStatusResponse",
+        "type": "object"
+      },
       "SecretRefStatus": {
         "properties": {
           "component": {
@@ -3086,7 +3148,7 @@
   "info": {
     "description": "Control API for private AI inference infrastructure.",
     "title": "AI Infrastructure Control Plane",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4289,6 +4351,104 @@
         "summary": "List Models",
         "tags": [
           "inventory"
+        ]
+      }
+    },
+    "/ops/retention": {
+      "get": {
+        "operationId": "retention_status_ops_retention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Retention Status",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/ops/retention/purge": {
+      "post": {
+        "operationId": "retention_purge_ops_retention_purge_post",
+        "parameters": [
+          {
+            "description": "When true, only report rows that would be deleted",
+            "in": "query",
+            "name": "dry_run",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "When true, only report rows that would be deleted",
+              "title": "Dry Run",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Override RETENTION_DAYS for this call",
+            "in": "query",
+            "name": "retention_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Override RETENTION_DAYS for this call",
+              "title": "Retention Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5000,
+              "maximum": 50000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPurgeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retention Purge",
+        "tags": [
+          "ops"
         ]
       }
     },
