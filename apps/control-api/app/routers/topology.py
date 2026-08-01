@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.drift_actions import DriftActionsResponse, build_drift_actions
 from app.drift_service import DriftStatus
 from app.fleet_service import FleetClustersResponse, build_fleet_clusters
 from app.probes import get_inventory_drift
@@ -29,3 +30,9 @@ def fleet_topology() -> TopologyStatus:
 @router.get("/drift", response_model=DriftStatus)
 def drift() -> DriftStatus:
     return get_inventory_drift()
+
+
+@router.get("/drift/actions", response_model=DriftActionsResponse)
+def drift_actions() -> DriftActionsResponse:
+    """Suggested remediation for inventory drift (never auto-applies)."""
+    return build_drift_actions(get_inventory_drift())

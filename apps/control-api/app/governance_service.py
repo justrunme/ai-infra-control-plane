@@ -19,6 +19,8 @@ class GovernanceEvaluateRequest(BaseModel):
     groups: list[str] = Field(default_factory=list)
     policy_pack: str = ""
     team: str = "platform"
+    # Isolation key; defaults to team when empty.
+    tenant_id: str = ""
     owner: str = "alice"
     environment: str = "development"
     namespace: str = "ai-dev"

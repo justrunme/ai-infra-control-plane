@@ -1,0 +1,82 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "ai-control-plane.fullname" . }}
+  labels:
+    {{- include "ai-control-plane.labels" . | nindent 4 }}
+    {{- with .Values.metrics.prometheusRule.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: ai-control-plane.rules
+      rules:
+        - record: slo:control_plane_governance_evaluate_latency_ms:p95
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(ai_control_governance_evaluate_latency_ms_bucket[5m])) by (le)
+            )
+        - record: slo:control_plane_governance_evaluate_availability:ratio
+          expr: |
+            1 - (
+              sum(rate(ai_control_governance_evaluate_errors_total[5m]))
+              /
+              clamp_min(sum(rate(ai_control_governance_evaluate_latency_ms_count[5m])), 1)
+            )
+        - record: slo:control_plane_approval_queue_depth
+          expr: max(ai_control_approvals_pending)
+        - record: slo:control_plane_db_error_rate:ratio
+          expr: |
+            sum(rate(ai_control_db_operation_errors_total[5m]))
+            /
+            clamp_min(sum(rate(ai_control_db_operations_total[5m])), 1)
+        - record: slo:control_plane_db_operation_latency_ms:avg
+          expr: |
+            sum(rate(ai_control_db_operation_latency_ms_sum[5m]))
+            /
+            clamp_min(sum(rate(ai_control_db_operation_latency_ms_count[5m])), 1)
+        - alert: GovernanceEvaluateLatencyP95High
+          expr: slo:control_plane_governance_evaluate_latency_ms:p95 > {{ .Values.metrics.prometheusRule.thresholds.evaluateLatencyP95Ms }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Control-plane governance evaluate p95 exceeds SLO
+        - alert: GovernanceEvaluateAvailabilityLow
+          expr: slo:control_plane_governance_evaluate_availability:ratio < {{ .Values.metrics.prometheusRule.thresholds.evaluateAvailability }}
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Control-plane governance evaluate availability below SLO
+        - alert: ApprovalQueueDepthHigh
+          expr: slo:control_plane_approval_queue_depth > {{ .Values.metrics.prometheusRule.thresholds.approvalQueueDepth }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Pending approval queue depth is high
+        - alert: DecisionStoreErrorRateHigh
+          expr: slo:control_plane_db_error_rate:ratio > {{ .Values.metrics.prometheusRule.thresholds.dbErrorRate }}
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Decision store error rate is high
+        - alert: DecisionStoreLatencyHigh
+          expr: slo:control_plane_db_operation_latency_ms:avg > {{ .Values.metrics.prometheusRule.thresholds.dbLatencyMs }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Decision store average latency is high
+        - alert: InventoryDriftDetected
+          expr: ai_control_inventory_in_sync == 0
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: Model inventory drift detected (see GET /drift/actions)
+{{- end }}

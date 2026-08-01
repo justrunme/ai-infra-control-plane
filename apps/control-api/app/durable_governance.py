@@ -36,6 +36,7 @@ def persist_evaluation(
             policy_bundle_id=result.policy_bundle_id or "",
             policy_digest=result.policy_digest or "",
             team=request.team,
+            tenant_id=request.tenant_id or request.team,
             environment=request.environment,
             model=request.model,
             subject=request.subject or request.owner,
@@ -140,9 +141,11 @@ def approval_grants_allow(
 def decision_to_dict(
     decision_id: str,
     store: DecisionStore | None = None,
+    *,
+    tenant_id: str | None = None,
 ) -> dict[str, Any]:
     decision_store = store or get_decision_store()
-    record = decision_store.get_decision(decision_id)
+    record = decision_store.get_decision(decision_id, tenant_id=tenant_id)
     if record is None:
         raise KeyError(decision_id)
     return {
@@ -152,6 +155,7 @@ def decision_to_dict(
         "policy_bundle_id": record.policy_bundle_id,
         "policy_digest": record.policy_digest,
         "team": record.team,
+        "tenant_id": record.tenant_id,
         "environment": record.environment,
         "model": record.model,
         "subject": record.subject,

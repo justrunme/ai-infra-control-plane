@@ -285,7 +285,7 @@ ghcr.io/justrunme/ai-infra-control-plane:latest
 ghcr.io/justrunme/ai-infra-control-plane:<git-sha>
 ```
 
-Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v1.3.0**.
+Images are signed with cosign and accompanied by an SPDX SBOM artifact from the release workflow. Tag releases with `v*` (for example `v1.0.0`) to publish semver tags. Current release line: **v1.4.0**.
 
 ## Kubernetes Deployment
 
@@ -294,9 +294,9 @@ From the published OCI chart (preferred):
 ```sh
 helm upgrade --install ai-control-plane \
   oci://ghcr.io/justrunme/charts/ai-control-plane \
-  --version 1.3.0 \
+  --version 1.4.0 \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=1.3.0
+  --set image.tag=1.4.0
 ```
 
 Or from a git checkout:
@@ -304,7 +304,7 @@ Or from a git checkout:
 ```sh
 helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
   --set image.repository=ghcr.io/justrunme/ai-infra-control-plane \
-  --set image.tag=1.3.0
+  --set image.tag=1.4.0
 ```
 
 The chart ships production defaults: non-root execution, read-only root filesystem, model inventory ConfigMap, HPA, PodDisruptionBudget, and optional ServiceMonitor, Ingress, and NetworkPolicy. See `infra/helm/ai-control-plane/README.md`.

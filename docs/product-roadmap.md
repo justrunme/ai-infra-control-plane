@@ -50,7 +50,8 @@ flowchart TD
 | v1.0.1 | Correct migration ledger + concurrent schema apply | Done |
 | v1.1.0 | Transactional Unit of Work, indexes, pagination metadata | Done |
 | v1.2.0 | OpenAPI breaking-diff CI, OCI Helm chart distribution | Done |
-| v1.3.0 | Retention purge, decision FKs, signed OCI Helm chart | This release |
+| v1.3.0 | Retention purge, decision FKs, signed OCI Helm chart | Done |
+| v1.4.0 | Tenant isolation, PrometheusRule SLO alerts, drift actions, ADRs | This release |
 
 ## Related docs
 
@@ -62,6 +63,9 @@ flowchart TD
 - [Upgrade v0.5 → v1.0](upgrade-v0.5-to-v1.0.md)
 - [Release verification](release-verification.md)
 - [Retention](retention.md)
+- [Tenant isolation](tenant-isolation.md)
+- [Threat model](threat-model.md)
+- [ADRs](adr/README.md)
 - [Portfolio overview](portfolio-overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

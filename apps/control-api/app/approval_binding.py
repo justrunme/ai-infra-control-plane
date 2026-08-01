@@ -17,6 +17,7 @@ _BINDING_FIELDS: tuple[str, ...] = (
     "groups",
     "policy_pack",
     "team",
+    "tenant_id",
     "owner",
     "environment",
     "namespace",
@@ -57,6 +58,8 @@ def binding_payload(
         value = raw.get(key)
         if key == "groups":
             payload[key] = sorted(str(item) for item in (value or []))
+        elif key == "tenant_id":
+            payload[key] = str(value or raw.get("team") or "")
         elif isinstance(value, bool):
             payload[key] = value
         elif value is None:

@@ -84,6 +84,7 @@ jobs:
         run: |
           helm template ai-control-plane infra/helm/ai-control-plane \
             --set metrics.serviceMonitor.enabled=true \
+            --set metrics.prometheusRule.enabled=true \
             --set ingress.enabled=true \
             --set networkPolicy.enabled=true
       - name: Helm template (production profile)

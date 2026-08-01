@@ -11,7 +11,9 @@ from app.identity_service import (
     AuthenticationError,
     AuthorizationError,
     resolve_approver_identity,
+    resolve_request_tenant,
 )
+from app.settings import get_settings
 
 router = APIRouter(tags=["approvals"])
 
@@ -80,6 +82,22 @@ def _store_unavailable(exc: StoreUnavailableError) -> HTTPException:
     return HTTPException(status_code=503, detail=_STORE_UNAVAILABLE_DETAIL)
 
 
+def _tenant_scope(request: Request) -> str | None:
+    """Return tenant filter when isolation is enabled; else None (no filter)."""
+    if not get_settings().tenant_isolation:
+        return None
+    tenant = resolve_request_tenant(dict(request.headers))
+    if not tenant:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "tenant required",
+                "hint": "set x-ai-tenant or JWT tenant/team claim",
+            },
+        )
+    return tenant
+
+
 def _resolve_reviewer(request: Request, payload: ResolveApprovalRequest) -> str:
     try:
         return resolve_approver_identity(
@@ -100,13 +118,20 @@ def _resolve_reviewer(request: Request, payload: ResolveApprovalRequest) -> str:
 
 @router.get("/approvals", response_model=ApprovalListResponse)
 def list_approvals(
+    request: Request,
     status: str = "pending",
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> ApprovalListResponse:
+    tenant_id = _tenant_scope(request)
     try:
         store = get_decision_store()
-        page = store.list_approvals(status=status, limit=limit, offset=offset)
+        page = store.list_approvals(
+            status=status,
+            limit=limit,
+            offset=offset,
+            tenant_id=tenant_id,
+        )
         items = [_to_response(item) for item in page.items]
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
@@ -126,10 +151,11 @@ def list_approvals(
 
 
 @router.get("/approvals/{approval_id}", response_model=ApprovalResponse)
-def get_approval(approval_id: str) -> ApprovalResponse:
+def get_approval(approval_id: str, request: Request) -> ApprovalResponse:
+    tenant_id = _tenant_scope(request)
     try:
         store = get_decision_store()
-        record = store.get_approval(approval_id)
+        record = store.get_approval(approval_id, tenant_id=tenant_id)
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
     if record is None:
@@ -198,9 +224,10 @@ def reject_request(
 
 
 @router.get("/governance/decisions/{decision_id}")
-def get_decision(decision_id: str) -> dict:
+def get_decision(decision_id: str, request: Request) -> dict:
+    tenant_id = _tenant_scope(request)
     try:
-        return decision_to_dict(decision_id)
+        return decision_to_dict(decision_id, tenant_id=tenant_id)
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
     except KeyError as exc:

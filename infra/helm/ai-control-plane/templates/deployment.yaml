@@ -85,6 +85,8 @@ spec:
               value: {{ .Values.persistence.approvalTtlSeconds | quote }}
             - name: RETENTION_DAYS
               value: {{ .Values.persistence.retentionDays | default 90 | quote }}
+            - name: TENANT_ISOLATION
+              value: {{ .Values.persistence.tenantIsolation | default false | quote }}
             - name: PROBE_CACHE_TTL_SECONDS
               value: {{ .Values.persistence.probeCacheTtlSeconds | quote }}
             - name: HTTP_TRUST_ENV

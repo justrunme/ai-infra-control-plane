@@ -87,6 +87,21 @@ def metrics() -> str:
     lines.extend(render_governance_latency_metrics())
     lines.extend(render_db_metrics())
 
+    pending_approvals = 0
+    try:
+        from app.decision_store import get_decision_store
+
+        pending_approvals = get_decision_store().count_approvals("pending")
+    except Exception:  # noqa: BLE001
+        pending_approvals = 0
+    lines.extend(
+        [
+            "# HELP ai_control_approvals_pending Pending approval queue depth.",
+            "# TYPE ai_control_approvals_pending gauge",
+            metric_line("ai_control_approvals_pending", pending_approvals),
+        ]
+    )
+
     lines.extend(
         [
             "# HELP ai_control_http_request_latency_ms "
