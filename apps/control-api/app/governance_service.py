@@ -186,11 +186,13 @@ def evaluate_governance_request(
     payload: GovernanceEvaluateRequest,
     *,
     telemetry: GovernanceTelemetryStage | None = None,
+    bundle: Any | None = None,
 ) -> GovernanceEvaluateResponse:
     # Import lazily to avoid an import cycle at module load time.
     from app.policy_bundle import get_policy_bundle
 
-    bundle = get_policy_bundle()
+    if bundle is None:
+        bundle = get_policy_bundle()
     if bundle.validation_status != "ok" or bundle.pack_module is None:
         raise RuntimeError(
             f"policy bundle is not valid: {bundle.error or 'unknown error'}"

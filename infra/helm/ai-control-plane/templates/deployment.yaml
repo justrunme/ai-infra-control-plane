@@ -91,6 +91,22 @@ spec:
               value: {{ .Values.persistence.probeCacheTtlSeconds | quote }}
             - name: HTTP_TRUST_ENV
               value: {{ .Values.persistence.httpTrustEnv | quote }}
+            - name: POLICY_SOURCE_TYPE
+              value: {{ .Values.policySource.type | default "filesystem" | quote }}
+            {{- if .Values.policySource.path }}
+            - name: POLICY_SOURCE_PATH
+              value: {{ .Values.policySource.path | quote }}
+            {{- end }}
+            {{- if .Values.policySource.reference }}
+            - name: POLICY_SOURCE_OCI_REF
+              value: {{ .Values.policySource.reference | quote }}
+            {{- end }}
+            {{- if .Values.policySource.digest }}
+            - name: POLICY_SOURCE_OCI_DIGEST
+              value: {{ .Values.policySource.digest | quote }}
+            {{- end }}
+            - name: POLICY_SOURCE_VERIFY_SIGNATURE
+              value: {{ .Values.policySource.verifySignature | default false | quote }}
             {{- end }}
           {{- if .Values.secrets.externalSecrets.enabled }}
           envFrom:

@@ -505,6 +505,44 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
+    def list_recent_decisions(
+        self,
+        *,
+        limit: int = 1000,
+        tenant_id: str | None = None,
+    ) -> list[DecisionRecord]:
+        limit = max(1, min(limit, 5000))
+        try:
+            with observe_db_operation("list_recent_decisions"):
+                with self._session() as conn:
+                    if tenant_id is None:
+                        cur = self._execute(
+                            conn,
+                            """
+                            SELECT * FROM decisions
+                            ORDER BY created_at DESC
+                            LIMIT ?
+                            """,
+                            (limit,),
+                        )
+                    else:
+                        cur = self._execute(
+                            conn,
+                            """
+                            SELECT * FROM decisions
+                            WHERE tenant_id = ?
+                            ORDER BY created_at DESC
+                            LIMIT ?
+                            """,
+                            (tenant_id, limit),
+                        )
+                    rows = cur.fetchall()
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
+        return [self._decision_from_row(row) for row in rows]
+
     def get_decision(
         self,
         decision_id: str,

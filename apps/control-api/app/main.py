@@ -34,6 +34,7 @@ from app.routers import (
     topology,
 )
 from app.routers.approvals import router as approvals_router
+from app.routers.policy_bundles import router as policy_bundles_router
 from app.settings import get_settings
 
 
@@ -48,6 +49,12 @@ async def lifespan(_app: FastAPI):
         get_decision_store()
     except Exception:  # noqa: BLE001
         pass
+    try:
+        from app.policy_lifecycle import get_policy_lifecycle
+
+        get_policy_lifecycle().ensure_bootstrapped()
+    except Exception:  # noqa: BLE001
+        pass
     yield
     http_client.close_http_client()
     from app.decision_store import reset_decision_store
@@ -57,13 +64,14 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="AI Infrastructure Control Plane",
-    version="1.4.0",
+    version="1.5.0",
     description="Control API for private AI inference infrastructure.",
     lifespan=lifespan,
 )
 
 install_error_handlers(app)
 app.include_router(approvals_router)
+app.include_router(policy_bundles_router)
 app.include_router(dashboard.router)
 app.include_router(health.router)
 app.include_router(inventory.router)
