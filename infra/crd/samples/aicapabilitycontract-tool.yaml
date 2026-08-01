@@ -1,0 +1,18 @@
+apiVersion: ai.justrunme.dev/v1
+kind: AICapabilityContract
+metadata:
+  name: jira-read
+  namespace: ai-control
+spec:
+  kind: tool
+  name: jira-read
+  tenantId: platform
+  contentDigest: sha256:replace-me
+  source: gitops
+  desiredStatus: active
+  capabilities:
+    owner: platform
+    risk_tier: low
+    mcp_server: atlassian
+    allowed_actions: [read, list]
+    allowed_teams: [platform, search]

@@ -55,8 +55,8 @@ flowchart TD
 | v1.5.0 | Signed OCI PolicyBundle + simulate/activate/rollback + CRD | Done |
 | v1.6.0 | RemediationProposal closed-loop (detect→approve→PR→verify) | Done |
 | v1.7.0 | RBAC + JWT-only tenant + quota failure policy | Done |
-| v1.8.0 | Durable agent/tool capability contract | This release |
-| v2.0.0 | Stabilize CRD/API + upgrade boundary | Next |
+| v1.8.0 | Durable agent/tool capability contract | Done |
+| v2.0.0 | Stabilize CRD/API + upgrade boundary | This release |
 
 ## Related docs
 
@@ -66,6 +66,7 @@ flowchart TD
 - [API compatibility](api-compatibility.md)
 - [Maturity boundary](maturity-boundary.md)
 - [Upgrade v0.5 → v1.0](upgrade-v0.5-to-v1.0.md)
+- [Upgrade v1.x → v2.0](upgrade-v1-to-v2.0.md)
 - [Release verification](release-verification.md)
 - [Retention](retention.md)
 - [Tenant isolation](tenant-isolation.md)
