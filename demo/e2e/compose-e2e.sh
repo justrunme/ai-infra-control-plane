@@ -7,6 +7,7 @@ IMAGE="${IMAGE:-ai-infra-control-plane:e2e}"
 NAME="${NAME:-ai-cp-compose-e2e}"
 PORT="${PORT:-18081}"
 DATA_DIR="$(mktemp -d)"
+chmod 777 "${DATA_DIR}"
 
 cleanup() {
   docker rm -f "${NAME}" >/dev/null 2>&1 || true
@@ -31,14 +32,20 @@ for _ in $(seq 1 60); do
   fi
   sleep 1
 done
-curl -fsS "http://127.0.0.1:${PORT}/healthz" >/dev/null
-
+if ! curl -fsS "http://127.0.0.1:${PORT}/healthz" >/dev/null; then
+  echo "control-api failed to become healthy" >&2
+  docker logs "${NAME}" >&2 || true
+  exit 1
+fi
 BASE="http://127.0.0.1:${PORT}"
 
 echo "==> allow"
-ALLOW="$(curl -fsS -X POST "${BASE}/governance/evaluate" \
+if ! ALLOW="$(curl -fsS -X POST "${BASE}/governance/evaluate" \
   -H 'content-type: application/json' \
-  -d '{"team":"platform","owner":"alice","environment":"development","namespace":"ai-dev","action":"invoke_model","model":"llama3.1:8b","provider":"ollama"}')"
+  -d '{"team":"platform","owner":"alice","environment":"development","namespace":"ai-dev","action":"invoke_model","model":"llama3.1:8b","provider":"ollama"}')"; then
+  docker logs "${NAME}" >&2 || true
+  exit 1
+fi
 echo "${ALLOW}" | grep -q '"final_verdict":"allow"'
 DECISION_ID="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["decision_id"])' <<<"${ALLOW}")"
 
