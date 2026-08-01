@@ -78,6 +78,7 @@ class DecisionRecord:
     policy_bundle_id: str
     policy_digest: str
     team: str
+    tenant_id: str
     environment: str
     model: str
     subject: str
@@ -161,13 +162,14 @@ class DecisionStore:
 
         path = sqlite_path_from_url(database_url)
         _ensure_sqlite_parent(path)
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA busy_timeout=15000")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
+        # Serialize connect+schema so concurrent startups cannot race WAL/DDL.
         with _sqlite_schema_lock:
+            self._conn = sqlite3.connect(path, check_same_thread=False)
+            self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=15000")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+            self._conn.execute("PRAGMA foreign_keys=ON")
             self._apply_schema(self._conn, postgres=False)
             self.assert_migrations_current()
         set_pool_stats(backend="sqlite", size=1, available=1)
@@ -384,6 +386,7 @@ class DecisionStore:
         policy_bundle_id: str = "",
         policy_digest: str = "",
         team: str = "",
+        tenant_id: str = "",
         environment: str = "",
         model: str = "",
         subject: str = "",
@@ -396,6 +399,7 @@ class DecisionStore:
     ) -> str:
         decision_id = decision_id or str(uuid.uuid4())
         created_at = _isoformat(_utcnow())
+        effective_tenant = (tenant_id or team or "").strip()
         params = (
             decision_id,
             request_id,
@@ -403,6 +407,7 @@ class DecisionStore:
             policy_bundle_id,
             policy_digest,
             team,
+            effective_tenant,
             environment,
             model,
             subject,
@@ -415,10 +420,10 @@ class DecisionStore:
         sql = """
             INSERT INTO decisions (
               decision_id, request_id, final_verdict, policy_bundle_id,
-              policy_digest, team, environment, model, subject,
+              policy_digest, team, tenant_id, environment, model, subject,
               reasons_json, stages_json, request_json, request_digest,
               created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         try:
             with observe_db_operation("create_decision"):
@@ -500,7 +505,12 @@ class DecisionStore:
                 raise self._wrap_db(exc) from exc
             raise
 
-    def get_decision(self, decision_id: str) -> DecisionRecord | None:
+    def get_decision(
+        self,
+        decision_id: str,
+        *,
+        tenant_id: str | None = None,
+    ) -> DecisionRecord | None:
         try:
             with observe_db_operation("get_decision"):
                 with self._session() as conn:
@@ -516,9 +526,17 @@ class DecisionStore:
             raise
         if row is None:
             return None
-        return self._decision_from_row(row)
+        record = self._decision_from_row(row)
+        if tenant_id is not None and record.tenant_id != tenant_id:
+            return None
+        return record
 
-    def get_approval(self, approval_id: str) -> ApprovalRecord | None:
+    def get_approval(
+        self,
+        approval_id: str,
+        *,
+        tenant_id: str | None = None,
+    ) -> ApprovalRecord | None:
         try:
             with observe_db_operation("get_approval"):
                 with self._session() as conn:
@@ -529,13 +547,31 @@ class DecisionStore:
                         (approval_id,),
                     )
                     row = cur.fetchone()
+                    if row is None:
+                        return None
+                    approval = self._approval_from_row(row)
+                    if tenant_id is None:
+                        return approval
+                    dec_cur = self._execute(
+                        conn,
+                        """
+                        SELECT tenant_id, team FROM decisions
+                        WHERE decision_id = ?
+                        """,
+                        (approval.decision_id,),
+                    )
+                    dec_row = dec_cur.fetchone()
+                    if dec_row is None:
+                        return None
+                    mapping = self._as_mapping(dec_row)
+                    owner_tenant = mapping.get("tenant_id") or mapping.get("team") or ""
+                    if owner_tenant != tenant_id:
+                        return None
+                    return approval
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
-        if row is None:
-            return None
-        return self._approval_from_row(row)
 
     def list_approvals(
         self,
@@ -543,6 +579,7 @@ class DecisionStore:
         *,
         limit: int = 100,
         offset: int = 0,
+        tenant_id: str | None = None,
     ) -> ApprovalPage:
         limit = max(1, min(limit, 500))
         offset = max(0, offset)
@@ -550,23 +587,40 @@ class DecisionStore:
             with observe_db_operation("list_approvals"):
                 with self._session() as conn:
                     self._expire_stale(conn)
-                    count_cur = self._execute(
-                        conn,
-                        "SELECT COUNT(*) AS total FROM approvals WHERE status = ?",
-                        (status,),
+                    if tenant_id is None:
+                        count_sql = (
+                            "SELECT COUNT(*) AS total FROM approvals WHERE status = ?"
+                        )
+                        count_params: tuple[Any, ...] = (status,)
+                        list_sql = """
+                            SELECT * FROM approvals
+                            WHERE status = ?
+                            ORDER BY created_at ASC
+                            LIMIT ? OFFSET ?
+                            """
+                        list_params: tuple[Any, ...] = (status, limit, offset)
+                    else:
+                        count_sql = """
+                            SELECT COUNT(*) AS total
+                            FROM approvals a
+                            JOIN decisions d ON d.decision_id = a.decision_id
+                            WHERE a.status = ? AND d.tenant_id = ?
+                            """
+                        count_params = (status, tenant_id)
+                        list_sql = """
+                            SELECT a.*
+                            FROM approvals a
+                            JOIN decisions d ON d.decision_id = a.decision_id
+                            WHERE a.status = ? AND d.tenant_id = ?
+                            ORDER BY a.created_at ASC
+                            LIMIT ? OFFSET ?
+                            """
+                        list_params = (status, tenant_id, limit, offset)
+                    count_cur = self._execute(conn, count_sql, count_params)
+                    total = int(
+                        self._as_mapping(count_cur.fetchone()).get("total") or 0
                     )
-                    count_row = count_cur.fetchone()
-                    total = int(self._as_mapping(count_row).get("total") or 0)
-                    cur = self._execute(
-                        conn,
-                        """
-                        SELECT * FROM approvals
-                        WHERE status = ?
-                        ORDER BY created_at ASC
-                        LIMIT ? OFFSET ?
-                        """,
-                        (status, limit, offset),
-                    )
+                    cur = self._execute(conn, list_sql, list_params)
                     rows = cur.fetchall()
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
@@ -578,6 +632,22 @@ class DecisionStore:
             limit=limit,
             offset=offset,
         )
+
+    def count_approvals(self, status: str = "pending") -> int:
+        try:
+            with observe_db_operation("count_approvals"):
+                with self._session() as conn:
+                    self._expire_stale(conn)
+                    cur = self._execute(
+                        conn,
+                        "SELECT COUNT(*) AS total FROM approvals WHERE status = ?",
+                        (status,),
+                    )
+                    return int(self._as_mapping(cur.fetchone()).get("total") or 0)
+        except Exception as exc:  # noqa: BLE001
+            if _is_operational_db_error(exc):
+                raise self._wrap_db(exc) from exc
+            raise
 
     def resolve_approval(
         self,
@@ -864,13 +934,16 @@ class DecisionStore:
     @classmethod
     def _decision_from_row(cls, row: Any) -> DecisionRecord:
         mapping = cls._as_mapping(row)
+        team = mapping.get("team") or ""
+        tenant_id = mapping.get("tenant_id") or team
         return DecisionRecord(
             decision_id=mapping["decision_id"],
             request_id=mapping.get("request_id") or "",
             final_verdict=mapping.get("final_verdict") or "",
             policy_bundle_id=mapping.get("policy_bundle_id") or "",
             policy_digest=mapping.get("policy_digest") or "",
-            team=mapping.get("team") or "",
+            team=team,
+            tenant_id=tenant_id,
             environment=mapping.get("environment") or "",
             model=mapping.get("model") or "",
             subject=mapping.get("subject") or "",

@@ -16,13 +16,14 @@ Use this backlog to create small, reviewable pull requests.
 - **v1.0:** Postgres connection pool + schema migrations + DB metrics, multi-replica Postgres kind e2e, frozen OpenAPI + compatibility CI, unified error envelope, approval pagination, maturity boundary + upgrade guide
 - **v1.1–v1.2:** Transactional UoW, indexes, pagination metadata, oasdiff, OCI Helm
 - **v1.3:** Retention purge API, decision FKs, cosign-signed OCI Helm chart
+- **v1.4:** Tenant isolation, PrometheusRule SLO alerts, drift suggested actions, ADRs/threat model
 
-## Next (post-1.3)
+## Next (post-1.4)
 
 1. Optional ITSM webhook adapter behind a single `ApprovalNotifier` interface
-2. Alembic CLI packaging for operator-run migrations (beyond in-process schema_migrations)
-3. Multi-region control-plane federation
-4. External install walkthrough / recorded failure demo
+2. External install walkthrough / recorded failure demo
+3. Thin Operator Console (approval inbox) — only after external install proof
+4. Multi-region control-plane federation
 
 ## Explicitly deferred
 

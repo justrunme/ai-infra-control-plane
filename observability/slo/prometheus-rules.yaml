@@ -40,6 +40,21 @@ groups:
             clamp_min(sum(rate(ai_control_governance_evaluate_latency_ms_count[5m])), 1)
           )
 
+      - record: slo:control_plane_approval_queue_depth
+        expr: max(ai_control_approvals_pending)
+
+      - record: slo:control_plane_db_error_rate:ratio
+        expr: |
+          sum(rate(ai_control_db_operation_errors_total[5m]))
+          /
+          clamp_min(sum(rate(ai_control_db_operations_total[5m])), 1)
+
+      - record: slo:control_plane_db_operation_latency_ms:avg
+        expr: |
+          sum(rate(ai_control_db_operation_latency_ms_sum[5m]))
+          /
+          clamp_min(sum(rate(ai_control_db_operation_latency_ms_count[5m])), 1)
+
       - alert: GatewayLatencyP95High
         expr: slo:gateway_chat_duration_seconds:p95 > 2.5
         for: 10m
@@ -103,3 +118,35 @@ groups:
           severity: critical
         annotations:
           summary: Control-plane governance evaluate availability below 99.9% SLO
+
+      - alert: ApprovalQueueDepthHigh
+        expr: slo:control_plane_approval_queue_depth > 25
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Pending approval queue depth exceeds 25
+
+      - alert: DecisionStoreErrorRateHigh
+        expr: slo:control_plane_db_error_rate:ratio > 0.01
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Decision store error rate exceeds 1%
+
+      - alert: DecisionStoreLatencyHigh
+        expr: slo:control_plane_db_operation_latency_ms:avg > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Decision store average operation latency exceeds 100ms
+
+      - alert: InventoryDriftRateHigh
+        expr: max(ai_control_inventory_drift) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Backend inventory drift flag is raised (see GET /drift/actions)

@@ -23,6 +23,7 @@ DEFAULT_APPROVER_GROUPS = ("ai-approvers", "secops")
 class WorkloadIdentity(BaseModel):
     subject: str = "anonymous"
     team: str = "platform"
+    tenant_id: str = "platform"
     owner: str = "unknown"
     groups: list[str] = Field(default_factory=list)
     policy_pack: str = ""
@@ -153,11 +154,17 @@ def resolve_workload_identity(
     )
     groups = claim_groups or header_groups or list(body.groups)
     team = (
-        str(claims.get("team") or claims.get("tenant") or "").strip()
+        str(claims.get("team") or "").strip()
         or headers.get("x-ai-team", "").strip()
-        or headers.get("x-ai-tenant", "").strip()
         or team_from_groups(groups, None)
         or body.team
+    )
+    body_tenant = str(getattr(body, "tenant_id", "") or "").strip()
+    tenant_id = (
+        str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
+        or headers.get("x-ai-tenant", "").strip()
+        or body_tenant
+        or team
     )
     owner = (
         str(claims.get("preferred_username") or claims.get("name") or "").strip()
@@ -201,6 +208,7 @@ def resolve_workload_identity(
     return WorkloadIdentity(
         subject=subject,
         team=team,
+        tenant_id=tenant_id,
         owner=owner,
         groups=groups,
         policy_pack=policy_pack,
@@ -214,14 +222,27 @@ def apply_identity(
     body: GovernanceEvaluateRequest,
     identity: WorkloadIdentity,
 ) -> GovernanceEvaluateRequest:
-    return body.model_copy(
-        update={
-            "subject": identity.subject,
-            "team": identity.team,
-            "owner": identity.owner,
-            "groups": identity.groups,
-            "policy_pack": identity.policy_pack,
-            "environment": identity.environment,
-            "namespace": identity.namespace,
-        }
+    update = {
+        "subject": identity.subject,
+        "team": identity.team,
+        "owner": identity.owner,
+        "groups": identity.groups,
+        "policy_pack": identity.policy_pack,
+        "environment": identity.environment,
+        "namespace": identity.namespace,
+    }
+    if hasattr(body, "tenant_id"):
+        update["tenant_id"] = identity.tenant_id
+    return body.model_copy(update=update)
+
+
+def resolve_request_tenant(headers: dict[str, str]) -> str:
+    """Resolve tenant for read/list isolation (headers / JWT claims)."""
+    claims = extract_bearer_claims(headers)
+    return (
+        str(claims.get("tenant") or claims.get("tenant_id") or "").strip()
+        or headers.get("x-ai-tenant", "").strip()
+        or str(claims.get("team") or "").strip()
+        or headers.get("x-ai-team", "").strip()
+        or ""
     )

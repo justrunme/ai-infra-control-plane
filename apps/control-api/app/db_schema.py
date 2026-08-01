@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   policy_bundle_id TEXT,
   policy_digest TEXT,
   team TEXT,
+  tenant_id TEXT,
   environment TEXT,
   model TEXT,
   subject TEXT,
@@ -57,6 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_decisions_request_id
   ON decisions (request_id);
 CREATE INDEX IF NOT EXISTS idx_decisions_team_created
   ON decisions (team, created_at);
+CREATE INDEX IF NOT EXISTS idx_decisions_tenant_created
+  ON decisions (tenant_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id
   ON audit_meta (decision_id);
 CREATE INDEX IF NOT EXISTS idx_audit_meta_created_at
@@ -79,6 +82,8 @@ _INDEX_STATEMENTS = (
     "ON decisions (request_id)",
     "CREATE INDEX IF NOT EXISTS idx_decisions_team_created "
     "ON decisions (team, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_decisions_tenant_created "
+    "ON decisions (tenant_id, created_at)",
     "CREATE INDEX IF NOT EXISTS idx_audit_meta_decision_id "
     "ON audit_meta (decision_id)",
     "CREATE INDEX IF NOT EXISTS idx_audit_meta_created_at "
@@ -132,6 +137,23 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
         "005_decision_foreign_keys",
         postgres=_POSTGRES_FK_STATEMENTS,
         sqlite=(),
+    ),
+    _migration(
+        "006_decision_tenant_id",
+        postgres=(
+            "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS tenant_id TEXT",
+            "UPDATE decisions SET tenant_id = team "
+            "WHERE tenant_id IS NULL OR tenant_id = ''",
+            "CREATE INDEX IF NOT EXISTS idx_decisions_tenant_created "
+            "ON decisions (tenant_id, created_at)",
+        ),
+        sqlite=(
+            "ALTER TABLE decisions ADD COLUMN tenant_id TEXT",
+            "UPDATE decisions SET tenant_id = team "
+            "WHERE tenant_id IS NULL OR tenant_id = ''",
+            "CREATE INDEX IF NOT EXISTS idx_decisions_tenant_created "
+            "ON decisions (tenant_id, created_at)",
+        ),
     ),
 )
 

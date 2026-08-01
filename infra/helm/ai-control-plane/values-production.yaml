@@ -8,7 +8,7 @@ autoscaling:
   maxReplicas: 6
 
 image:
-  tag: "1.3.0"
+  tag: "1.4.0"
   pullPolicy: IfNotPresent
 
 persistence:
@@ -21,6 +21,8 @@ persistence:
   databaseUrlKey: DATABASE_URL
   databaseUrl: ""
   approvalTtlSeconds: 3600
+  retentionDays: 90
+  tenantIsolation: true
   probeCacheTtlSeconds: 10
   httpTrustEnv: false
 
@@ -41,6 +43,8 @@ networkPolicy:
 
 metrics:
   serviceMonitor:
+    enabled: true
+  prometheusRule:
     enabled: true
 
 podDisruptionBudget:
