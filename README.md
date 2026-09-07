@@ -14,6 +14,11 @@
 
 [![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
 
+[![Case study](https://img.shields.io/badge/case-justrunme.com-111111)](https://justrunme.com/cases/ai-infra-control-plane/)
+
+Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-control-plane/) · [Andrey Lesnikov](https://justrunme.com/)
+Related on site: [RAG Knowledge Platform](https://justrunme.com/cases/rag-knowledge-platform/) · [Cost and Token Observability](https://justrunme.com/cases/cost-token-observability/)
+
 ```text
 Detect → Decide → Approve → GitOps Proposal → Verify
 ```
