@@ -17,7 +17,19 @@
 [![Case study](https://img.shields.io/badge/case-justrunme.com-111111)](https://justrunme.com/cases/ai-infra-control-plane/)
 
 Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-control-plane/) · [Andrey Lesnikov](https://justrunme.com/)
-Related on site: [RAG Knowledge Platform](https://justrunme.com/cases/rag-knowledge-platform/) · [Cost and Token Observability](https://justrunme.com/cases/cost-token-observability/)
+
+## On justrunme.com
+
+This repository is the public evidence base for:
+
+| Case | URL |
+| --- | --- |
+| **AI Infra Control Plane** (primary) | https://justrunme.com/cases/ai-infra-control-plane/ |
+| RAG Knowledge Platform | https://justrunme.com/cases/rag-knowledge-platform/ |
+| Cost and Token Observability | https://justrunme.com/cases/cost-token-observability/ |
+
+Site: [justrunme.com](https://justrunme.com/) · Author: [Andrey Lesnikov](https://justrunme.com/about/)
+
 
 ```text
 Detect → Decide → Approve → GitOps Proposal → Verify
