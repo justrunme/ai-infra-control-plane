@@ -24,7 +24,7 @@ Text overlay (or browser tab title):
 
 ## Scene 2 — Architecture (8s)
 
-Open `docs/portfolio/reference-architecture.md` or product roadmap diagram:
+Open `docs/project/reference-architecture.md` or product roadmap diagram:
 
 - Control Plane → governance
 - Execution Plane → gateway + MCP + intent

@@ -85,6 +85,6 @@ flowchart TD
 - [Runtime verification](runtime-verification.md)
 - [RBAC](rbac.md)
 - [Capability contracts](capability-contracts.md)
-- [Portfolio overview](portfolio-overview.md)
+- [Overview](overview.md)
 - [Runtime enforcement](runtime-enforcement.md)
 - [Platform architecture](platform-architecture.md)

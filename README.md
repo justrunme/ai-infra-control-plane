@@ -38,7 +38,7 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 | Tier | What you get |
 | --- | --- |
 | **Supported** | `/governance/evaluate`, durable decisions/approvals (Postgres HA / SQLite single-node), tenant isolation + JWT-only tenant, RBAC roles, quota `onUnavailable`, signed OCI Helm/images, capability contracts registry, durable PolicyBundle generations + OCI load/signature verify, optional GitHub draft-PR provider, runtime verification contract, capability-bound approvals |
-| **Reference** | Argo sync status `not_checked` in verify, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
+| **Reference** | Argo sync status verified in kind e2e, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
 Current release line: **v2.4.0**.  
@@ -167,7 +167,7 @@ security/
   opa/                Kubernetes policy gates for rendered manifests
 docs/
   architecture.md     System design notes
-  case-study.md       Portfolio case study and demo flow
+  case-study.md       Case study and demo flow
   digital-twin.md     AI infrastructure topology model
   platform-architecture.md Technical platform architecture
 ```
@@ -337,7 +337,7 @@ helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
 
 The chart ships security-hardened single-node defaults. Use `values-production.yaml` for PostgreSQL HA, HPA, PDB, JWT fail-closed, NetworkPolicy and monitoring resources. See `infra/helm/ai-control-plane/README.md`.
 
-## Portfolio Docs
+## Documentation
 
 - `docs/case-study.md` explains the problem, architecture, capabilities, governance pipeline, observability, forecasting, GitOps, security, and demo flow.
 - `docs/platform-architecture.md` describes the system boundary, logical layers, control API, governance architecture, delivery path, and extension points.

@@ -34,7 +34,7 @@ See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity
 3. Thin Operator Console (approval inbox) — only after external install proof
 4. Multi-region control-plane federation
 5. In-tree CRD controllers (CRDs remain desired-state schemas)
-6. Argo Application sync status inside runtime verify (`gitops_sync: not_checked` today)
+6. Argo Application sync status inside runtime verify (verified in kind e2e as of v2.5, runtime verify integration deferred)
 
 ## Explicitly out of scope
 
