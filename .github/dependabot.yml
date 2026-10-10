@@ -1,0 +1,73 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - python
+
+  - package-ecosystem: pip
+    directory: /apps/control-api
+    schedule:
+      interval: monthly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - python
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - github-actions
+
+  - package-ecosystem: docker
+    directory: /apps/control-api
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: terraform
+    directory: /infra/terraform/hetzner-vm
+    schedule:
+      interval: monthly
+    groups:
+      terraform-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: /infra/terraform/k3s-bootstrap
+    schedule:
+      interval: monthly
+    groups:
+      terraform-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+      - terraform
