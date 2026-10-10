@@ -6,6 +6,7 @@ The following versions of the AI Infrastructure Control Plane are currently supp
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 2.5.x   | :white_check_mark: |
 | 2.4.x   | :white_check_mark: |
 | 2.3.x   | :white_check_mark: |
 | 2.2.x   | :white_check_mark: |
