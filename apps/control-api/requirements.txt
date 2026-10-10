@@ -1,10 +1,10 @@
-fastapi==0.115.14
-uvicorn[standard]==0.35.0
-pydantic==2.11.7
-pydantic-settings==2.10.1
-pytest==8.4.1
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pytest==9.1.1
 httpx==0.28.1
-PyJWT[crypto]==2.14.0
-redis==5.2.1
-psycopg[binary,pool]==3.2.9
+PyJWT[crypto]==2.15.1
+redis==8.1.0
+psycopg[binary,pool]==3.3.6
 
