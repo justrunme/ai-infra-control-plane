@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-10
+
 ### Added
 - Multi-architecture container images (linux/amd64, linux/arm64)
 - Build provenance attestation via GitHub Actions
@@ -14,11 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cosign signature verification in CI pipeline
 - `:main` tag for container images on pushes to main branch
 - Dependabot configuration with grouped updates for Python, GitHub Actions, Docker, and Terraform
+- SECURITY.md security policy
 - This changelog
 
 ### Changed
 - Python test matrix extended to include 3.12 and 3.13
 - Argo CD installed in kind e2e tests with real sync status verification
+- PyJWT and other Python dependency bumps
+- Release workflow attestation permissions (attestations, id-token, packages, contents)
 
 ## [2.4.0] - 2026-08-01
 
@@ -171,7 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Model inventory management
 - Ollama and vLLM backend probes
 
-[Unreleased]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/justrunme/ai-infra-control-plane/compare/v2.1.0...v2.2.0
