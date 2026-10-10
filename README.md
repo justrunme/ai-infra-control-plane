@@ -1,22 +1,29 @@
 # AI Infrastructure Control Plane
 
+Governed private AI control plane on Kubernetes.
+
 [![CI](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml)
-[![Release](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml)
-![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-control%20API-009688)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-platform%20engineering-326CE5)
-![Terraform](https://img.shields.io/badge/Terraform-infrastructure-844FBA)
-![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-> **Kubernetes-native reference control plane for governed private AI inference.**  
-> Part of the [AI Infrastructure OS](docs/product-roadmap.md) architecture with the [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform) execution plane.
-
-[![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/hero-overview.mp4)
-
-[![Case study](https://img.shields.io/badge/case-justrunme.com-111111)](https://justrunme.com/cases/ai-infra-control-plane/)
+[![Release](https://img.shields.io/github/v/release/justrunme/ai-infra-control-plane?display_name=tag)](https://github.com/justrunme/ai-infra-control-plane/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-control-plane/) · [Andrey Lesnikov](https://justrunme.com/)
+
+## What it does
+
+- Evaluates governance decisions (`/governance/evaluate`) with durable approvals and tenant isolation
+- Emits GitOps-oriented remediation proposals and verifies runtime enforcement contracts
+- Ships a control API with an operator dashboard (status, inventory drift, governance playground)
+
+## Why
+
+- Private inference needs an explicit Detect → Decide → Approve → Verify loop, not ad-hoc gateway rules
+- Control plane concerns (policy, quotas, approvals) stay separate from the execution plane ([AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform))
+
+## Quickstart
+
+```bash
+make platform-demo && make platform-demo-verify
+```
 
 ## On justrunme.com
 
@@ -29,7 +36,6 @@ This repository is the public evidence base for:
 | Cost and Token Observability | https://justrunme.com/cases/cost-token-observability/ |
 
 Site: [justrunme.com](https://justrunme.com/) · Author: [Andrey Lesnikov](https://justrunme.com/about/)
-
 
 ```text
 Detect → Decide → Approve → GitOps Proposal → Verify
