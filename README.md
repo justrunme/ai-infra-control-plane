@@ -197,7 +197,7 @@ make test
 
 The project targets Python 3.12 for local development and CI.
 
-Run the portfolio demo:
+Run the platform demo:
 
 ```sh
 make demo
