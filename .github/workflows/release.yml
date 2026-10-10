@@ -99,23 +99,7 @@ jobs:
           cache-from: type=gha
           cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
 
-      - name: Generate SBOM
-        if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: image
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
-          format: spdx-json
-          output: sbom.spdx.json
-
-      - name: Upload SBOM artifact
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: control-api-sbom
-          path: sbom.spdx.json
-
-      - name: Create GitHub Release and attach SBOM (tags only)
+      - name: Create GitHub Release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -126,7 +110,7 @@ jobs:
           notes_file="$(mktemp)"
           # Extract the Keep a Changelog section for this version as release notes.
           awk -v ver="${version}" '
-            $0 ~ "^## \\[" ver "\\]" {found=1; print; next}
+            $0 ~ "^## \[" ver "\]" {found=1; print; next}
             found && /^## \[/ {exit}
             found {print}
           ' CHANGELOG.md > "${notes_file}"
@@ -134,13 +118,32 @@ jobs:
             printf 'Release %s\n' "${tag_name}" > "${notes_file}"
           fi
           if gh release view "${tag_name}" >/dev/null 2>&1; then
-            echo "Release ${tag_name} already exists; uploading SBOM with --clobber"
+            echo "Release ${tag_name} already exists"
           else
             gh release create "${tag_name}" \
               --verify-tag \
               --title "${tag_name}" \
               --notes-file "${notes_file}"
           fi
+
+      - name: Generate SBOM
+        if: github.event_name != 'pull_request'
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          artifact-name: control-api-sbom.spdx.json
+          output-file: sbom.spdx.json
+          upload-artifact: true
+          upload-release-assets: false
+
+      - name: Attach SBOM to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag_name="${GITHUB_REF#refs/tags/}"
           gh release upload "${tag_name}" sbom.spdx.json --clobber
 
       - name: Install cosign
