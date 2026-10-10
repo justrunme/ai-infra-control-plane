@@ -20,6 +20,20 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+        run: |
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz actionlint
+          sudo install actionlint /usr/local/bin/actionlint
+      - name: Lint GitHub Actions workflows
+        run: actionlint -color
+
   test:
     runs-on: ubuntu-latest
     strategy:
