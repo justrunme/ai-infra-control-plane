@@ -11,7 +11,7 @@ verified_at, proposal_id, outcome (verified|failed)
 inventory: DriftStatus (current probes)
 checks[]: probe_freshness | inventory_drift | baseline_closure
 baseline_closure: baseline/still_missing/resolved/closed
-gitops_sync: not_checked   # Argo client deferred; apply remains external
+gitops_sync: not_checked   # Argo status verified in kind e2e; runtime verify integration deferred
 ```
 
 For backward compatibility the persisted JSON also dual-writes legacy

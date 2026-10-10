@@ -38,7 +38,7 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 | Tier | What you get |
 | --- | --- |
 | **Supported** | `/governance/evaluate`, durable decisions/approvals (Postgres HA / SQLite single-node), tenant isolation + JWT-only tenant, RBAC roles, quota `onUnavailable`, signed OCI Helm/images, capability contracts registry, durable PolicyBundle generations + OCI load/signature verify, optional GitHub draft-PR provider, runtime verification contract, capability-bound approvals |
-| **Reference** | Argo sync status `not_checked` in verify, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
+| **Reference** | Argo sync status verified in kind e2e, CRDs without in-tree controller, live Redis/Prometheus demo integrations |
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
 Current release line: **v2.4.0**.  
