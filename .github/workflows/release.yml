@@ -163,7 +163,7 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
+          cosign sign --yes --registry-referrers-mode=legacy "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
 
       - name: Verify signed image
         if: github.event_name != 'pull_request'
@@ -189,8 +189,8 @@ jobs:
           # Prefer digest from helm push output when present.
           digest="$(printf '%s\n' "${push_out}" | sed -n 's/.*sha256:\([a-f0-9]\{64\}\).*/sha256:\1/p' | tail -1)"
           if [[ -n "${digest}" ]]; then
-            cosign sign --yes "${{ env.CHART_OCI }}/ai-control-plane@${digest}"
+            cosign sign --yes --registry-referrers-mode=legacy "${{ env.CHART_OCI }}/ai-control-plane@${digest}"
           else
-            cosign sign --yes "${chart_ref}"
+            cosign sign --yes --registry-referrers-mode=legacy "${chart_ref}"
           fi
           echo "Signed chart ${chart_ref}"
