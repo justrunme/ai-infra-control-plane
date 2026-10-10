@@ -31,5 +31,5 @@ python experiments/gpu-placement/score.py \
 This experiment complements:
 
 - [Capacity closed loop](../capacity-loop/README.md) — when to scale replicas
-- [Fleet topology](../../docs/portfolio-overview.md) — where models run
+- [Fleet topology](../../docs/overview.md) — where models run
 - [Model risk registry](../../governance/registry/models.yaml) — which models are approved
