@@ -167,7 +167,7 @@ security/
   opa/                Kubernetes policy gates for rendered manifests
 docs/
   architecture.md     System design notes
-  case-study.md       Portfolio case study and demo flow
+  case-study.md       Case study and demo flow
   digital-twin.md     AI infrastructure topology model
   platform-architecture.md Technical platform architecture
 ```
