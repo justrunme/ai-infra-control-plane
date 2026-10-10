@@ -25,6 +25,20 @@ Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-contro
 make platform-demo && make platform-demo-verify
 ```
 
+## Architecture
+
+```mermaid
+flowchart LR
+  Client[Client / operator] --> API[apps/control-api]
+  API --> Gov[governance evaluate / approve]
+  Gov --> PG[(Postgres / SQLite)]
+  API --> Helm[infra/helm + CRDs]
+  Helm --> Argo[infra/argocd]
+  Argo --> RT[AI Runtime Platform]
+  CI[.github/workflows/ci.yml] --> API
+  CI --> Rel[.github/workflows/release.yml]
+```
+
 ## On justrunme.com
 
 This repository is the public evidence base for:
