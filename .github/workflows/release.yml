@@ -115,12 +115,32 @@ jobs:
           name: control-api-sbom
           path: sbom.spdx.json
 
-      - name: Attach SBOM to release (tags only)
+      - name: Create GitHub Release and attach SBOM (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           tag_name="${GITHUB_REF#refs/tags/}"
+          version="${tag_name#v}"
+          notes_file="$(mktemp)"
+          # Extract the Keep a Changelog section for this version as release notes.
+          awk -v ver="${version}" '
+            $0 ~ "^## \\[" ver "\\]" {found=1; print; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > "${notes_file}"
+          if [[ ! -s "${notes_file}" ]]; then
+            printf 'Release %s\n' "${tag_name}" > "${notes_file}"
+          fi
+          if gh release view "${tag_name}" >/dev/null 2>&1; then
+            echo "Release ${tag_name} already exists; uploading SBOM with --clobber"
+          else
+            gh release create "${tag_name}" \
+              --verify-tag \
+              --title "${tag_name}" \
+              --notes-file "${notes_file}"
+          fi
           gh release upload "${tag_name}" sbom.spdx.json --clobber
 
       - name: Install cosign
