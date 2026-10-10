@@ -13,6 +13,7 @@ Governed private AI control plane on Kubernetes.
 ![Terraform](https://img.shields.io/badge/Terraform-infrastructure-844FBA)
 ![Trivy](https://img.shields.io/badge/Trivy-security%20scan-1904DA)
 [![Case study](https://img.shields.io/badge/case-justrunme.com-111111)](https://justrunme.com/cases/ai-infra-control-plane/)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/justrunme/ai-infra-control-plane/badge)](https://securityscorecards.dev/viewer/?uri=github.com/justrunme/ai-infra-control-plane)
 
 Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-control-plane/) · [Andrey Lesnikov](https://justrunme.com/)
 
