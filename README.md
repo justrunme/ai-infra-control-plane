@@ -3,6 +3,7 @@
 Governed private AI control plane on Kubernetes.
 
 [![Animated preview of the AI Infrastructure Control Plane](docs/videos/previews/hero-overview.gif)](docs/videos/previews/hero-overview.gif)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/justrunme/ai-infra-control-plane/badge)](https://securityscorecards.dev/viewer/?uri=github.com/justrunme/ai-infra-control-plane)
 
 [![CI](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/ci.yml)
 [![Release](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml/badge.svg)](https://github.com/justrunme/ai-infra-control-plane/actions/workflows/release.yml)
