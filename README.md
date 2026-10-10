@@ -337,7 +337,7 @@ helm upgrade --install ai-control-plane infra/helm/ai-control-plane \
 
 The chart ships security-hardened single-node defaults. Use `values-production.yaml` for PostgreSQL HA, HPA, PDB, JWT fail-closed, NetworkPolicy and monitoring resources. See `infra/helm/ai-control-plane/README.md`.
 
-## Portfolio Docs
+## Documentation
 
 - `docs/case-study.md` explains the problem, architecture, capabilities, governance pipeline, observability, forecasting, GitOps, security, and demo flow.
 - `docs/platform-architecture.md` describes the system boundary, logical layers, control API, governance architecture, delivery path, and extension points.
