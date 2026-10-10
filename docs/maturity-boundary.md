@@ -3,7 +3,7 @@
 | Tier | Meaning | Examples |
 | --- | --- | --- |
 | **Supported** | Production path, covered by CI e2e/SLO, semver-stable | `/governance/evaluate`, durable approvals/decisions with policy + capability digests, Postgres HA / SQLite single-node, tenant isolation + JWT-only tenant, RBAC, quota `onUnavailable`, capability contracts, durable PolicyBundle generations, optional GitOps draft-PR adapter, runtime verification contract, `/livez`/`/readyz`, signed OCI Helm |
-| **Reference** | Integrated but not fully adapter-complete | Argo sync status in verify (`gitops_sync: not_checked`), CRDs without in-tree controller, live Redis/Prometheus inputs, demos |
+| **Reference** | Integrated but not fully adapter-complete | Argo sync status verified in kind e2e, CRDs without in-tree controller, live Redis/Prometheus inputs, demos |
 | **Experimental** | Prototype / sample-driven | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
 ## Recommended pair
@@ -29,7 +29,7 @@ active agent/tool capability digests (v2.4).
 | Limitation | Status |
 | --- | --- |
 | Argo/Flux reconciliation controller | Reference / deferred (CRDs are desired-state schemas) |
-| Actual GitOps sync check in verify | `gitops_sync: not_checked` |
+| Actual GitOps sync check in verify | Verified in kind e2e; runtime verify integration deferred |
 | Full operator console / approval inbox | Deferred (API is the surface) |
 | Multi-region control-plane federation | Deferred |
 | ITSM webhook / notifier adapters | Deferred |
