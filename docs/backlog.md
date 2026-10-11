@@ -4,7 +4,7 @@ Use this backlog for small, reviewable maintenance and deferred-product PRs.
 
 ## Current stable
 
-**v2.4.0** is the current Supported control-plane contract:
+**v2.5.0** is the current Supported control-plane contract:
 
 - Durable decisions/approvals (Postgres HA / SQLite single-node)
 - Durable PolicyBundle generations + OCI load/signature verify
@@ -14,7 +14,7 @@ Use this backlog for small, reviewable maintenance and deferred-product PRs.
 - RBAC, JWT-only tenant, quota `onUnavailable`, signed OCI Helm/images
 
 See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity-boundary.md)
-(recommended pair **CP 2.4.x + Runtime 2.3.x**, honest limitations table).
+(recommended pair **CP 2.5.x + Runtime 2.4.x**, honest limitations table).
 
 ## Completed (selected)
 
@@ -26,6 +26,7 @@ See [product-roadmap.md](product-roadmap.md) and [maturity-boundary.md](maturity
 - **v2.2:** GitOpsProvider + GitHub draft PR adapter
 - **v2.3:** Runtime verification contract
 - **v2.4:** Capability-bound execution digests
+- **v2.5:** Multi-arch images, provenance/SBOM/cosign CI, Argo sync status in kind e2e, Dependabot/SECURITY hygiene
 
 ## Deferred (not in Supported scope)
 

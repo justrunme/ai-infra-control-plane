@@ -15,6 +15,8 @@ Governed private AI control plane on Kubernetes.
 [![Case study](https://img.shields.io/badge/case-justrunme.com-111111)](https://justrunme.com/cases/ai-infra-control-plane/)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/justrunme/ai-infra-control-plane/badge)](https://securityscorecards.dev/viewer/?uri=github.com/justrunme/ai-infra-control-plane)
 
+Evidence: [docs/EVIDENCE.md](docs/EVIDENCE.md)
+
 Case study: [AI Infra Control Plane](https://justrunme.com/cases/ai-infra-control-plane/) · [Andrey Lesnikov](https://justrunme.com/)
 
 ## What it does
@@ -71,7 +73,7 @@ Detect → Decide → Approve → GitOps Proposal → Verify
 | **Experimental** | Forecasting sims, FinOps CSV helpers, intent heuristics |
 
 Current release line: **v2.5.0**.  
-Recommended pair: **Control Plane v2.5.x + Runtime v2.3.x**  
+Recommended pair: **Control Plane v2.5.x + Runtime v2.4.x**  
 ([Runtime compatibility matrix](https://github.com/justrunme/ai-runtime-platform/blob/main/docs/compatibility-matrix.md)).  
 Upgrade: [v1 → v2.0](docs/upgrade-v1-to-v2.0.md) · maturity: [maturity-boundary.md](docs/maturity-boundary.md).
 
@@ -373,9 +375,9 @@ The chart ships security-hardened single-node defaults. Use `values-production.y
 
 ## Project status
 
-The v2.4 control-plane contract is feature-complete for the declared
+The v2.5 control-plane contract is feature-complete for the declared
 Supported scope. Pair with [AI Runtime Platform](https://github.com/justrunme/ai-runtime-platform)
-**v2.3.x** for the closed loop. Further work is maintenance-oriented:
+**v2.4.x** for the closed loop. Further work is maintenance-oriented:
 compatibility testing, security updates, dependency upgrades and external
 deployment evidence.
 
