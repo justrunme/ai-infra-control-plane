@@ -2808,9 +2808,15 @@
             "type": "string"
           },
           "verify_signature": {
-            "default": false,
-            "title": "Verify Signature",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verify Signature"
           }
         },
         "title": "PolicySourceRequest",

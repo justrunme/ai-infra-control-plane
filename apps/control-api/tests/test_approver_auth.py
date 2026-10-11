@@ -49,7 +49,12 @@ def _enable_oidc(monkeypatch: pytest.MonkeyPatch, public_pem: bytes) -> None:
     )
 
 
-def _pending_approval_id() -> str:
+def _pending_approval_id(monkeypatch: pytest.MonkeyPatch) -> str:
+    # Keep playground/simulate signals so write_permission reaches approval rules.
+    monkeypatch.setattr(
+        "app.server_signals.allow_client_governance_signals",
+        lambda headers=None: True,
+    )
     response = client.post(
         "/governance/evaluate",
         json={
@@ -67,14 +72,14 @@ def _pending_approval_id() -> str:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["final_verdict"] == "approval_required"
+    assert body["final_verdict"] == "approval_required", body
     return body["approval_id"]
 
 
 def test_approve_requires_token_when_oidc_enabled(monkeypatch) -> None:
     private_pem, public_pem = _rsa_keypair()
     _enable_oidc(monkeypatch, public_pem)
-    approval_id = _pending_approval_id()
+    approval_id = _pending_approval_id(monkeypatch)
 
     response = client.post(
         f"/approvals/{approval_id}/approve",
@@ -86,7 +91,7 @@ def test_approve_requires_token_when_oidc_enabled(monkeypatch) -> None:
 def test_approve_rejects_invalid_token(monkeypatch) -> None:
     private_pem, public_pem = _rsa_keypair()
     _enable_oidc(monkeypatch, public_pem)
-    approval_id = _pending_approval_id()
+    approval_id = _pending_approval_id(monkeypatch)
 
     response = client.post(
         f"/approvals/{approval_id}/approve",
@@ -99,7 +104,7 @@ def test_approve_rejects_invalid_token(monkeypatch) -> None:
 def test_approve_rejects_valid_token_without_approver_role(monkeypatch) -> None:
     private_pem, public_pem = _rsa_keypair()
     _enable_oidc(monkeypatch, public_pem)
-    approval_id = _pending_approval_id()
+    approval_id = _pending_approval_id(monkeypatch)
     token = jwt.encode(
         {
             "sub": "user-1",
@@ -121,7 +126,7 @@ def test_approve_rejects_valid_token_without_approver_role(monkeypatch) -> None:
 def test_approve_uses_jwt_subject_not_body_reviewer(monkeypatch) -> None:
     private_pem, public_pem = _rsa_keypair()
     _enable_oidc(monkeypatch, public_pem)
-    approval_id = _pending_approval_id()
+    approval_id = _pending_approval_id(monkeypatch)
     token = jwt.encode(
         {
             "sub": "approver-42",
@@ -144,7 +149,7 @@ def test_approve_uses_jwt_subject_not_body_reviewer(monkeypatch) -> None:
 
 def test_demo_mode_still_accepts_body_reviewer(monkeypatch) -> None:
     monkeypatch.delenv("OIDC_JWT_VERIFY", raising=False)
-    approval_id = _pending_approval_id()
+    approval_id = _pending_approval_id(monkeypatch)
     response = client.post(
         f"/approvals/{approval_id}/approve",
         json={"reviewer": "secops", "comment": "demo"},

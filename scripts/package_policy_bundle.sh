@@ -8,11 +8,13 @@ REF="${POLICY_OCI_REF:-}"
 
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}/governance"
-# Ship YAML + evaluate modules needed by PolicyBundle.load.
+# Prefer YAML policy data. evaluate.py modules may be included for compatibility;
+# the control plane loads engines from its shipped image unless
+# POLICY_BUNDLE_ALLOW_EXECUTABLE=true.
 rsync -a --exclude 'results' --exclude '__pycache__' \
   "${ROOT}/governance/" "${OUT_DIR}/governance/"
 
-echo "Packed policy tree at ${OUT_DIR}/governance"
+echo "Packed policy data tree at ${OUT_DIR}/governance"
 if [[ -n "${REF}" ]]; then
   if ! command -v oras >/dev/null 2>&1; then
     echo "oras not installed; skip push" >&2

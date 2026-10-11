@@ -1,0 +1,29 @@
+# Server-side tenant data classification.
+# Client-supplied sensitive_data and write_permission are ignored unless
+# governance simulate mode is allowed (playground / local demo).
+tenants:
+  platform:
+    default_sensitive: false
+    write_allowed: true
+  search:
+    default_sensitive: false
+    write_allowed: false
+  finance:
+    default_sensitive: true
+    write_allowed: false
+  mlops:
+    default_sensitive: false
+    write_allowed: true
+
+# Namespace hints only raise sensitivity for already-sensitive tenants.
+# Production namespaces alone do not force sensitive_data (avoids blocking
+# models with pii_allowed=false during normal approval flows).
+namespaces: {}
+
+# JWT / header claim values that mark a request as sensitive.
+sensitive_classifications:
+  - pii
+  - confidential
+  - restricted
+  - secret
+  - sensitive

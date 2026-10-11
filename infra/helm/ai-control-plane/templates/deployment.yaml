@@ -178,7 +178,8 @@ spec:
               value: {{ .Values.policySource.digest | quote }}
             {{- end }}
             - name: POLICY_SOURCE_VERIFY_SIGNATURE
-              value: {{ .Values.policySource.verifySignature | default false | quote }}
+              {{- /* OCI defaults to verified; set policySource.verifySignature=false for local unsigned pulls. */}}
+              value: {{ .Values.policySource.verifySignature | default true | quote }}
             {{- end }}
             - name: POLICY_SOURCE_FAILURE_MODE
               value: {{ .Values.policySource.failureMode | default "last_known_good" | quote }}

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.authz import require_roles
 from app.policy_lifecycle import get_policy_lifecycle
-from app.policy_source import PolicySource
+from app.policy_source import PolicySource, default_verify_signature_for_type
 
 router = APIRouter(prefix="/governance/policy-bundles", tags=["policy-bundles"])
 
@@ -19,7 +19,8 @@ class PolicySourceRequest(BaseModel):
     path: str = ""
     reference: str = ""
     digest: str = ""
-    verify_signature: bool = False
+    # None → default true for OCI, false for filesystem.
+    verify_signature: bool | None = None
 
 
 class PolicyBundleInfo(BaseModel):
@@ -83,12 +84,17 @@ def validate_bundle(
 ) -> ValidateResponse:
     require_roles(request, "platform-admin")
     life = get_policy_lifecycle()
+    verify = (
+        default_verify_signature_for_type(payload.type)
+        if payload.verify_signature is None
+        else payload.verify_signature
+    )
     source = PolicySource(
         type=payload.type,
         path=payload.path,
         reference=payload.reference,
         digest=payload.digest,
-        verify_signature=payload.verify_signature,
+        verify_signature=verify,
     )
     try:
         if source.type in {"", "filesystem"} and source.path:

@@ -1,4 +1,13 @@
-"""Load and cache a validated governance policy bundle."""
+"""Load and cache a validated governance policy bundle.
+
+Bundle content is treated as **data-only** (YAML/policy packs). Evaluation
+engines (``evaluate.py``) are loaded from the control-plane shipped governance
+tree, not from an OCI-fetched path, so a compromised registry cannot execute
+arbitrary Python inside the API process.
+
+Set ``POLICY_BUNDLE_ALLOW_EXECUTABLE=true`` only for local experiments that
+intentionally load ``evaluate.py`` from the materialized bundle root.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +34,22 @@ _POLICY_YAML_RELATIVE = (
     Path("agents") / "agents.yaml",
     Path("tools") / "tools.yaml",
     Path("cost") / "policies.yaml",
+    Path("cost") / "pricing.yaml",
     Path("risk") / "rules.yaml",
+    Path("classification") / "tenants.yaml",
+)
+
+_ENGINE_MODULES = (
+    ("packs", "policy_packs_bundle", Path("policy-packs") / "evaluate.py"),
+    ("quota", "quota_governance_bundle", Path("quota") / "evaluate.py"),
+    ("registry", "model_registry_bundle", Path("registry") / "evaluate.py"),
+    ("sovereign", "sovereign_ai_bundle", Path("sovereign") / "evaluate.py"),
+    ("agents", "agent_registry_bundle", Path("agents") / "evaluate.py"),
+    ("tools", "tool_registry_bundle", Path("tools") / "evaluate.py"),
+    ("cost", "cost_governance_bundle", Path("cost") / "evaluate.py"),
+    ("risk", "risk_governance_bundle", Path("risk") / "evaluate.py"),
+    ("approval", "approval_governance_bundle", Path("approval") / "evaluate.py"),
+    ("prompt", "prompt_security_bundle", Path("prompt-security") / "evaluate.py"),
 )
 
 _bundle: PolicyBundle | None = None
@@ -50,6 +74,25 @@ def _content_digest(root: Path) -> str:
             digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _allow_executable_bundle() -> bool:
+    return os.getenv("POLICY_BUNDLE_ALLOW_EXECUTABLE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _engine_root(data_root: Path) -> Path:
+    """Return the trusted root for evaluate.py modules."""
+    if _allow_executable_bundle():
+        return data_root
+    shipped = get_governance_root()
+    if shipped.is_dir():
+        return shipped
+    return data_root
 
 
 @dataclass
@@ -81,76 +124,57 @@ class PolicyBundle:
     prompt_module: ModuleType | None = None
     error: str | None = None
     modules: dict[str, ModuleType] = field(default_factory=dict)
+    engine_root: str = ""
+    data_root: str = ""
 
     @classmethod
     def load(cls, root: Path) -> PolicyBundle:
-        """Load modules and parse policy YAML under ``root``."""
+        """Load trusted engines and parse policy YAML under ``root``."""
         loaded_at = datetime.now(UTC).isoformat()
         git_revision = _git_revision()
         content_digest = _content_digest(root)
         bundle_id = content_digest[:12]
+        data_root = root
+        engine_root = _engine_root(root)
 
         try:
-            pack_module = load_module(
-                "policy_packs_bundle", root / "policy-packs" / "evaluate.py"
-            )
-            quota_module = load_module(
-                "quota_governance_bundle", root / "quota" / "evaluate.py"
-            )
-            registry_module = load_module(
-                "model_registry_bundle", root / "registry" / "evaluate.py"
-            )
-            sovereign_module = load_module(
-                "sovereign_ai_bundle", root / "sovereign" / "evaluate.py"
-            )
-            agent_module = load_module(
-                "agent_registry_bundle", root / "agents" / "evaluate.py"
-            )
-            tools_module = load_module(
-                "tool_registry_bundle", root / "tools" / "evaluate.py"
-            )
-            cost_module = load_module(
-                "cost_governance_bundle", root / "cost" / "evaluate.py"
-            )
-            risk_module = load_module(
-                "risk_governance_bundle", root / "risk" / "evaluate.py"
-            )
-            approval_module = load_module(
-                "approval_governance_bundle", root / "approval" / "evaluate.py"
-            )
-            prompt_module = load_module(
-                "prompt_security_bundle", root / "prompt-security" / "evaluate.py"
-            )
+            loaded: dict[str, ModuleType] = {}
+            for key, module_name, relative in _ENGINE_MODULES:
+                path = engine_root / relative
+                if not path.is_file():
+                    raise FileNotFoundError(
+                        f"trusted policy engine missing: {path}"
+                    )
+                loaded[key] = load_module(module_name, path)
 
-            packs = pack_module.parse_packs(root / "policy-packs" / "packs.yaml")
+            pack_module = loaded["packs"]
+            quota_module = loaded["quota"]
+            registry_module = loaded["registry"]
+            sovereign_module = loaded["sovereign"]
+            agent_module = loaded["agents"]
+            tools_module = loaded["tools"]
+            cost_module = loaded["cost"]
+            risk_module = loaded["risk"]
+            approval_module = loaded["approval"]
+            prompt_module = loaded["prompt"]
+
+            packs = pack_module.parse_packs(data_root / "policy-packs" / "packs.yaml")
             quota_policies = quota_module.parse_policies(
-                root / "quota" / "policies.yaml"
+                data_root / "quota" / "policies.yaml"
             )
             registry = registry_module.parse_registry(
-                root / "registry" / "models.yaml"
+                data_root / "registry" / "models.yaml"
             )
             residency = sovereign_module.parse_residency(
-                root / "sovereign" / "residency.yaml"
+                data_root / "sovereign" / "residency.yaml"
             )
-            agents = agent_module.parse_registry(root / "agents" / "agents.yaml")
-            tools = tools_module.parse_registry(root / "tools" / "tools.yaml")
+            agents = agent_module.parse_registry(data_root / "agents" / "agents.yaml")
+            tools = tools_module.parse_registry(data_root / "tools" / "tools.yaml")
             cost_policies = cost_module.parse_policy_file(
-                root / "cost" / "policies.yaml"
+                data_root / "cost" / "policies.yaml"
             )
-            risk_rules = risk_module.parse_rules(root / "risk" / "rules.yaml")
+            risk_rules = risk_module.parse_rules(data_root / "risk" / "rules.yaml")
 
-            modules = {
-                "packs": pack_module,
-                "quota": quota_module,
-                "registry": registry_module,
-                "sovereign": sovereign_module,
-                "agents": agent_module,
-                "tools": tools_module,
-                "cost": cost_module,
-                "risk": risk_module,
-                "approval": approval_module,
-                "prompt": prompt_module,
-            }
             return cls(
                 bundle_id=bundle_id,
                 git_revision=git_revision,
@@ -175,7 +199,9 @@ class PolicyBundle:
                 risk_module=risk_module,
                 approval_module=approval_module,
                 prompt_module=prompt_module,
-                modules=modules,
+                modules=loaded,
+                engine_root=str(engine_root),
+                data_root=str(data_root),
             )
         except Exception as exc:  # noqa: BLE001 - surface load failures in bundle
             return cls(
@@ -185,6 +211,8 @@ class PolicyBundle:
                 loaded_at=loaded_at,
                 validation_status="error",
                 error=str(exc),
+                engine_root=str(engine_root),
+                data_root=str(data_root),
             )
 
 

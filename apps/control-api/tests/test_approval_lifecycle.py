@@ -28,6 +28,7 @@ def test_resolve_approval_approved(store: DecisionStore) -> None:
     decision_id = store.create_decision(final_verdict="approval_required")
     approval_id = store.create_approval(decision_id, ttl_seconds=3600)
 
+    # Subject defaults empty; reviewer bob is not a self-approval.
     resolved = store.resolve_approval(
         approval_id,
         status="approved",

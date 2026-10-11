@@ -10,7 +10,13 @@ Gateway replicas write tenant counters to Redis when `TENANT_ATTRIBUTION_ENABLED
 | --- | --- |
 | `ai:tenant:{team}` | `window_start`, `requests_last_minute`, `tokens_today`, `tokens_day` |
 
-During `POST /governance/evaluate`, empty `requests_last_minute` / `tokens_today` in the request are backfilled from Redis before the quota stage runs.
+During `POST /governance/evaluate`, `requests_last_minute` / `tokens_today` are
+**always** taken from Redis when `QUOTA_REDIS_URL` is set (client counters are
+ignored). Cost fields come from server-side `governance/cost/pricing.yaml` plus
+optional FinOps Redis spend keys; `sensitive_data` / `write_permission` come from
+`governance/classification/tenants.yaml` and JWT claims. Client-supplied values
+are accepted only in demo mode (OIDC verify off) or with the
+`governance-simulate` role when Redis is disabled.
 
 ```bash
 curl -sS http://127.0.0.1:8091/governance/inputs/status

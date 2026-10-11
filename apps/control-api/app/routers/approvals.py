@@ -177,6 +177,7 @@ def approve_request(
     payload: ResolveApprovalRequest,
     request: Request,
 ) -> ApprovalResponse:
+    tenant_id = _tenant_scope(request)
     reviewer = _resolve_reviewer(request, payload)
     try:
         store = get_decision_store()
@@ -185,15 +186,23 @@ def approve_request(
             status="approved",
             reviewer=reviewer,
             comment=payload.comment,
+            tenant_id=tenant_id,
+            forbid_self_approval=True,
         )
         store.append_audit_meta(
             decision_id=record.decision_id,
             event_type="approval_approved",
             actor=reviewer,
-            payload={"approval_id": approval_id, "comment": payload.comment},
+            payload={
+                "approval_id": approval_id,
+                "comment": payload.comment,
+                "tenant_id": tenant_id,
+            },
         )
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail={"error": str(exc)}) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail={"error": str(exc)}) from exc
     except ValueError as exc:
@@ -207,6 +216,7 @@ def reject_request(
     payload: ResolveApprovalRequest,
     request: Request,
 ) -> ApprovalResponse:
+    tenant_id = _tenant_scope(request)
     reviewer = _resolve_reviewer(request, payload)
     try:
         store = get_decision_store()
@@ -215,15 +225,23 @@ def reject_request(
             status="rejected",
             reviewer=reviewer,
             comment=payload.comment,
+            tenant_id=tenant_id,
+            forbid_self_approval=True,
         )
         store.append_audit_meta(
             decision_id=record.decision_id,
             event_type="approval_rejected",
             actor=reviewer,
-            payload={"approval_id": approval_id, "comment": payload.comment},
+            payload={
+                "approval_id": approval_id,
+                "comment": payload.comment,
+                "tenant_id": tenant_id,
+            },
         )
     except StoreUnavailableError as exc:
         raise _store_unavailable(exc) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail={"error": str(exc)}) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail={"error": str(exc)}) from exc
     except ValueError as exc:

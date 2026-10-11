@@ -110,7 +110,9 @@ policySource:
   path: ""
   reference: ""
   digest: ""
-  verifySignature: false
+  # When type=oci, signature verification defaults to true in the API
+  # (POLICY_SOURCE_VERIFY_SIGNATURE). Set false only for local unsigned pulls.
+  verifySignature: true
   # fail_closed | last_known_good — production should use fail_closed.
   failureMode: last_known_good
   # When type=oci, prefer initContainer materialization (API reads filesystem).

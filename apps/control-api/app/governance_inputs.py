@@ -15,8 +15,14 @@ from app.prometheus_service import (
 )
 from app.quota_state_service import (
     QuotaStateSnapshot,
+    get_quota_on_unavailable,
     quota_state_status,
     read_quota_state,
+)
+from app.server_signals import (
+    allow_client_governance_signals,
+    derive_request_cost,
+    derive_sensitivity,
 )
 
 
@@ -27,14 +33,54 @@ class GovernanceInputsStatus(BaseModel):
 
 def enrich_governance_request(
     payload: GovernanceEvaluateRequest,
+    *,
+    headers: dict[str, str] | None = None,
 ) -> tuple[GovernanceEvaluateRequest, QuotaStateSnapshot | None, PrometheusSignals]:
+    """Overlay server-authoritative quota/cost/sensitivity onto the request.
+
+    Client-supplied ``requests_last_minute``, ``tokens_today``, cost fields,
+    ``sensitive_data``, and ``write_permission`` are ignored unless simulate
+    mode is allowed (demo / ``governance-simulate`` role).
+    """
+    headers = headers or {}
+    simulate = allow_client_governance_signals(headers)
     updates: dict[str, object] = {}
     quota_snapshot = read_quota_state(payload.team)
+
     if quota_snapshot is not None and not quota_snapshot.unavailable:
-        if payload.requests_last_minute == 0:
-            updates["requests_last_minute"] = quota_snapshot.requests_last_minute
-        if payload.tokens_today == 0:
-            updates["tokens_today"] = quota_snapshot.tokens_today
+        # Always prefer Redis counters; never trust the client body.
+        updates["requests_last_minute"] = quota_snapshot.requests_last_minute
+        updates["tokens_today"] = quota_snapshot.tokens_today
+        month_cost = quota_snapshot.month_to_date_cost_usd
+    elif quota_snapshot is not None and quota_snapshot.unavailable:
+        # Leave counters unset; evaluate_governance_request applies onUnavailable.
+        month_cost = None
+    elif simulate:
+        # Redis disabled + simulate/playground: keep client counters.
+        month_cost = None
+    else:
+        # Redis disabled in production: treat as unavailable.
+        quota_snapshot = QuotaStateSnapshot(
+            team=payload.team,
+            source="unavailable",
+            unavailable=True,
+        )
+        month_cost = None
+
+    if not simulate:
+        cost = derive_request_cost(
+            model=payload.model,
+            input_tokens=payload.input_tokens,
+            output_tokens=payload.output_tokens,
+            month_to_date_cost_usd=month_cost,
+        )
+        updates.update(cost)
+        sensitivity = derive_sensitivity(
+            team=payload.team,
+            namespace=payload.namespace,
+            headers=headers,
+        )
+        updates.update(sensitivity)
 
     signals = fetch_prometheus_signals(team=payload.team, model=payload.model)
     merged = payload.model_copy(update=updates) if updates else payload
@@ -46,8 +92,14 @@ def build_telemetry_stage(
     quota_snapshot: QuotaStateSnapshot | None,
     signals: PrometheusSignals,
 ) -> GovernanceTelemetryStage:
+    if quota_snapshot is None:
+        quota_source = "request"
+    elif quota_snapshot.unavailable:
+        quota_source = "unavailable"
+    else:
+        quota_source = quota_snapshot.source
     return GovernanceTelemetryStage(
-        quota_source=quota_snapshot.source if quota_snapshot else "request",
+        quota_source=quota_source,
         requests_last_minute=payload.requests_last_minute,
         tokens_today=payload.tokens_today,
         prometheus_enabled=signals.enabled,
@@ -74,3 +126,14 @@ def apply_prometheus_row_fields(
     signals: PrometheusSignals,
 ) -> None:
     row.update(signals_to_row_fields(signals))
+
+
+# Re-export for callers that need the policy when Redis is missing.
+__all__ = [
+    "GovernanceInputsStatus",
+    "apply_prometheus_row_fields",
+    "build_telemetry_stage",
+    "enrich_governance_request",
+    "get_quota_on_unavailable",
+    "governance_inputs_status",
+]
