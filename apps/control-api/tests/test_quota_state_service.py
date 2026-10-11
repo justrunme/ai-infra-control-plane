@@ -4,7 +4,18 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from app.quota_state_service import incr_quota_counters, read_quota_state
+from app.quota_state_service import (
+    get_quota_on_unavailable,
+    incr_quota_counters,
+    read_quota_state,
+)
+
+
+def test_get_quota_on_unavailable_defaults_fail_closed(monkeypatch) -> None:
+    """NEGATIVE: unset env must not default to allow."""
+    monkeypatch.delenv("QUOTA_ON_UNAVAILABLE", raising=False)
+    assert get_quota_on_unavailable() == "approval_required"
+    assert get_quota_on_unavailable() != "allow"
 
 
 def test_read_quota_state_from_redis(monkeypatch) -> None:

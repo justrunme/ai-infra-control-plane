@@ -37,6 +37,6 @@ Enabled in `values-production.yaml`.
 
 | `QUOTA_ON_UNAVAILABLE` | Evaluate when Redis is configured but unreachable |
 | --- | --- |
-| `allow` (default) | Fail-open (demo/dev) |
+| `approval_required` (default) | Fail-closed to human approval |
 | `block` | Hard block |
-| `approval_required` | Fail-closed to human approval (production) |
+| `allow` (explicit only) | Fail-open; emits reason/metric `quota_backend_unavailable_allowed` |

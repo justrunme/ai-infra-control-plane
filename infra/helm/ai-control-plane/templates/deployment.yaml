@@ -133,7 +133,7 @@ spec:
               value: {{ .Values.quota.redisUrl | quote }}
             {{- end }}
             - name: QUOTA_ON_UNAVAILABLE
-              value: {{ .Values.quota.onUnavailable | default "allow" | quote }}
+              value: {{ .Values.quota.onUnavailable | default "approval_required" | quote }}
             {{- if .Values.persistence.enabled }}
             {{- if .Values.persistence.existingSecret }}
             - name: DATABASE_URL

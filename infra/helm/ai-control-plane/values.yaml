@@ -41,8 +41,9 @@ persistence:
 # unreachable, onUnavailable controls evaluate fail-closed behavior.
 quota:
   redisUrl: ""
-  # allow | block | approval_required
-  onUnavailable: allow
+  # allow | block | approval_required — default fails closed to human review.
+  # Explicit allow emits reason/metric quota_backend_unavailable_allowed.
+  onUnavailable: approval_required
 
 serviceAccount:
   create: true

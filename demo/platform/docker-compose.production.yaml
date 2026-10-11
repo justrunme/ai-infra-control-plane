@@ -41,6 +41,8 @@ services:
         condition: service_healthy
     environment:
       QUOTA_REDIS_URL: redis://redis:6379/0
+      # Fail closed when Redis is unreachable (opt-in allow is explicit only).
+      QUOTA_ON_UNAVAILABLE: approval_required
       PROMETHEUS_GOVERNANCE_ENABLED: "true"
       PROMETHEUS_URL: http://prometheus:9090
       PROMETHEUS_MAX_ERROR_RATE: "0.95"

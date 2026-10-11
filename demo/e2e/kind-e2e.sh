@@ -87,7 +87,14 @@ spec:
 EOF
 
 echo "==> wait for Argo CD sync"
-kubectl -n argocd wait --for=condition=SyncStatusCode=Synced --timeout=60s app/ai-control-plane-demo || true
+if ! kubectl -n argocd wait --for=condition=SyncStatusCode=Synced --timeout=60s app/ai-control-plane-demo; then
+  echo "ERROR: Argo CD sync wait failed" >&2
+  kubectl -n argocd get app ai-control-plane-demo -o wide >&2 || true
+  kubectl -n argocd describe app ai-control-plane-demo >&2 || true
+  kubectl -n argocd get app ai-control-plane-demo -o yaml >&2 || true
+  kubectl -n argocd get events --sort-by=.lastTimestamp >&2 || true
+  exit 1
+fi
 
 echo "==> port-forward"
 kubectl -n "${NAMESPACE}" port-forward "svc/${RELEASE}-ai-control-plane" 18080:80 >/tmp/ai-cp-pf.log 2>&1 &
