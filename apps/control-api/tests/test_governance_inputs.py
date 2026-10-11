@@ -40,8 +40,13 @@ def test_enrich_governance_request_uses_redis_quota(monkeypatch) -> None:
         lambda **_: PrometheusSignals(enabled=False),
     )
 
-    payload = GovernanceEvaluateRequest(team="finance")
+    payload = GovernanceEvaluateRequest(
+        team="finance",
+        requests_last_minute=1,
+        tokens_today=99,
+    )
     enriched, snapshot, _signals = inputs_module.enrich_governance_request(payload)
     assert snapshot is not None
+    # Client counters are ignored when Redis state is available.
     assert enriched.requests_last_minute == 42
     assert enriched.tokens_today == 9000

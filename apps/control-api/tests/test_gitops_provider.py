@@ -21,6 +21,8 @@ from app.gitops_provider import (
 from app.remediation_service import RemediationError, prepare_pr_draft
 from app.settings import clear_settings_cache
 
+PROPOSAL_ID = "abcd1234-ffff-eeee-dddd-000011112222"
+
 
 def _approved_proposal(store: DecisionStore) -> str:
     drift = DriftStatus(
@@ -45,7 +47,11 @@ def _approved_proposal(store: DecisionStore) -> str:
         source="test",
         remediation_kind="pull_model",
         drift_snapshot=drift.model_dump(),
-        selected_action={"title": "Pull model", "kind": "pull_model"},
+        selected_action={
+            "title": "Pull model",
+            "kind": "pull_model",
+            "model": "llama3.1:8b",
+        },
     )
 
 
@@ -80,14 +86,18 @@ def test_github_provider_creates_draft_pr(monkeypatch: pytest.MonkeyPatch) -> No
         path = request.url.path
         if path.endswith("/git/ref/heads/main"):
             return httpx.Response(200, json={"object": {"sha": "abc123"}})
-        if path.endswith("/git/ref/heads/remediation/abcd1234"):
+        if path.endswith(f"/git/ref/heads/remediation/{PROPOSAL_ID}"):
             return httpx.Response(404, json={"message": "Not Found"})
         if path.endswith("/git/refs") and request.method == "POST":
-            return httpx.Response(201, json={"ref": "refs/heads/remediation/abcd1234"})
+            return httpx.Response(
+                201, json={"ref": f"refs/heads/remediation/{PROPOSAL_ID}"}
+            )
         if "/contents/remediation/proposals/" in path and request.method == "GET":
             return httpx.Response(404, json={"message": "Not Found"})
         if "/contents/remediation/proposals/" in path and request.method == "PUT":
             return httpx.Response(201, json={"content": {"path": path}})
+        if path.endswith("/pulls") and request.method == "GET":
+            return httpx.Response(200, json=[])
         if path.endswith("/pulls") and request.method == "POST":
             body = request.read()
             assert b'"draft": true' in body or b'"draft":true' in body
@@ -100,29 +110,31 @@ def test_github_provider_creates_draft_pr(monkeypatch: pytest.MonkeyPatch) -> No
             )
         return httpx.Response(500, json={"message": f"unexpected {path}"})
 
-    client = httpx.Client(
+    http_client = httpx.Client(
         transport=httpx.MockTransport(handler),
         base_url="https://api.github.com",
     )
     provider = GitHubPullRequestProvider(
         token="ghs_test",
         repository="acme/platform",
-        client=client,
+        client=http_client,
     )
     result = provider.create_draft_pull_request(
         GitOpsPullRequestRequest(
-            proposal_id="abcd1234-ffff-eeee-dddd-000011112222",
+            proposal_id=PROPOSAL_ID,
             title="fix: drift",
             body="body",
             tenant_id="platform",
             remediation_kind="pull_model",
+            selected_action={"model": "llama3.1:8b"},
         )
     )
     assert result.created is True
     assert result.provider == "github"
     assert result.pr_url == "https://github.com/acme/platform/pull/42"
     assert any(c.startswith("POST ") and c.endswith("/pulls") for c in calls)
-    client.close()
+    assert any("values.patch.yaml" in c for c in calls)
+    http_client.close()
 
 
 def test_build_gitops_provider_github(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,6 +156,8 @@ def test_github_provider_updates_existing_note() -> None:
             return httpx.Response(200, json={"sha": "file-sha"})
         if "/contents/remediation/proposals/" in path and request.method == "PUT":
             return httpx.Response(200, json={"content": {"sha": "new"}})
+        if path.endswith("/pulls") and request.method == "GET":
+            return httpx.Response(200, json=[])
         if path.endswith("/pulls"):
             return httpx.Response(
                 201,
@@ -154,34 +168,34 @@ def test_github_provider_updates_existing_note() -> None:
             )
         return httpx.Response(500, text=path)
 
-    client = httpx.Client(
+    http_client = httpx.Client(
         transport=httpx.MockTransport(handler),
         base_url="https://api.github.com",
     )
     provider = GitHubPullRequestProvider(
         token="ghs_test",
         repository="acme/platform",
-        client=client,
+        client=http_client,
     )
     result = provider.create_draft_pull_request(
         GitOpsPullRequestRequest(proposal_id="zzzzzzzz-1", title="t", body="b")
     )
     assert result.pr_url.endswith("/pull/7")
-    client.close()
+    http_client.close()
 
 
 def test_github_provider_http_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"message": "Bad credentials"})
 
-    client = httpx.Client(
+    http_client = httpx.Client(
         transport=httpx.MockTransport(handler),
         base_url="https://api.github.com",
     )
     provider = GitHubPullRequestProvider(
         token="bad",
         repository="acme/platform",
-        client=client,
+        client=http_client,
     )
     with pytest.raises(GitOpsProviderError):
         provider.create_draft_pull_request(
@@ -191,7 +205,7 @@ def test_github_provider_http_error() -> None:
                 body="b",
             )
         )
-    client.close()
+    http_client.close()
 
 
 def test_prepare_pr_draft_uses_provider(
@@ -209,6 +223,7 @@ def test_prepare_pr_draft_uses_provider(
     class FakeProvider:
         def create_draft_pull_request(self, request):
             assert request.proposal_id == proposal_id
+            assert request.selected_action is not None
             from app.gitops_provider import GitOpsPullRequestResult
 
             return GitOpsPullRequestResult(

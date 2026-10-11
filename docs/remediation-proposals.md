@@ -15,7 +15,7 @@ verifies runtime drift after apply.
 | Mode | When | Behavior |
 | --- | --- | --- |
 | `noop` (default) | No token/repo, or `GITOPS_PROVIDER=noop` | Persist `pr_title` / `pr_body` only |
-| `github` | `GITHUB_TOKEN` + `GITHUB_REPOSITORY`, or `GITOPS_PROVIDER=github` | Create branch + remediation note + **draft** PR; store `pr_url` |
+| `github` | `GITHUB_TOKEN` + `GITHUB_REPOSITORY`, or `GITOPS_PROVIDER=github` | Create branch + **manifest patch** (`values.patch.yaml`) + note + **draft** PR (idempotent); store `pr_url` |
 
 If `prepare-pr` includes `pr_url`, the adapter is skipped. Failures leave the
 proposal in `approved` (no half-applied `pr_created`).

@@ -125,7 +125,9 @@ def governance_evaluate(
                 ] += 1
                 return result
 
-            enriched, quota_snapshot, signals = enrich_governance_request(merged)
+            enriched, quota_snapshot, signals = enrich_governance_request(
+                merged, headers=header_map
+            )
             telemetry = build_telemetry_stage(enriched, quota_snapshot, signals)
             result = evaluate_governance_request(enriched, telemetry=telemetry)
             result = persist_evaluation(

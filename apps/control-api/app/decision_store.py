@@ -798,6 +798,9 @@ class DecisionStore:
         status: str,
         reviewer: str,
         comment: str = "",
+        *,
+        tenant_id: str | None = None,
+        forbid_self_approval: bool = True,
     ) -> ApprovalRecord:
         if status not in {"approved", "rejected"}:
             raise ValueError("status must be 'approved' or 'rejected'")
@@ -806,31 +809,93 @@ class DecisionStore:
             with observe_db_operation("resolve_approval"):
                 with self._session() as conn:
                     self._expire_if_needed(conn, approval_id)
-                    cur = self._execute(
-                        conn,
-                        "SELECT * FROM approvals WHERE approval_id = ?",
-                        (approval_id,),
-                    )
+                    if tenant_id is not None:
+                        cur = self._execute(
+                            conn,
+                            """
+                            SELECT a.*, d.tenant_id AS decision_tenant_id,
+                                   d.team AS decision_team, d.subject AS decision_subject,
+                                   d.request_json AS decision_request_json
+                            FROM approvals a
+                            JOIN decisions d ON d.decision_id = a.decision_id
+                            WHERE a.approval_id = ?
+                            """,
+                            (approval_id,),
+                        )
+                    else:
+                        cur = self._execute(
+                            conn,
+                            """
+                            SELECT a.*, d.tenant_id AS decision_tenant_id,
+                                   d.team AS decision_team, d.subject AS decision_subject,
+                                   d.request_json AS decision_request_json
+                            FROM approvals a
+                            LEFT JOIN decisions d ON d.decision_id = a.decision_id
+                            WHERE a.approval_id = ?
+                            """,
+                            (approval_id,),
+                        )
                     row = cur.fetchone()
                     if row is None:
                         raise KeyError(f"approval not found: {approval_id}")
+                    mapping = self._as_mapping(row)
                     approval = self._approval_from_row(row)
+                    owner_tenant = (
+                        mapping.get("decision_tenant_id")
+                        or mapping.get("decision_team")
+                        or ""
+                    )
+                    if tenant_id is not None and owner_tenant != tenant_id:
+                        raise KeyError(f"approval not found: {approval_id}")
                     if approval.status == "expired":
                         raise ValueError("approval expired")
                     if approval.status != "pending":
                         raise ValueError(
                             f"approval is not pending (status={approval.status})"
                         )
+
+                    requester = str(mapping.get("decision_subject") or "").strip()
+                    if not requester:
+                        raw_request = mapping.get("decision_request_json") or "{}"
+                        try:
+                            request_payload = (
+                                raw_request
+                                if isinstance(raw_request, dict)
+                                else json.loads(raw_request or "{}")
+                            )
+                        except (TypeError, json.JSONDecodeError):
+                            request_payload = {}
+                        if isinstance(request_payload, dict):
+                            requester = str(
+                                request_payload.get("subject")
+                                or request_payload.get("owner")
+                                or ""
+                            ).strip()
+                    if (
+                        forbid_self_approval
+                        and requester
+                        and reviewer.strip().lower() == requester.lower()
+                    ):
+                        raise PermissionError(
+                            "self-approval is forbidden; approver must differ "
+                            "from requester"
+                        )
+
                     resolved_at = _isoformat(_utcnow())
-                    self._execute(
+                    update_cur = self._execute(
                         conn,
                         """
                         UPDATE approvals
                         SET status = ?, reviewer = ?, review_comment = ?, resolved_at = ?
-                        WHERE approval_id = ?
+                        WHERE approval_id = ? AND status = 'pending'
                         """,
                         (status, reviewer, comment, resolved_at, approval_id),
                     )
+                    if int(update_cur.rowcount or 0) != 1:
+                        raise ValueError(
+                            "approval is not pending (concurrent resolve or "
+                            f"status={approval.status})"
+                        )
                     self._commit(conn)
                     cur = self._execute(
                         conn,
@@ -838,13 +903,14 @@ class DecisionStore:
                         (approval_id,),
                     )
                     updated_row = cur.fetchone()
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, PermissionError):
             raise
         except Exception as exc:  # noqa: BLE001
             if _is_operational_db_error(exc):
                 raise self._wrap_db(exc) from exc
             raise
-        assert updated_row is not None
+        if updated_row is None:
+            raise RuntimeError(f"approval missing after resolve: {approval_id}")
         return self._approval_from_row(updated_row)
 
     def expire_stale_approvals(self) -> int:

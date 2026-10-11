@@ -215,9 +215,12 @@ def evaluate_governance_request(
     agent_module = bundle.agent_module
     tools_module = bundle.tools_module
     sovereign_module = bundle.sovereign_module
-    assert quota_module and registry_module and cost_module and risk_module
-    assert approval_module and prompt_module and agent_module and tools_module
-    assert sovereign_module
+    if not (quota_module and registry_module and cost_module and risk_module):
+        raise RuntimeError("policy bundle missing required evaluation engines")
+    if not (approval_module and prompt_module and agent_module and tools_module):
+        raise RuntimeError("policy bundle missing approval/prompt/agent engines")
+    if sovereign_module is None:
+        raise RuntimeError("policy bundle missing sovereign evaluation engine")
 
     quota_policies = bundle.quota_policies
     pack_config = bundle.packs

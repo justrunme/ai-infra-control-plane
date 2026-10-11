@@ -19,15 +19,35 @@ class PolicySource:
     verify_signature: bool = False
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def default_verify_signature_for_type(source_type: str) -> bool:
+    """OCI sources verify signatures by default; filesystem does not.
+
+    Local/dev opt-out: set ``POLICY_SOURCE_VERIFY_SIGNATURE=false``.
+    """
+    if (source_type or "").strip().lower() == "oci":
+        return True
+    return False
+
+
 def policy_source_from_env() -> PolicySource:
     source_type = os.getenv("POLICY_SOURCE_TYPE", "filesystem").strip().lower()
+    effective_type = source_type or "filesystem"
     return PolicySource(
-        type=source_type or "filesystem",
+        type=effective_type,
         path=os.getenv("POLICY_SOURCE_PATH", "").strip(),
         reference=os.getenv("POLICY_SOURCE_OCI_REF", "").strip(),
         digest=os.getenv("POLICY_SOURCE_OCI_DIGEST", "").strip(),
-        verify_signature=os.getenv("POLICY_SOURCE_VERIFY_SIGNATURE", "").strip().lower()
-        in {"1", "true", "yes", "on"},
+        verify_signature=_env_bool(
+            "POLICY_SOURCE_VERIFY_SIGNATURE",
+            default_verify_signature_for_type(effective_type),
+        ),
     )
 
 

@@ -280,6 +280,7 @@ def prepare_pr_draft(
                     body=body,
                     tenant_id=record.tenant_id,
                     remediation_kind=record.remediation_kind,
+                    selected_action=dict(action) if action else None,
                 )
             )
         except GitOpsProviderError as exc:
