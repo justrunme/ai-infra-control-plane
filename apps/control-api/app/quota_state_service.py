@@ -85,7 +85,7 @@ class QuotaStateStatus(BaseModel):
     enabled: bool
     redis_url: str | None = None
     backend: str = "request"
-    on_unavailable: QuotaOnUnavailable = "allow"
+    on_unavailable: QuotaOnUnavailable = "approval_required"
 
 
 def is_quota_redis_enabled() -> bool:
@@ -100,13 +100,14 @@ def get_quota_redis_url() -> str | None:
 def get_quota_on_unavailable() -> QuotaOnUnavailable:
     """Policy when Redis quota state cannot be read.
 
-    Default ``allow`` preserves demo/dev fail-open. Production Helm sets
-    ``approval_required`` (fail-closed to human review).
+    Default ``approval_required`` fails closed to human review. ``allow`` is
+    opt-in only (explicit ``QUOTA_ON_UNAVAILABLE=allow``) and must be marked
+    with reason ``quota_backend_unavailable_allowed``. Unknown values fail closed.
     """
-    raw = os.getenv("QUOTA_ON_UNAVAILABLE", "allow").strip().lower()
+    raw = os.getenv("QUOTA_ON_UNAVAILABLE", "approval_required").strip().lower()
     if raw in {"allow", "block", "approval_required"}:
         return raw  # type: ignore[return-value]
-    return "allow"
+    return "approval_required"
 
 
 def _normalize_state(

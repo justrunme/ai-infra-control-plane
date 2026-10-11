@@ -26,6 +26,7 @@ GOVERNANCE_EVALUATE_LATENCY_BUCKET_COUNTS: dict[str, int] = defaultdict(int)
 GOVERNANCE_EVALUATE_LATENCY_MS_SUM: float = 0.0
 GOVERNANCE_EVALUATE_LATENCY_MS_COUNT: int = 0
 GOVERNANCE_EVALUATE_ERRORS_TOTAL: dict[str, int] = defaultdict(int)
+QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL: int = 0
 
 
 def metric_label_value(value: str | int) -> str:
@@ -64,13 +65,21 @@ def inc_governance_eval_errors(reason: str = "store_unavailable") -> None:
     GOVERNANCE_EVALUATE_ERRORS_TOTAL[reason] += 1
 
 
+def inc_quota_backend_unavailable_allowed() -> None:
+    """Count explicit fail-open allows when the quota Redis backend is down."""
+    global QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL
+    QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL += 1
+
+
 def reset_governance_latency_metrics() -> None:
     """Clear histogram state (tests)."""
     global GOVERNANCE_EVALUATE_LATENCY_MS_SUM, GOVERNANCE_EVALUATE_LATENCY_MS_COUNT
+    global QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL
     GOVERNANCE_EVALUATE_LATENCY_MS_SUM = 0.0
     GOVERNANCE_EVALUATE_LATENCY_MS_COUNT = 0
     GOVERNANCE_EVALUATE_LATENCY_BUCKET_COUNTS.clear()
     GOVERNANCE_EVALUATE_ERRORS_TOTAL.clear()
+    QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL = 0
 
 
 def render_governance_latency_metrics() -> list[str]:
@@ -123,4 +132,16 @@ def render_governance_latency_metrics() -> list[str]:
                 reason=reason,
             )
         )
+    lines.extend(
+        [
+            "# HELP ai_control_quota_backend_unavailable_allowed_total "
+            "Evaluate allows while quota Redis was unavailable "
+            "(explicit QUOTA_ON_UNAVAILABLE=allow).",
+            "# TYPE ai_control_quota_backend_unavailable_allowed_total counter",
+            metric_line(
+                "ai_control_quota_backend_unavailable_allowed_total",
+                QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL,
+            ),
+        ]
+    )
     return lines

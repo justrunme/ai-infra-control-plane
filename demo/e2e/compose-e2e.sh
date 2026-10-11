@@ -76,4 +76,39 @@ done
 
 curl -fsS "${BASE}/governance/decisions/${DECISION_ID}" | grep -q '"final_verdict":"allow"'
 curl -fsS "${BASE}/approvals/${APPROVAL_ID}" | grep -q '"status":"approved"'
+
+echo "==> redis-down fail-closed (QUOTA_ON_UNAVAILABLE unset)"
+REDIS_DOWN_NAME="${NAME}-quota-down"
+docker rm -f "${REDIS_DOWN_NAME}" >/dev/null 2>&1 || true
+# QUOTA_ON_UNAVAILABLE intentionally unset — must fail closed (not allow).
+docker run -d --name "${REDIS_DOWN_NAME}" \
+  -p "$((PORT + 1)):8080" \
+  -e DATABASE_URL="sqlite:////tmp/control-plane.db" \
+  -e HTTP_TRUST_ENV=false \
+  -e QUOTA_REDIS_URL="redis://127.0.0.1:1/0" \
+  "${IMAGE}" >/dev/null
+cleanup_redis_down() {
+  docker rm -f "${REDIS_DOWN_NAME}" >/dev/null 2>&1 || true
+}
+trap 'cleanup_redis_down; cleanup' EXIT
+
+DOWN_BASE="http://127.0.0.1:$((PORT + 1))"
+for _ in $(seq 1 60); do
+  if curl -fsS "${DOWN_BASE}/healthz" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+DOWN_EVAL="$(curl -fsS -X POST "${DOWN_BASE}/governance/evaluate" \
+  -H 'content-type: application/json' \
+  -d '{"team":"platform","owner":"alice","environment":"development","namespace":"ai-dev","action":"invoke_model","model":"llama3.1:8b","provider":"ollama"}')"
+echo "${DOWN_EVAL}" | grep -q '"final_verdict":"approval_required"'
+if echo "${DOWN_EVAL}" | grep -q '"final_verdict":"allow"'; then
+  echo "ERROR: redis-down evaluate must not allow when QUOTA_ON_UNAVAILABLE is unset" >&2
+  echo "${DOWN_EVAL}" >&2
+  exit 1
+fi
+cleanup_redis_down
+trap cleanup EXIT
+
 echo "==> compose e2e passed"

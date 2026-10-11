@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,6 +13,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.governance_telemetry import GovernanceTelemetryStage
+
+logger = logging.getLogger(__name__)
+
+QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON = "quota_backend_unavailable_allowed"
 
 
 class GovernanceEvaluateRequest(BaseModel):
@@ -278,6 +283,7 @@ def evaluate_governance_request(
         row["_pack_quota_multiplier"] = pack_pre["quota_multiplier"]
         quota_result = quota_module.evaluate_request(row, quota_policies)
         if telemetry and telemetry.quota_source == "unavailable":
+            from app.metrics_util import inc_quota_backend_unavailable_allowed
             from app.quota_state_service import get_quota_on_unavailable
 
             policy = get_quota_on_unavailable()
@@ -292,6 +298,21 @@ def evaluate_governance_request(
                 quota_result = {
                     "decision": "block",
                     "reasons": ["quota state unavailable; request blocked"],
+                }
+            elif policy == "allow":
+                # Explicit fail-open only; never the unset default.
+                logger.warning(
+                    "quota Redis unavailable; allowing evaluate because "
+                    "QUOTA_ON_UNAVAILABLE=allow (%s)",
+                    QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON,
+                )
+                inc_quota_backend_unavailable_allowed()
+                prior = list(quota_result.get("reasons") or [])
+                if QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON not in prior:
+                    prior.append(QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON)
+                quota_result = {
+                    "decision": "allow",
+                    "reasons": prior,
                 }
         registry_result = registry_module.evaluate_model_policy(row, registry)
         model_entry = registry_module.lookup_model(registry, row["model"])
@@ -325,6 +346,15 @@ def evaluate_governance_request(
         risk_result,
         approval_result,
     )
+
+    # Preserve the explicit fail-open marker on top-level allow decisions.
+    if (
+        verdict == "allow"
+        and QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON
+        in (quota_result.get("reasons") or [])
+        and QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON not in reasons
+    ):
+        reasons = [QUOTA_BACKEND_UNAVAILABLE_ALLOWED_REASON, *reasons]
 
     if telemetry and telemetry.block_reasons:
         verdict = "block"

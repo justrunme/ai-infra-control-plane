@@ -16,10 +16,15 @@ without live counters in production.
    claims when isolation is enforced in production.
 2. Add control-plane RBAC roles mapped from IdP groups; enforce `platform-admin`
    on policy activate/rollback and keep `approver` for resolve paths.
-3. Add `QUOTA_ON_UNAVAILABLE` with production default `approval_required`.
+3. Add `QUOTA_ON_UNAVAILABLE` with default `approval_required` (fail-closed).
+   Explicit `allow` is opt-in only and must emit warning + decision reason /
+   metric `quota_backend_unavailable_allowed`.
 
 ## Consequences
 
-- Production Helm profile sets `tenantJwtOnly: true` and
+- Chart defaults and compose env set `quota.onUnavailable` /
+  `QUOTA_ON_UNAVAILABLE` to `approval_required`.
+- Production Helm profile sets `tenantJwtOnly: true` and keeps
   `quota.onUnavailable: approval_required`.
-- Demo/dev keep header-based identity and quota fail-open (`allow`).
+- Demo/dev keep header-based identity; quota fail-open requires an explicit
+  `QUOTA_ON_UNAVAILABLE=allow` setting.

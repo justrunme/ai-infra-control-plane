@@ -87,7 +87,14 @@ spec:
 EOF
 
 echo "==> wait for Argo CD sync"
-kubectl -n argocd wait --for=condition=SyncStatusCode=Synced --timeout=60s app/ai-control-plane-demo || true
+if ! kubectl -n argocd wait --for=jsonpath='{.status.sync.status}'=Synced --timeout=180s application/ai-control-plane-demo; then
+  echo "ERROR: Argo CD sync wait failed" >&2
+  kubectl -n argocd get app ai-control-plane-demo -o wide >&2 || true
+  kubectl -n argocd describe app ai-control-plane-demo >&2 || true
+  kubectl -n argocd get app ai-control-plane-demo -o yaml >&2 || true
+  kubectl -n argocd get events --sort-by=.lastTimestamp >&2 || true
+  exit 1
+fi
 
 echo "==> port-forward"
 kubectl -n "${NAMESPACE}" port-forward "svc/${RELEASE}-ai-control-plane" 18080:80 >/tmp/ai-cp-pf.log 2>&1 &
@@ -123,6 +130,7 @@ curl -fsS -X POST "${BASE}/approvals/${APPROVAL_ID}/approve" \
 
 echo "==> verify Argo CD sync status"
 SYNC_STATUS="$(kubectl -n argocd get app ai-control-plane-demo -o jsonpath='{.status.sync.status}')"
+kubectl -n argocd wait --for=jsonpath='{.status.health.status}'=Healthy --timeout=180s application/ai-control-plane-demo || true  # final assert below fails closed
 HEALTH_STATUS="$(kubectl -n argocd get app ai-control-plane-demo -o jsonpath='{.status.health.status}')"
 echo "Argo CD sync status: ${SYNC_STATUS}, health: ${HEALTH_STATUS}"
 if [[ "${SYNC_STATUS}" != "Synced" ]]; then

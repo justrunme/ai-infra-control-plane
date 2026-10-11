@@ -107,3 +107,97 @@ def test_quota_on_unavailable_approval_required(monkeypatch) -> None:
     assert any("quota state unavailable" in r for r in body["reasons"])
     monkeypatch.delenv("QUOTA_REDIS_URL", raising=False)
     monkeypatch.delenv("QUOTA_ON_UNAVAILABLE", raising=False)
+
+
+def test_quota_unavailable_default_is_not_allow(monkeypatch) -> None:
+    """NEGATIVE: unset QUOTA_ON_UNAVAILABLE must fail closed, never allow."""
+    from app.metrics_util import reset_governance_latency_metrics
+    from app.quota_state_service import get_quota_on_unavailable
+
+    monkeypatch.setenv("QUOTA_REDIS_URL", "redis://127.0.0.1:1/0")
+    monkeypatch.delenv("QUOTA_ON_UNAVAILABLE", raising=False)
+    reset_governance_latency_metrics()
+
+    assert get_quota_on_unavailable() == "approval_required"
+
+    monkeypatch.setattr(
+        "app.governance_inputs.read_quota_state",
+        lambda team: QuotaStateSnapshot(
+            team=team, source="unavailable", unavailable=True
+        ),
+    )
+    response = client.post(
+        "/governance/evaluate",
+        json={
+            "team": "platform",
+            "environment": "development",
+            "model": "llama3.1:8b",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["final_verdict"] != "allow"
+    assert body["final_verdict"] == "approval_required"
+    assert any("quota state unavailable" in r for r in body["reasons"])
+    monkeypatch.delenv("QUOTA_REDIS_URL", raising=False)
+
+
+def test_quota_unavailable_explicit_allow_marks_reason(monkeypatch, caplog) -> None:
+    """Explicit allow must emit quota_backend_unavailable_allowed reason + metric."""
+    import logging
+
+    from app import metrics_util
+
+    monkeypatch.setenv("QUOTA_REDIS_URL", "redis://127.0.0.1:1/0")
+    monkeypatch.setenv("QUOTA_ON_UNAVAILABLE", "allow")
+    metrics_util.reset_governance_latency_metrics()
+    monkeypatch.setattr(
+        "app.governance_inputs.read_quota_state",
+        lambda team: QuotaStateSnapshot(
+            team=team, source="unavailable", unavailable=True
+        ),
+    )
+
+    with caplog.at_level(logging.WARNING, logger="app.governance_service"):
+        response = client.post(
+            "/governance/evaluate",
+            json={
+                "team": "platform",
+                "environment": "development",
+                "model": "llama3.1:8b",
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["final_verdict"] == "allow"
+    assert "quota_backend_unavailable_allowed" in body["reasons"]
+    assert (
+        "quota_backend_unavailable_allowed"
+        in body["stages"]["quota"]["reasons"]
+    )
+    assert metrics_util.QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL >= 1
+    assert any(
+        "quota_backend_unavailable_allowed" in record.message
+        for record in caplog.records
+        if record.levelno >= logging.WARNING
+    )
+
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert "ai_control_quota_backend_unavailable_allowed_total" in metrics.text
+    assert (
+        "ai_control_quota_backend_unavailable_allowed_total "
+        f"{metrics_util.QUOTA_BACKEND_UNAVAILABLE_ALLOWED_TOTAL}"
+    ) in metrics.text
+    monkeypatch.delenv("QUOTA_REDIS_URL", raising=False)
+    monkeypatch.delenv("QUOTA_ON_UNAVAILABLE", raising=False)
+
+
+def test_quota_on_unavailable_invalid_value_fails_closed(monkeypatch) -> None:
+    """NEGATIVE: garbage QUOTA_ON_UNAVAILABLE must not fall back to allow."""
+    from app.quota_state_service import get_quota_on_unavailable
+
+    monkeypatch.setenv("QUOTA_ON_UNAVAILABLE", "not-a-policy")
+    assert get_quota_on_unavailable() == "approval_required"
+    monkeypatch.delenv("QUOTA_ON_UNAVAILABLE", raising=False)
