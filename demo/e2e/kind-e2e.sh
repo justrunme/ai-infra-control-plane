@@ -130,6 +130,7 @@ curl -fsS -X POST "${BASE}/approvals/${APPROVAL_ID}/approve" \
 
 echo "==> verify Argo CD sync status"
 SYNC_STATUS="$(kubectl -n argocd get app ai-control-plane-demo -o jsonpath='{.status.sync.status}')"
+kubectl -n argocd wait --for=jsonpath='{.status.health.status}'=Healthy --timeout=180s application/ai-control-plane-demo || true  # final assert below fails closed
 HEALTH_STATUS="$(kubectl -n argocd get app ai-control-plane-demo -o jsonpath='{.status.health.status}')"
 echo "Argo CD sync status: ${SYNC_STATUS}, health: ${HEALTH_STATUS}"
 if [[ "${SYNC_STATUS}" != "Synced" ]]; then
