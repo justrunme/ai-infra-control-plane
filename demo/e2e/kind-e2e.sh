@@ -87,7 +87,7 @@ spec:
 EOF
 
 echo "==> wait for Argo CD sync"
-if ! kubectl -n argocd wait --for=condition=SyncStatusCode=Synced --timeout=60s app/ai-control-plane-demo; then
+if ! kubectl -n argocd wait --for=jsonpath='{.status.sync.status}'=Synced --timeout=180s application/ai-control-plane-demo; then
   echo "ERROR: Argo CD sync wait failed" >&2
   kubectl -n argocd get app ai-control-plane-demo -o wide >&2 || true
   kubectl -n argocd describe app ai-control-plane-demo >&2 || true

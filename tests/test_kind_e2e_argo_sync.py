@@ -14,7 +14,7 @@ def test_kind_e2e_argo_sync_wait_is_not_masked() -> None:
     wait_lines = [
         line
         for line in lines
-        if "wait" in line and "SyncStatusCode=Synced" in line
+        if "wait" in line and "{.status.sync.status}'=Synced" in line
     ]
     assert wait_lines, "expected an Argo CD SyncStatusCode wait in kind-e2e.sh"
     for line in wait_lines:
