@@ -1,4 +1,4 @@
-# Maturity Boundary (v2.4.0)
+# Maturity Boundary (v2.5.0)
 
 | Tier | Meaning | Examples |
 | --- | --- | --- |
@@ -10,7 +10,7 @@
 
 | Control Plane | Runtime | Status |
 | --- | --- | --- |
-| **2.4.x** | **2.3.x** | Current stable closed-loop pair |
+| **2.5.x** | **2.4.x** | Current stable closed-loop pair |
 
 Runtime release gates also prove CP `2.0.x` (2.x baseline) and legacy `1.3.x`.
 Matrix: [ai-runtime-platform compatibility](https://github.com/justrunme/ai-runtime-platform/blob/main/docs/compatibility-matrix.md).
@@ -22,7 +22,7 @@ Detect → Decide → Approve → Apply through GitOps → Verify in Runtime
 ```
 
 Supported core pins evaluate/approval reuse to PolicyBundle digests **and**
-active agent/tool capability digests (v2.4).
+active agent/tool capability digests (v2.4+; current line v2.5).
 
 ## Honest limitations
 
