@@ -14,7 +14,9 @@ jobs:
     name: Scorecard analysis
     runs-on: ubuntu-latest
     permissions:
+      # Upload Scorecard SARIF to code scanning.
       security-events: write
+      # Publish results / badge via OIDC.
       id-token: write
       contents: read
       actions: read

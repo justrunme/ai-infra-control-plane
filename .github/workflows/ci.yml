@@ -6,6 +6,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -26,9 +29,16 @@ jobs:
       - name: Install actionlint
         env:
           ACTIONLINT_VERSION: "1.7.12"
+          # From actionlint_1.7.12_checksums.txt (linux_amd64).
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
         run: |
-          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
-            | tar -xz actionlint
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" -o "${archive}"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_checksums.txt" -o checksums.txt
+          grep -F " ${archive}" checksums.txt | sha256sum -c -
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" actionlint
           sudo install actionlint /usr/local/bin/actionlint
       - name: Lint GitHub Actions workflows
         run: actionlint -color
@@ -143,16 +153,29 @@ jobs:
         env:
           # Pin versions: GitHub /releases/latest is flaky under Actions API rate limits (404).
           CONFTEST_VERSION: "0.68.2"
+          # From checksums.txt for conftest_0.68.2_Linux_x86_64.tar.gz.
+          CONFTEST_SHA256: "e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347"
         run: |
-          curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
-            | tar -xz conftest
+          set -euo pipefail
+          archive="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${archive}" -o "${archive}"
+          curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/checksums.txt" -o checksums.txt
+          grep -F " ${archive}" checksums.txt | sha256sum -c -
+          echo "${CONFTEST_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" conftest
           sudo install conftest /usr/local/bin/conftest
       - name: Install OPA
         env:
           OPA_VERSION: "1.19.0"
+          # From opa_linux_amd64_static.sha256 on the v1.19.0 release.
+          OPA_SHA256: "1dd5c5591ff856f5e20a1d66bafae9511ddf3c5552ed3b5070c70b2b6580ee3f"
         run: |
-          curl -fsSL "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static" \
-            -o opa
+          set -euo pipefail
+          binary="opa_linux_amd64_static"
+          curl -fsSL "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/${binary}" -o opa
+          curl -fsSL "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/${binary}.sha256" -o opa.sha256
+          echo "$(cut -d' ' -f1 opa.sha256)  opa" | sha256sum -c -
+          echo "${OPA_SHA256}  opa" | sha256sum -c -
           chmod +x opa
           sudo install opa /usr/local/bin/opa
       - name: OPA unit tests
