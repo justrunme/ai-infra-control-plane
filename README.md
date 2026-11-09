@@ -387,3 +387,8 @@ Honest limitations and deferred items: [`docs/maturity-boundary.md`](docs/maturi
 ```sh
 bash demo/e2e/kind-e2e.sh   # Helm on kind: allow/block/approval + PVC restart
 ```
+
+## Author
+
+Andrey Lesnikov — Senior DevOps & AI Platform Engineer  
+[https://orcid.org/0009-0004-7583-4314](https://orcid.org/0009-0004-7583-4314)
